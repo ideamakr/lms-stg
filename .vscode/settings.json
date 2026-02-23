@@ -1,0 +1,15 @@
+{
+  "liveServer.settings.ignoreFiles": [
+    "**/*.db",
+    "**/*.sqlite",
+    "**/*.json",
+    "**/*.log"
+  ],
+  "[html]": {
+    "editor.wordWrap": "off",
+    "editor.formatOnSave": false
+  },
+  "python.analysis.extraPaths": [
+    "./"
+  ]
+}

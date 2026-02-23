@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SaaS Design Preview</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* --- GLOBAL RESETS --- */
+      body {
+        margin: 0;
+        font-family: "Inter", sans-serif;
+        background-color: #f1f5f9;
+        color: #334155;
+      }
+
+      /* --- MODERN SAAS UI STYLES --- */
+
+      /* 1. The Dark "Canvas" Background */
+      .saas-canvas {
+        background-color: #2c59c0; /* Deep Slate Blue/Black */
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center; /* Center vertically for preview */
+        padding: 40px 20px;
+        box-sizing: border-box;
+      }
+
+      /* 2. The Centered Floating Card */
+      .saas-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 800px;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* High-end shadow */
+        overflow: hidden;
+        animation: slideUp 0.5s ease-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Card Header */
+      .saas-card-header {
+        padding: 30px 40px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #fff;
+      }
+
+      .saas-card-header h2 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0 0 5px 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .saas-card-header p {
+        color: #64748b;
+        margin: 0;
+        font-size: 0.95rem;
+        padding-left: 36px;
+      }
+
+      /* Card Body */
+      .saas-card-body {
+        padding: 35px 40px;
+      }
+
+      /* 3. The Grid Layout */
+      .saas-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Two equal columns */
+        column-gap: 30px;
+        row-gap: 24px;
+      }
+
+      .grid-full-width {
+        grid-column: 1 / -1;
+      }
+
+      /* 4. Input Styling */
+      .saas-form-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #475569;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+      }
+
+      .saas-form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #1e293b;
+        background-color: #f8fafc;
+        transition: all 0.2s;
+        box-sizing: border-box;
+        font-family: inherit;
+      }
+
+      .saas-form-control:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        background-color: #fff;
+        outline: none;
+      }
+
+      /* Checkbox */
+      .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        cursor: pointer;
+      }
+
+      .checkbox-wrapper input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #3b82f6;
+        cursor: pointer;
+      }
+
+      /* Summary Box (Info Alert) */
+      .summary-box {
+        background-color: #eff6ff;
+        border: 1px solid #dbeafe;
+        color: #1e3a8a;
+        padding: 15px 20px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      /* Buttons */
+      .saas-form-footer {
+        margin-top: 40px;
+        padding-top: 25px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+      }
+
+      .btn-saas-primary {
+        background-color: #3b82f6;
+        color: white;
+        padding: 12px 32px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+      }
+
+      .btn-saas-primary:hover {
+        background-color: #2563eb;
+        transform: translateY(-1px);
+      }
+
+      .btn-saas-secondary {
+        background-color: transparent;
+        color: #64748b;
+        padding: 12px 24px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-saas-secondary:hover {
+        background-color: #f1f5f9;
+        color: #334155;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="saas-canvas">
+      <div class="saas-card">
+        <div class="saas-card-header">
+          <h2>
+            <i class="fas fa-paper-plane" style="color: #3b82f6"></i>
+            Apply for Leave
+          </h2>
+          <p>Submit a new request for approval by your line manager.</p>
+        </div>
+
+        <div class="saas-card-body">
+          <form>
+            <div class="saas-form-grid">
+              <div class="saas-form-group">
+                <label>Leave Type <span style="color: #ef4444">*</span></label>
+                <select class="saas-form-control">
+                  <option>Annual Leave (14.0 days left)</option>
+                  <option>Medical Leave (14.0 days left)</option>
+                  <option>Unpaid Leave</option>
+                </select>
+              </div>
+
+              <div class="saas-form-group">
+                <label>Approver <span style="color: #ef4444">*</span></label>
+                <select class="saas-form-control">
+                  <option>Sarah Connor (Team Lead)</option>
+                  <option>Tony Stark (Director)</option>
+                </select>
+              </div>
+
+              <div class="saas-form-group">
+                <label>Start Date <span style="color: #ef4444">*</span></label>
+                <input type="date" class="saas-form-control" />
+              </div>
+
+              <div class="saas-form-group">
+                <label>End Date <span style="color: #ef4444">*</span></label>
+                <input type="date" class="saas-form-control" />
+              </div>
+
+              <div class="grid-full-width checkbox-wrapper">
+                <input type="checkbox" id="halfDayMock" />
+                <label
+                  for="halfDayMock"
+                  style="margin: 0; font-weight: 500; color: #334155"
+                >
+                  Apply for Half Day (0.5)
+                </label>
+              </div>
+
+              <div class="saas-form-group grid-full-width">
+                <label
+                  >Reason for Leave <span style="color: #ef4444">*</span></label
+                >
+                <textarea
+                  class="saas-form-control"
+                  rows="3"
+                  placeholder="e.g., Family vacation in Bali..."
+                ></textarea>
+              </div>
+
+              <div class="saas-form-group grid-full-width">
+                <label>Attachment (Optional)</label>
+                <div
+                  style="
+                    border: 2px dashed #e2e8f0;
+                    padding: 20px;
+                    text-align: center;
+                    border-radius: 8px;
+                    color: #94a3b8;
+                    font-size: 0.9rem;
+                    cursor: pointer;
+                    transition: 0.2s;
+                  "
+                  onmouseover="this.style.borderColor='#cbd5e1'"
+                  onmouseout="this.style.borderColor='#e2e8f0'"
+                >
+                  <i
+                    class="fas fa-cloud-upload-alt"
+                    style="
+                      font-size: 1.5rem;
+                      margin-bottom: 8px;
+                      display: block;
+                    "
+                  ></i>
+                  <span>Click to upload MC or supporting documents</span>
+                </div>
+              </div>
+
+              <div class="grid-full-width summary-box">
+                <i class="fas fa-info-circle" style="font-size: 1.2rem"></i>
+                <div>
+                  <strong>Summary:</strong> applying for
+                  <span style="font-weight: 800">5.0 days</span> of Annual
+                  Leave.
+                </div>
+              </div>
+            </div>
+
+            <div class="saas-form-footer">
+              <button type="button" class="btn-saas-secondary">Cancel</button>
+              <button type="button" class="btn-saas-primary">
+                <i class="fas fa-check-circle" style="margin-right: 8px"></i>
+                Submit Application
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

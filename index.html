@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leave Management System</title>
+    <style>
+      /* --- CSS: PROFESSIONAL SMART CARD DESIGN --- */
+      :root {
+        --primary: #2563eb;
+        --bg: #f3f4f6;
+        --text: #1f2937;
+      }
+      body {
+        font-family: -apple-system, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+        padding-top: 50px;
+      }
+
+      .card {
+        background: white;
+        width: 600px;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        margin-bottom: 2rem;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 1rem;
+      }
+      .header h2 {
+        margin: 0;
+        color: var(--primary);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .full-width {
+        grid-column: span 2;
+      }
+
+      label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        box-sizing: border-box;
+      }
+      input:focus,
+      select:focus {
+        border-color: var(--primary);
+        outline: none;
+        ring: 2px var(--primary);
+      }
+
+      .toggle-container {
+        background: #eff6ff;
+        padding: 10px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .btn {
+        background: var(--primary);
+        color: white;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 6px;
+        width: 100%;
+        font-size: 1rem;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .btn:hover {
+        background: #1d4ed8;
+      }
+
+      .status-msg {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 6px;
+        display: none;
+        text-align: center;
+      }
+      .success {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      /* Wallet Display */
+      .wallet {
+        background: #f8fafc;
+        border: 1px dashed #94a3b8;
+        padding: 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: #475569;
+        margin-top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <h2>New Leave Request</h2>
+        <p style="color: #6b7280; font-size: 0.9rem">
+          Submit your request for approval
+        </p>
+      </div>
+
+      <form id="leaveForm" onsubmit="submitLeave(event)">
+        <div class="grid">
+          <div>
+            <label>Employee Name</label>
+            <input
+              type="text"
+              id="employee_name"
+              value="John Doe"
+              onchange="checkBalance()"
+              placeholder="Enter Name"
+            />
+          </div>
+          <div>
+            <label>Leave Type</label>
+            <select id="leave_type" required onchange="checkBalance()">
+              <option value="Annual Leave">Annual Leave</option>
+              <option value="Medical Leave">Medical Leave</option>
+              <option value="Emergency Leave">Emergency Leave</option>
+            </select>
+            <div id="walletDisplay" class="wallet">Checking balance...</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="full-width toggle-container">
+            <span style="font-size: 0.9rem; font-weight: 600"
+              >Taking a Half Day?</span
+            >
+            <input
+              type="checkbox"
+              id="halfDayCheck"
+              onchange="toggleHalfDay()"
+            />
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <label>Start Date</label>
+            <input
+              type="date"
+              id="start_date"
+              required
+              onchange="calculateDays()"
+            />
+          </div>
+          <div id="endDateGroup">
+            <label>End Date</label>
+            <input
+              type="date"
+              id="end_date"
+              required
+              onchange="calculateDays()"
+            />
+          </div>
+        </div>
+
+        <p
+          id="durationText"
+          style="
+            text-align: right;
+            font-weight: bold;
+            color: var(--primary);
+            margin-top: -10px;
+            margin-bottom: 20px;
+          "
+        >
+          Duration: 0 Days
+        </p>
+
+        <div class="grid">
+          <div class="full-width">
+            <label>Reason</label>
+            <textarea
+              id="reason"
+              rows="3"
+              placeholder="e.g. Personal matters..."
+              required
+            ></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn">Submit Request</button>
+
+        <div id="statusMessage" class="status-msg"></div>
+      </form>
+    </div>
+
+    <script>
+      const API_URL = "http://127.0.0.1:8000";
+
+      // 1. On Load: Check Balance for John Doe
+      checkBalance();
+
+      async function checkBalance() {
+        const nameInput = document.getElementById("employee_name");
+        // Simple capitalization fix (optional)
+        // const name = nameInput.value.trim();
+        const name = nameInput.value;
+
+        const type = document.getElementById("leave_type").value;
+        const year = new Date().getFullYear();
+
+        // Don't check if empty
+        if (!name) return;
+
+        try {
+          const res = await fetch(
+            `${API_URL}/leaves/balance?employee_name=${name}&year=${year}&leave_type=${type}`
+          );
+
+          if (res.ok) {
+            const data = await res.json();
+            // Check if we got valid data back (if user doesn't exist, ent might be null)
+            if (data && data.entitlement !== undefined) {
+              document.getElementById(
+                "walletDisplay"
+              ).innerText = `Wallet: ${data.remaining} days remaining (Entitlement: ${data.entitlement})`;
+            } else {
+              document.getElementById("walletDisplay").innerText =
+                "User not found";
+            }
+          } else {
+            document.getElementById("walletDisplay").innerText =
+              "User not found";
+          }
+        } catch (e) {
+          document.getElementById("walletDisplay").innerText =
+            "Could not load balance.";
+        }
+      }
+
+      // 2. Logic: Toggle Half Day
+      function toggleHalfDay() {
+        const isHalf = document.getElementById("halfDayCheck").checked;
+        const endInput = document.getElementById("endDateGroup");
+
+        if (isHalf) {
+          endInput.style.display = "none"; // Hide End Date
+          document.getElementById("end_date").value =
+            document.getElementById("start_date").value; // Sync dates
+        } else {
+          endInput.style.display = "block"; // Show End Date
+        }
+        calculateDays();
+      }
+
+      // 3. Logic: Calculate Duration
+      function calculateDays() {
+        const start = new Date(document.getElementById("start_date").value);
+        const endRaw = document.getElementById("end_date").value;
+        const isHalf = document.getElementById("halfDayCheck").checked;
+
+        if (!start || isNaN(start)) return;
+
+        let days = 0;
+        if (isHalf) {
+          days = 0.5;
+          // Auto-sync end date if hidden
+          document.getElementById("end_date").value =
+            document.getElementById("start_date").value;
+        } else if (endRaw) {
+          const end = new Date(endRaw);
+          const diffTime = Math.abs(end - start);
+          days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        document.getElementById(
+          "durationText"
+        ).innerText = `Duration: ${days} Days`;
+      }
+
+      // 4. Logic: Submit Form
+      async function submitLeave(event) {
+        event.preventDefault();
+        const msg = document.getElementById("statusMessage");
+        msg.style.display = "block";
+        msg.innerText = "Submitting...";
+        msg.className = "status-msg";
+
+        const formData = new FormData();
+        formData.append(
+          "employee_name",
+          document.getElementById("employee_name").value
+        );
+        formData.append(
+          "leave_type",
+          document.getElementById("leave_type").value
+        );
+        formData.append(
+          "start_date",
+          document.getElementById("start_date").value
+        );
+        formData.append("end_date", document.getElementById("end_date").value);
+        formData.append("reason", document.getElementById("reason").value);
+
+        try {
+          const response = await fetch(`${API_URL}/leaves/`, {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            msg.innerText = "✅ Success! Leave Request ID: " + result.id;
+            msg.classList.add("success");
+            checkBalance(); // Refresh wallet immediately
+          } else {
+            msg.innerText = "❌ Error: " + result.detail;
+            msg.classList.add("error");
+          }
+        } catch (error) {
+          msg.innerText = "❌ Network Error";
+          msg.classList.add("error");
+        }
+      }
+    </script>
+  </body>
+</html>
