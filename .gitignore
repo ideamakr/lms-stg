@@ -1,0 +1,15 @@
+# Database
+*.db
+*.sqlite3
+
+# Python junk
+__pycache__/
+*.pyc
+venv/
+env/
+
+# Uploads & OS files
+uploads/
+app/static/uploads/
+.DS_Store
+.vscode/
