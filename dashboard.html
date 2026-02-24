@@ -905,6 +905,40 @@ div.swal2-container {
 }
 
 
+/* 1. Define the Scrollable Containers */
+#home_away_list, 
+#tile_leave_inbox, 
+#tile_ot_inbox {
+    max-height: 200px; /* Limits height so it doesn't stretch the page */
+    overflow-y: auto;  /* Adds the scrollbar when list is long */
+    overflow-x: hidden;
+    padding-right: 5px; /* Prevents text from hitting the scrollbar */
+}
+
+/* 2. Make the scrollbar look slim (Optional but recommended) */
+#home_away_list::-webkit-scrollbar,
+#tile_leave_inbox::-webkit-scrollbar,
+#tile_ot_inbox::-webkit-scrollbar {
+    width: 6px;
+}
+#home_away_list::-webkit-scrollbar-track,
+#tile_leave_inbox::-webkit-scrollbar-track,
+#tile_ot_inbox::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+#home_away_list::-webkit-scrollbar-thumb,
+#tile_leave_inbox::-webkit-scrollbar-thumb,
+#tile_ot_inbox::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+#home_away_list::-webkit-scrollbar-thumb:hover,
+#tile_leave_inbox::-webkit-scrollbar-thumb:hover,
+#tile_ot_inbox::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
 
     </style>
   </head>
@@ -13962,10 +13996,12 @@ function toggleUserStatus(userId, fullName) {
 // 3. Helper to load the form data (Intelligent Dashboard Engine)
 // 3. Helper to load the form data (Intelligent Dashboard Engine)
 async function loadHomeLeadershipInsights() {
+    // 1. Setup Role Access
     const isHR = userRoles.includes("hr_admin");
     const isManager = userRoles.includes("manager");
     const isBoss = isHR || isManager;
 
+    // 2. Get DOM Elements
     const panel = document.getElementById("leadership_panel");
     const miniStats = document.getElementById("leadership_mini_stats");
     const actionCenter = document.getElementById("manager_action_center");
@@ -13974,16 +14010,19 @@ async function loadHomeLeadershipInsights() {
     const leaveInbox = document.getElementById("tile_leave_inbox");
     const otInbox = document.getElementById("tile_ot_inbox");
 
+    // 3. Toggle Visibility based on Role
     if (panel) panel.style.display = "block";
     if (miniStats) miniStats.style.display = isBoss ? "flex" : "none";
     if (actionCenter) actionCenter.style.display = isBoss ? "block" : "none";
 
     try {
+        // 🚀 TIMEZONE FIX: Ensure we use Local System Time (KL)
         const now = new Date();
+        const offset = now.getTimezoneOffset();
+        const todayStr = new Date(now.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
         const year = now.getFullYear();
-        const todayStr = now.toISOString().split('T')[0];
 
-        // 1. CONCURRENT FETCHING
+        // 4. CONCURRENT FETCHING
         const fetchPromises = [
             fetchWithAuth(`${API_URL}/leaves/public-holidays`),
             fetchWithAuth(`${API_URL}/leaves/public-calendar`),
@@ -14005,12 +14044,12 @@ async function loadHomeLeadershipInsights() {
         
         const mgrData = isBoss && responses[3]?.ok ? await responses[3].json() : { requests: [] };
         const mgrLeaves = mgrData.requests || [];
-
         const otData = isBoss && responses[4]?.ok ? await responses[4].json() : [];
+        
         const pendingOT = (Array.isArray(otData) ? otData : []).filter(r => r.status.includes("Pending"));
-        const pendingLeaves = mgrLeaves.filter(l => l.status === "Pending");
+        const pendingLeaves = mgrLeaves.filter(l => l.status === "Pending" || l.status === "Pending Cancel");
 
-        // --- 🗓️ 1. NEXT HOLIDAY TILE (Unlimited Search) ---
+        // --- 🗓️ 1. NEXT HOLIDAY ---
         const nextHoliday = holidays.filter(h => h.holiday_date >= todayStr).sort((a, b) => a.holiday_date.localeCompare(b.holiday_date))[0];
         const holidayEl = document.getElementById("home_next_holiday");
         if (holidayEl) {
@@ -14022,14 +14061,11 @@ async function loadHomeLeadershipInsights() {
                     <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.2;">${nextHoliday.name}</div>
                     <small style="color: #0369a1; font-weight: 600; font-size: 0.75rem;">${diffDays === 0 ? 'TODAY' : 'In '+diffDays+' days'} (${formatDateNice(nextHoliday.holiday_date)})</small>`;
             } else {
-                holidayEl.innerHTML = `
-                    <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Next Holiday</div>
-                    <div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No upcoming holidays.</div>`;
+                holidayEl.innerHTML = `<div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No upcoming holidays.</div>`;
             }
         }
 
-        // --- ✈️ 2. MY UPCOMING SCHEDULE (Personal Leave) ---
-        // Looks ahead 30 days for your own approved leaves
+        // --- ✈️ 2. MY UPCOMING LEAVE ---
         const holidayLimit = new Date(year, now.getMonth(), now.getDate() + 30);
         const holidayLimitStr = holidayLimit.toISOString().split('T')[0];
         const personalUpcoming = myLeaves
@@ -14042,49 +14078,54 @@ async function loadHomeLeadershipInsights() {
                 const lDate = new Date(personalUpcoming.start_date);
                 const diffDays = Math.ceil((lDate - new Date(todayStr)) / (1000 * 60 * 60 * 24));
                 leaveEl.innerHTML = `
-                    <div style="font-size: 0.7rem; font-weight: 700; color: #ef4444; text-transform: uppercase; margin-bottom: 4px;">
-                        <i class="fas fa-plane-departure"></i> Starting Soon
-                    </div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: #ef4444; text-transform: uppercase; margin-bottom: 4px;">Starting Soon</div>
                     <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.2;">${formatDateNice(personalUpcoming.start_date)}</div>
-                    <small style="color: #15803d; font-weight: 600; font-size: 0.75rem;">${diffDays === 1 ? 'Tomorrow' : 'In ' + diffDays + ' days'} • ${personalUpcoming.days_taken} Day(s)</small>`;
+                    <small style="color: #15803d; font-weight: 600; font-size: 0.75rem;">In ${diffDays} days • ${personalUpcoming.days_taken} Day(s)</small>`;
             } else {
-                leaveEl.innerHTML = `
-                    <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Upcoming Leave</div>
-                    <div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No approved leave in 30 days.</div>`;
+                leaveEl.innerHTML = `<div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No approved leave soon.</div>`;
             }
         }
 
-        // --- 🔵 3. LEAVE TILE (Inbox Rows) ---
+        // --- 🔵 3. PENDING LEAVE (TOP 3 + VIEW MORE) ---
         if (document.getElementById("home_leave_count")) document.getElementById("home_leave_count").innerText = pendingLeaves.length;
         if (leaveInbox) {
+            // Logic: Show Top 3. If remaining > 0, show link.
+            const visibleItems = pendingLeaves.slice(0, 3);
+            const hiddenCount = pendingLeaves.length - 3;
+            
             leaveInbox.innerHTML = pendingLeaves.length > 0 
-                ? pendingLeaves.slice(0, 3).map(l => `
+                ? visibleItems.map(l => `
                     <div class="pulse-row" style="background:rgba(255,255,255,0.6); border-left: 3px solid #f59e0b; padding: 6px 8px; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;" onclick="showSection('manager_requests')">
                         <div style="display:flex; flex-direction:column;">
                             <span class="pulse-name" style="font-size:0.75rem; font-weight:700;">${l.employee_name.split(' ')[0]}</span>
                             <span style="font-size:0.6rem; color:#64748b;">${l.days_taken}d Leave</span>
                         </div>
                         <span class="pulse-label" style="background:#fff7ed; color:#f59e0b; font-size:0.55rem; padding: 2px 4px; font-weight:800;">REVIEW</span>
-                    </div>`).join("")
+                    </div>`).join("") + (hiddenCount > 0 ? `<div style="text-align:center; font-size:0.7rem; color:#2563eb; font-weight:600; padding-top:4px; cursor:pointer;" onclick="showSection('manager_requests')">+ ${hiddenCount} more requests...</div>` : "")
                 : `<div style="font-size:0.65rem; opacity:0.5; font-style:italic;">All clear!</div>`;
         }
 
-        // --- 🟠 4. OT TILE (Inbox Rows) ---
+        // --- 🟠 4. PENDING OT (TOP 3 + VIEW MORE) ---
         if (document.getElementById("home_ot_count")) document.getElementById("home_ot_count").innerText = pendingOT.length;
         if (otInbox) {
+            // Logic: Show Top 3. If remaining > 0, show link.
+            const visibleItems = pendingOT.slice(0, 3);
+            const hiddenCount = pendingOT.length - 3;
+
             otInbox.innerHTML = pendingOT.length > 0 
-                ? pendingOT.slice(0, 3).map(o => `
+                ? visibleItems.map(o => `
                     <div class="pulse-row" style="background:rgba(255,255,255,0.6); border-left: 3px solid #3b82f6; padding: 6px 8px; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;" onclick="showSection('manager_ot_requests')">
                         <div style="display:flex; flex-direction:column;">
                             <span class="pulse-name" style="font-size:0.75rem; font-weight:700;">${o.employee_name.split(' ')[0]}</span>
                             <span style="font-size:0.6rem; color:#64748b;">${o.total_value}${o.ot_unit[0]} Claim</span>
                         </div>
                         <span class="pulse-label" style="background:#eff6ff; color:#3b82f6; font-size:0.55rem; padding: 2px 4px; font-weight:800;">OT</span>
-                    </div>`).join("")
+                    </div>`).join("") + (hiddenCount > 0 ? `<div style="text-align:center; font-size:0.7rem; color:#2563eb; font-weight:600; padding-top:4px; cursor:pointer;" onclick="showSection('manager_ot_requests')">+ ${hiddenCount} more requests...</div>` : "")
                 : `<div style="font-size:0.65rem; opacity:0.5; font-style:italic;">All clear!</div>`;
         }
 
-        // --- 🟢 5. ATTENDANCE (Away Sidebar) ---
+        // --- 🟢 5. WHO'S AWAY TODAY (Full List) ---
+        // This will trigger the CSS scrollbar you committed earlier if the list is long.
         if (listEl) {
             const awayToday = publicLeaves.filter(l => todayStr >= l.start_date && todayStr <= l.end_date);
             if (document.getElementById("away_today_title")) {
@@ -14104,7 +14145,7 @@ async function loadHomeLeadershipInsights() {
                     </div>`).join("");
         }
 
-        // --- 📊 6. MINI STATS (Yellow Card) ---
+        // --- 📊 6. MINI STATS ---
         if (isBoss && miniStats) {
             const approved = mgrLeaves.filter(l => (l.status || "").toLowerCase() === "approved");
             const medical = approved.filter(l => l.leave_type === "Medical Leave").length;
