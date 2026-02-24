@@ -9320,20 +9320,19 @@ function changeMgrHistoryPage(direction) {
  
 /**
  * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
- * 🚀 FIXED: Button now sends 'Approved' payload to confirm cancellation (Matches Backend).
- * 🛡️ VISUALS: Status labels reverted to 'Pending L2 Approval' and 'Waiting for Approval'.
+ * 🎨 UPGRADE: Restores the "Pretty Timeline" with parsed remarks & colored dots.
+ * 🚀 Covers: Standard Leave & Carry Forward Requests.
+ */
+/**
+ * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
+ * 🎨 ALIGNMENT: Mirrors the layout of Leave Details Modal for consistency.
+ * 🚀 REVERTED: Original simple design for Admin Override banner.
  */
  async function processApproval(leaveId, actionType, startDate, endDate, leaveType, currentStatus) {
     
     // 🛡️ 1. GLOBAL SAFETY GUARD
     if (typeof processedActionIds !== 'undefined' && processedActionIds.has(leaveId)) {
-         Swal.fire({
-            icon: 'warning',
-            title: 'Request Processed',
-            text: 'This request has already been processed. The table is refreshing...',
-            timer: 2000,
-            showConfirmButton: false
-        });
+         Swal.fire({ icon: 'warning', title: 'Processing...', text: 'Please wait.', timer: 1000, showConfirmButton: false });
         return;
     }
 
@@ -9364,33 +9363,39 @@ function changeMgrHistoryPage(direction) {
         };
     }
 
-    // --- 3. ROBUST DATA FETCHING ---
+    // --- 3. FETCH DATA ---
     const leaveRecord = currentManagerRequests.find(r => r.id == leaveId);
+    const employeeName = leaveRecord ? leaveRecord.employee_name : "Staff Member";
     
-    // 🚀 DETECTION: Is this a Cancellation Journey?
-    // We check status OR history to ensure L2s see this correctly.
     const isCancellationFlow = 
         currentStatus.includes("Cancel") || 
         (leaveRecord && leaveRecord.status_history && 
          (leaveRecord.status_history.includes("Cancellation Request") || 
           leaveRecord.status_history.includes("Request Cancellation")));
 
-    // --- 4. RENDER BADGES (Reverted Labels) ---
+    // --- 4. RENDER BADGES (Labels & Colors) ---
     let statusText = (currentStatus || "PENDING").toUpperCase();
     let badgeClass = "status-pending";
-    
+    let statusColor = "#f59e0b"; // Orange
+
     if (statusText.includes("CANCEL")) {
         badgeClass = "status-pending-cancel";
-        statusText = "WAITING FOR APPROVAL"; // 🚀 User Requested Label
+        statusText = "WAITING FOR APPROVAL"; 
     }
     else if (statusText.includes("L2")) {
         badgeClass = "status-pending-l2-approval";
-        statusText = "PENDING L2 APPROVAL"; // 🚀 User Requested Label
+        statusText = "PENDING L2 APPROVAL"; 
     }
-    else if (statusText.includes("REJECT")) badgeClass = "status-rejected";
-    else if (statusText.includes("APPROVED")) badgeClass = "status-approved";
+    else if (statusText.includes("REJECT")) {
+        badgeClass = "status-rejected";
+        statusColor = "#ef4444";
+    }
+    else if (statusText.includes("APPROVED")) {
+        badgeClass = "status-approved";
+        statusColor = "#10b981";
+    }
 
-    // --- 5. CLEAN DATA ---
+    // --- 5. CLEAN DATA & PARSING ---
     let rawReason = leaveRecord ? (leaveRecord.reason || "No reason provided.") : "N/A";
     let cleanReason = rawReason;
     let adminNameFound = "";
@@ -9401,7 +9406,9 @@ function changeMgrHistoryPage(direction) {
         cleanReason = rawReason.replace(/\[HR_ADMIN_ACTION:.*?\]/g, "").replace("Reason:", "").trim();
     }
     const cfMatch = cleanReason.match(/\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]/i);
+    let displayDuration = (leaveRecord ? leaveRecord.days_taken : "0") + " Days";
     if (cfMatch) {
+        displayDuration = `${cfMatch[1]} Days`;
         cleanReason = cleanReason.replace(cfMatch[0], "").trim();
         leaveType = "Carry Forward"; 
     }
@@ -9420,13 +9427,14 @@ function changeMgrHistoryPage(direction) {
             </div>`;
     }
 
-    // Timeline
+    // 🚀 PRETTY TIMELINE GENERATOR
     let timelineHtml = "";
     if (leaveRecord && leaveRecord.status_history) {
         const historySteps = leaveRecord.status_history.split(" > ");
-        timelineHtml = `<div style="margin-top: 25px; border-top: 2px solid #f1f5f9; padding-top: 15px;">
-             <label style="font-size: 0.7rem; color: #64748b; font-weight: bold; display: block; margin-bottom: 15px;">DECISION HISTORY</label>
-             <div style="position: relative; padding-left: 25px; border-left: 2px solid #e2e8f0; margin-left: 10px;">`;
+        timelineHtml = `
+            <div style="margin-top: 25px; border-top: 2px solid #f1f5f9; padding-top: 15px;">
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 15px;">Decision History Log</label>
+                <div style="position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 8px;">`;
 
         historySteps.forEach((step, index) => {
             const isLast = index === historySteps.length - 1;
@@ -9434,166 +9442,163 @@ function changeMgrHistoryPage(direction) {
             const dateRegex = /\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)/;
             const timeMatch = step.match(dateRegex);
             let timeText = timeMatch ? timeMatch[1] : (isFirst ? startDate : "N/A");
+
             let statusLabel = step.replace(dateRegex, "").trim();
-            
-            let dotColor = isLast ? "#3b82f6" : "#cbd5e1";
-            if (statusLabel.toLowerCase().includes("approved")) dotColor = "#10b981";
-            if (statusLabel.toLowerCase().includes("rejected")) dotColor = "#ef4444";
+            let stepRemark = "";
+            if (isFirst) { stepRemark = cleanReason; }
+            else if (statusLabel.includes("| Note:")) {
+                const parts = statusLabel.split("| Note:");
+                statusLabel = parts[0].trim();
+                stepRemark = parts[1].trim();
+            } else {
+                const noteMatch = statusLabel.match(/\{Note:\s*(.*?)\}/i);
+                if (noteMatch) {
+                    stepRemark = noteMatch[1];
+                    statusLabel = statusLabel.replace(noteMatch[0], "").trim();
+                } else {
+                    const reasonMatch = statusLabel.match(/\(Reason:\s*(.*?)\)/i);
+                    if (reasonMatch) {
+                        stepRemark = reasonMatch[1];
+                        statusLabel = statusLabel.replace(reasonMatch[0], "").trim();
+                    }
+                }
+            }
+            statusLabel = statusLabel.replace(/\(\s*\)/g, "").trim();
+
+            let dotColor = "#cbd5e1";
+            if (statusLabel.includes("Approved")) dotColor = "#10b981";
+            else if (statusLabel.includes("Rejected")) dotColor = "#ef4444";
+            else if (statusLabel.includes("Cancelled") || statusLabel.includes("Withdrawn")) dotColor = "#64748b";
+            else if (isLast && currentStatus.includes("Pending")) dotColor = "#f59e0b";
 
             timelineHtml += `
                 <div style="margin-bottom: 20px; position: relative;">
-                    <div style="position: absolute; left: -30px; top: 4px; width: 8px; height: 8px; background: white; border: 2.5px solid ${dotColor}; border-radius: 50%;"></div>
-                    <div style="font-weight: 600; font-size: 0.8rem;">${statusLabel}</div>
-                    <div style="font-size: 0.7rem; color: #94a3b8;">${timeText}</div>
+                    <div style="position: absolute; left: -27px; top: 5px; width: 12px; height: 12px; background: white; border: 3px solid ${dotColor}; border-radius: 50%;"></div>
+                    <div style="font-weight: 600; font-size: 0.9rem; color: #1e293b;">${statusLabel}</div>
+                    <div style="font-size: 0.75rem; color: #94a3b8;">${timeText}</div>
+                    ${stepRemark ? `<div style="margin-top:4px; font-size:0.85rem; color:#475569; background:#f1f5f9; padding:6px 10px; border-radius:6px; border-left:3px solid ${dotColor};"><i class="fas fa-comment-dots" style="opacity:0.5; margin-right:4px;"></i> ${stepRemark}</div>` : ""}
                 </div>`;
         });
         timelineHtml += `</div></div>`;
     }
 
-    // --- 6. L2 LOGIC (Strictly for New Requests) ---
+    // --- 6. L2 LOGIC ---
     const isSenior = localStorage.getItem("is_senior_manager") === "true";
-    const isFirstStage = currentStatus === "Pending";
-
-    // Only show L2 selection if: Action is Approve AND Not Senior AND Not Cancellation
-    if (actionType === "Approved" && isFirstStage && !isSenior && !isCancellationFlow) {
+    if (actionType === "Approved" && currentStatus === "Pending" && !isSenior && !isCancellationFlow) {
         try {
             const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
             if (res && res.ok) {
                 const policy = await res.json();
-                if (policy.l2_approval_enabled) {
-                    if (l2Container) {
-                        l2Container.style.display = "block";
-                        await populateL2ManagerDropdown();
-                    }
+                if (policy.l2_approval_enabled && l2Container) {
+                    l2Container.style.display = "block";
+                    await populateL2ManagerDropdown();
                 }
             }
         } catch (e) { console.error("L2 Policy Check Error:", e); }
     }
 
-    // --- 7. RENDER SUMMARY ---
-    const dateDisplay = (startDate === endDate) 
-        ? formatDateNice(startDate) 
-        : `${formatDateNice(startDate)} <span style="color:#94a3b8;">➔</span> ${formatDateNice(endDate)}`;
-
+    // --- 7. RENDER SUMMARY (Aligned with Leave Details) ---
     const currentApprover = (currentStatus === "Pending L2 Approval") 
         ? (leaveRecord.approver_l2 || "L2 Manager")
         : (leaveRecord.approver_name || "Line Manager");
 
+    // 🚀 REVERTED: Original Simple Admin Override Banner
     let proxyBannerHtml = "";
     if (adminNameFound) {
-        proxyBannerHtml = `<div style="background: #fffbeb; border: 1px solid #fde68a; padding: 10px; margin-bottom: 15px; border-radius: 6px; color: #92400e; font-size: 0.8rem;"><strong>Admin Override:</strong> Submitted by ${adminNameFound}</div>`;
+        proxyBannerHtml = `
+            <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; color: #92400e; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; border-left: 4px solid #f59e0b;">
+                <i class="fas fa-user-shield"></i>
+                <span><strong>Admin Override:</strong> Submitted on behalf of employee by ${adminNameFound}</span>
+            </div>`;
     }
-
-    let summaryTitle = isCancellationFlow ? "Review Cancellation" : "Confirm Decision";
 
     document.getElementById("reviewSummary").innerHTML = `
         ${proxyBannerHtml}
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
-             <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <div>
-                    <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Request Type</span>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">${leaveType}</div>
-                </div>
-                <div style="text-align: right;">
-                    <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Current Status</span><br>
-                    <span class="status-badge ${badgeClass}">${statusText}</span>
-                </div>
-             </div>
-             
-             <div style="background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Justification</span>
-                <div style="font-size: 0.9rem; color: #334155; margin-top: 5px; font-style: italic;">"${cleanReason}"</div>
-                ${attachmentHtml}
-             </div>
+        
+        <div style="margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 12px;">
+            <div style="background: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <i class="fas fa-user" style="color: var(--primary); font-size: 0.9rem;"></i>
+            </div>
+            <div>
+                <label style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block;">Employee Name</label>
+                <strong style="font-size: 1.05rem; color: #1e293b;">${employeeName}</strong>
+            </div>
+        </div>
 
-             <div style="margin-top: 15px; font-size: 0.9rem;">
-                <i class="far fa-calendar-alt" style="color: #94a3b8; margin-right: 5px;"></i> <strong>${dateDisplay}</strong>
-             </div>
-             
-             <div style="margin-top: 12px; font-size: 0.8rem; color: #475569; background: #e0f2fe; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px;">
-                <i class="fas fa-user-tie" style="color: #0369a1;"></i>
-                <span>Assigned to: <strong>${currentApprover}</strong></span>
-             </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div>
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Request Type</label><br>
+                <strong style="color: #1e293b;">${leaveType}</strong>
+            </div>
+            <div>
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Duration</label><br>
+                <strong style="font-size: 1rem; color: #1e293b;">${displayDuration}</strong>
+            </div>
+            <div style="grid-column: span 2;">
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Reason</label><br>
+                <span style="font-size: 0.9rem; color: #334155; font-style: italic;">"${cleanReason}"</span>
+            </div>
+            <div>
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Status</label><br>
+                <strong style="font-size: 1rem; color: ${statusColor};">${currentStatus}</strong>
+            </div>
+            <div>
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Dates</label><br>
+                <span>${startDate} to ${endDate}</span>
+            </div>
+        </div>
 
-             ${timelineHtml}
-        </div>`;
+        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Current Approver</label><br>
+            <span style="color: #2563eb; font-weight: 600;"><i class="fas fa-user-tie"></i> ${currentApprover}</span>
+        </div>
 
-    // ---------------------------------------------------------
-    // 8. DYNAMIC BUTTON LOGIC (THE FIX)
-    // ---------------------------------------------------------
+        ${attachmentHtml}
+        ${timelineHtml}
+    `;
+
+    // --- 8. BUTTON LOGIC (Standard centering) ---
     const approveBtn = document.getElementById("modalApproveBtn");
     const rejectBtn = document.getElementById("modalRejectBtn");
+    [approveBtn, rejectBtn].forEach(btn => {
+        btn.style.display = "inline-flex"; btn.style.alignItems = "center";
+        btn.style.justifyContent = "center"; btn.style.gap = "8px"; btn.className = "btn";
+    });
 
-    approveBtn.style.display = "flex";
-    rejectBtn.style.display = "flex";
-    approveBtn.style.alignItems = "center";
-    approveBtn.style.justifyContent = "center";
-    approveBtn.style.gap = "8px";
-    
-    rejectBtn.style.alignItems = "center";
-    rejectBtn.style.justifyContent = "center";
-    rejectBtn.style.gap = "8px";
+    const setBackButtonStyle = (btn) => {
+        btn.style.background = "white"; btn.style.color = "#64748b";
+        btn.style.border = "1px solid #cbd5e1"; btn.innerHTML = 'Go Back';
+        btn.onclick = () => closeReviewModal();
+    };
 
-    // --- CASE 1: APPROVAL CLICKED ---
     if (actionType === "Approved") {
-        approveBtn.style.background = "#10b981";
+        approveBtn.style.background = "#10b981"; approveBtn.style.color = "white";
         approveBtn.style.borderColor = "#10b981";
-        approveBtn.style.color = "white";
-
-        // 🚀 SUB-CASE: CANCELLATION (Priority)
         if (isCancellationFlow) {
-            approveBtn.innerHTML = '<i class="fas fa-check-circle"></i><span>Confirm Cancel</span>';
-            approveBtn.title = "Accept cancellation and remove leave";
-            
-            // 🛡️ ACTION: Send "Approved". 
-            // Why? Because your backend listens for "Approved" to trigger the cancellation logic.
-            // Sending "Cancelled" here caused the backend to treat it as a Rejection!
+            approveBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Cancel';
             approveBtn.onclick = () => submitDecision(leaveId, "Approved");
-
         } else {
-            // 🚀 SUB-CASE: NORMAL APPROVAL
-            approveBtn.innerHTML = '<i class="fas fa-check"></i><span>Approve</span>';
-            approveBtn.title = "Approve this request";
-            
+            approveBtn.innerHTML = '<i class="fas fa-check"></i> Approve';
             approveBtn.onclick = () => {
                 if (l2Container.style.display !== "none" && !l2Select.value) {
-                    Swal.fire("Action Required", "Please select a Department Head for L2 Approval.", "warning");
+                    Swal.fire("Action Required", "Please select a Dept Head.", "warning");
                     return; 
                 }
                 submitDecision(leaveId, "Approved");
             };
         }
-
-        rejectBtn.style.background = "#f8fafc";
-        rejectBtn.style.color = "#64748b";
-        rejectBtn.style.borderColor = "#e2e8f0";
-        rejectBtn.innerHTML = 'Cancel';
-        rejectBtn.onclick = () => closeReviewModal(); 
-
+        setBackButtonStyle(rejectBtn);
     } else {
-        // --- CASE 2: REJECTION CLICKED ---
-        rejectBtn.style.background = "#ef4444";
-        rejectBtn.style.color = "white";
+        rejectBtn.style.background = "#ef4444"; rejectBtn.style.color = "white";
         rejectBtn.style.borderColor = "#ef4444";
-
         if (isCancellationFlow) {
-            rejectBtn.innerHTML = '<i class="fas fa-times-circle"></i><span>Deny Request</span>';
-            rejectBtn.title = "Reject cancellation (Leave remains Active)";
-            
-            // 🛡️ ACTION: "Rejected" -> Backend sets status to "Approved" (Active)
+            rejectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Deny Request';
             rejectBtn.onclick = () => submitDecision(leaveId, "Rejected");
-
         } else {
-            rejectBtn.innerHTML = '<i class="fas fa-times"></i><span>Reject</span>';
-            rejectBtn.title = "Reject this request";
+            rejectBtn.innerHTML = '<i class="fas fa-times"></i> Reject';
             rejectBtn.onclick = () => submitDecision(leaveId, "Rejected");
         }
-
-        approveBtn.style.background = "#f8fafc";
-        approveBtn.style.color = "#64748b";
-        approveBtn.style.borderColor = "#e2e8f0";
-        approveBtn.innerHTML = 'Cancel';
-        approveBtn.onclick = () => closeReviewModal(); 
+        setBackButtonStyle(approveBtn);
     }
 
     if (modal) modal.style.display = "flex";
