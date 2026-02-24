@@ -7054,7 +7054,7 @@ async function requestCancelLeave(leaveId) {
         showCancelButton: true,
         confirmButtonText: 'Submit Request',
         confirmButtonColor: '#ef4444', // Red for "Cancel" action
-        cancelButtonText: 'Go Back',
+        cancelButtonText: 'Cancel',
         focusConfirm: false, 
         didOpen: () => {
             // 🚀 LIVE COUNTER LOGIC
@@ -8223,7 +8223,7 @@ async function cancelOT(id) {
         showCancelButton: true,
         confirmButtonText: 'Submit Request',
         confirmButtonColor: '#ef4444', 
-        cancelButtonText: 'Go Back',
+        cancelButtonText: 'Cancel',
         focusConfirm: false, 
         didOpen: () => {
             // Live Character Counter
@@ -15701,32 +15701,29 @@ function sortManagerOTQueue(key) {
     renderManagerOTTable();
 }
 
-// 🚀 UPDATED: Complete 0-Bug Implementation (Lock-and-Key + Layout Safety)
-async function submitOTDecision(otId, actionType, otDate, otType, currentStatus) {
+/**
+ * 🚀 OVERTIME REVIEW: Opens the modal for Manager Decision
+ * 🎨 REVAMPED: Full Pretty Timeline with parsed remarks & Keyword Color Triggers.
+ */
+ async function submitOTDecision(otId, actionType, otDate, otType, currentStatus) {
     const modal = document.getElementById("reviewModal");
     const l2Container = document.getElementById("l2SelectorContainer");
     const l2Select = document.getElementById("l2_manager_select");
     const approveBtn = document.getElementById("modalApproveBtn");
     const rejectBtn = document.getElementById("modalRejectBtn");
-    const errorId = "l2_validation_error"; // 🚀 Added missing error ID for OT validation
+    const errorId = "l2_validation_error"; 
 
     if (!modal) return;
 
     // --- 1. Reset UI Inputs ---
     document.getElementById("mgr_review_remarks").value = "";
     const mgrCount = document.getElementById("mgr_char_count");
-    if (mgrCount) {
-        mgrCount.innerText = "0/200";
-        mgrCount.style.color = "#94a3b8";
-    }
+    if (mgrCount) { mgrCount.innerText = "0/200"; mgrCount.style.color = "#94a3b8"; }
 
-    // --- 2. Reset L2 Container (Safe Reset) ---
     const existingErr = document.getElementById(errorId);
     if (existingErr) existingErr.remove(); 
 
-    if (l2Container) {
-        l2Container.style.display = "none"; // 🚀 Safe hide, doesn't destroy layout
-    }
+    if (l2Container) l2Container.style.display = "none";
     if (l2Select) {
         l2Select.value = "";
         l2Select.style.borderColor = "#e2e8f0";
@@ -15739,7 +15736,7 @@ async function submitOTDecision(otId, actionType, otDate, otType, currentStatus)
         };
     }
 
-    // --- 3. 🧠 Smart L2 Logic (Hardened Guard) ---
+    // --- 2. Smart L2 Logic ---
     const isSenior = localStorage.getItem("is_senior_manager") === "true";
     const isFirstStage = currentStatus === "Pending"; 
 
@@ -15748,185 +15745,193 @@ async function submitOTDecision(otId, actionType, otDate, otType, currentStatus)
             const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
             if (res && res.ok) {
                 const policy = await res.json();
-                if (policy.l2_approval_enabled) {
-                    if (l2Container) {
-                        l2Container.style.display = "block";
-                        l2Container.style.background = "#f8fafc"; 
-                        l2Container.style.border = "1px solid #e2e8f0"; 
-                        l2Container.style.borderRadius = "6px";
-                        l2Container.style.padding = "10px 12px"; // 🚀 Slim padding
-                        l2Container.style.marginTop = "20px";
-                        l2Container.style.marginBottom = "20px"; // 🚀 Added spacing buffer
-                    }
+                if (policy.l2_approval_enabled && l2Container) {
+                    l2Container.style.display = "block";
+                    l2Container.style.background = "#f8fafc"; 
+                    l2Container.style.border = "1px solid #e2e8f0"; 
+                    l2Container.style.borderRadius = "8px";
+                    l2Container.style.padding = "15px";
+                    l2Container.style.marginTop = "20px";
                     await populateL2ManagerDropdown();
-                } else {
-                    if (l2Container) l2Container.style.display = "none";
                 }
             }
-        } catch (e) {
-            console.error("L2 Policy check failed:", e);
-            if (l2Container) l2Container.style.display = "none";
-        }
-    } else {
-        if (l2Container) l2Container.style.display = "none";
+        } catch (e) { console.error("L2 Policy check failed:", e); }
     }
 
-    // --- 4. 🚀 FETCH DETAILS ---
+    // --- 3. FETCH DETAILS & IDENTITY ---
     const otRecord = (window.currentManagerOTRequests || []).find(r => r.id === otId);
+    const employeeName = otRecord ? otRecord.employee_name : "Staff Member";
     
     let reasonText = otRecord ? (otRecord.reason || "No description provided.") : "N/A";
-    reasonText = reasonText.split("|")[0].trim(); 
+    reasonText = reasonText.split("| Manager Note:")[0].trim(); 
 
     let attachmentHtml = "";
     if (otRecord && otRecord.attachment_path) {
         const fileName = otRecord.attachment_path.split("/").pop();
         const fileUrl = `${API_URL}/uploads/${fileName}`;
         attachmentHtml = `
-            <div style="margin-top: 10px; padding: 10px 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
-                <div style="background: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #bae6fd;">
-                    <i class="fas fa-paperclip" style="color: #0284c7; font-size: 0.8rem;"></i>
-                </div>
-                <div style="flex: 1; overflow: hidden;">
-                    <label style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block; line-height: 1;">Attachment</label>
-                    <a href="${fileUrl}" target="_blank" style="font-size: 0.85rem; color: #0284c7; font-weight: 600; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
-                        ${fileName} <i class="fas fa-external-link-alt" style="font-size: 0.7rem; margin-left: 3px;"></i>
+            <div style="margin-top: 10px; padding: 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-file-alt" style="color: #0ea5e9; font-size: 1.2rem;"></i>
+                <div style="flex: 1;">
+                    <label style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block;">Attached Document</label>
+                    <a href="${fileUrl}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: none; font-size: 0.85rem;">
+                        View Attachment
                     </a>
                 </div>
             </div>`;
     }
 
-    // --- 5. 🚀 TIMELINE GENERATION ---
+    // --- 4. 🚀 THE REVAMPED HISTORY TIMELINE ---
     let timelineHtml = "";
     if (otRecord && otRecord.status_history) {
         const historySteps = otRecord.status_history.split(" > ");
         
         timelineHtml = `
             <div style="margin-top: 25px; border-top: 2px solid #f1f5f9; padding-top: 15px;">
-                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 15px; letter-spacing: 0.5px;">Decision History Log</label>
-                <div style="position: relative; padding-left: 25px; border-left: 2px solid #e2e8f0; margin-left: 10px;">`;
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 15px;">Decision History Log</label>
+                <div style="position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 8px;">`;
 
         historySteps.forEach((step, index) => {
             const isLast = index === historySteps.length - 1;
             const isFirst = index === 0;
 
+            // Extract Timestamp (YYYY-MM-DD HH:MM)
             const dateRegex = /\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)/;
             const timeMatch = step.match(dateRegex);
             let timeText = timeMatch ? timeMatch[1] : (isFirst ? otDate : "N/A");
             
+            // 🚀 PARSING LOGIC: Separate Status Label from Remark
             let statusLabel = step.replace(dateRegex, "").trim();
             let stepRemark = "";
             
-            if (isFirst) {
+            if (isFirst) { 
                 stepRemark = reasonText; 
             } else if (statusLabel.includes("| Note:")) {
-                const parts = statusLabel.split("| Note:");
-                statusLabel = parts[0].trim();
-                stepRemark = parts[1].trim();
+                const splitParts = statusLabel.split("| Note:");
+                statusLabel = splitParts[0].trim();
+                stepRemark = splitParts[1].trim();
             } else {
+                // Check for different note/reason patterns
                 const noteMatch = statusLabel.match(/\{Note:\s*(.*?)\}/i);
+                const reasonMatch = statusLabel.match(/\(Reason:\s*(.*?)\)/i);
+                
                 if (noteMatch) {
                     stepRemark = noteMatch[1];
                     statusLabel = statusLabel.replace(noteMatch[0], "").trim();
+                } else if (reasonMatch) {
+                    stepRemark = reasonMatch[1];
+                    statusLabel = statusLabel.replace(reasonMatch[0], "").trim();
                 }
             }
+            statusLabel = statusLabel.replace(/\(\s*\)/g, "").trim();
 
-            let dotColor = isLast ? (currentStatus === "Approved" ? "#10b981" : "#f59e0b") : "#cbd5e1";
-            if (statusLabel.includes("Rejected")) dotColor = "#ef4444";
-            if (statusLabel.includes("Cancelled") || statusLabel.includes("Withdrawn")) dotColor = "#64748b";
+            // 🎨 COLOR TRIGGER LOGIC
+            let dotColor = "#cbd5e1"; // ⚪ Default (Light Grey)
+            const labelLower = statusLabel.toLowerCase();
+
+            if (labelLower.includes("approved")) {
+                dotColor = "#10b981"; // 🟢 Success (Green)
+            } else if (labelLower.includes("rejected")) {
+                dotColor = "#ef4444"; // 🔴 Rejection (Red)
+            } else if (labelLower.includes("cancelled") || labelLower.includes("withdrawn")) {
+                dotColor = "#64748b"; // ⚫ Stopped (Dark Grey)
+            } else if (isLast && currentStatus.includes("Pending")) {
+                dotColor = "#f59e0b"; // 🟠 Active (Orange)
+            }
 
             timelineHtml += `
                 <div style="margin-bottom: 20px; position: relative;">
-                    <div style="position: absolute; left: -30px; top: 4px; width: 8px; height: 8px; background: white; border: 2.5px solid ${dotColor}; border-radius: 50%; z-index: 1;"></div>
-                    <div style="font-weight: 600; font-size: 0.8rem; color: ${isLast ? "#1e293b" : "#64748b"};">${statusLabel}</div>
-                    <div style="font-size: 0.7rem; color: #94a3b8;">${timeText}</div>
-                    ${stepRemark ? `<div style="margin-top:4px; font-size:0.8rem; color:#475569; background:#f1f5f9; padding:6px 10px; border-radius:6px; border-left:3px solid ${dotColor}; font-style:italic;">"${stepRemark}"</div>` : ""}
+                    <div style="position: absolute; left: -27px; top: 5px; width: 12px; height: 12px; background: white; border: 3px solid ${dotColor}; border-radius: 50%;"></div>
+                    
+                    <div style="font-weight: 600; font-size: 0.9rem; color: #1e293b;">${statusLabel}</div>
+                    <div style="font-size: 0.75rem; color: #94a3b8;">${timeText}</div>
+                    
+                    ${stepRemark ? `
+                        <div style="margin-top:4px; font-size:0.85rem; color:#475569; background:#f1f5f9; padding:6px 10px; border-radius:6px; border-left:3px solid ${dotColor};">
+                            <i class="fas fa-comment-dots" style="opacity:0.5; margin-right:4px;"></i> ${stepRemark}
+                        </div>` : ""}
                 </div>`;
         });
         timelineHtml += `</div></div>`;
     }
 
-    // --- 6. Update Header & Summary Card ---
-    let summaryTitle = "Confirm Decision";
-    if (currentStatus === "Pending Cancel") {
-        summaryTitle = "Review Cancellation";
-    }
+    // --- 5. RENDER SUMMARY (Modern Aligned UI) ---
+    let statusBadgeColor = "#f59e0b"; 
+    if (currentStatus === "Approved") statusBadgeColor = "#10b981";
+    if (currentStatus === "Rejected") statusBadgeColor = "#ef4444";
 
     document.getElementById("reviewSummary").innerHTML = `
-        <div style="background: #fff7ed; padding: 15px; border-radius: 10px; border: 1px solid #ffedd5; margin-bottom: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-size: 0.7rem; font-weight: 700; color: #9a3412; text-transform: uppercase; letter-spacing: 0.5px;">${summaryTitle}</span>
-                <strong style="font-size: 0.85rem; color: ${actionType === 'Approved' ? '#10b981' : '#ef4444'};">${actionType}</strong>
+        <div style="margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 12px;">
+            <div style="background: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <i class="fas fa-user-clock" style="color: var(--primary); font-size: 0.9rem;"></i>
             </div>
-            <div style="color: #7c2d12;">
-                <div style="font-size: 1.1rem; font-weight: 800; margin-bottom: 2px;">Overtime: ${formatDateNice(otDate)}</div>
-                <div style="font-size: 0.85rem; opacity: 0.9;">Category: <strong>${otType} OT</strong></div>
-            </div>
-            <div style="margin-top: 12px; font-size: 0.65rem; color: #9a3412; border-top: 1px dashed #fed7aa; padding-top: 8px; display: flex; justify-content: space-between;">
-                <span>Ref: #OT-${otId.toString().padStart(4, "0")}</span>
-                <span>Status: ${currentStatus}</span>
+            <div>
+                <label style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block;">Employee Name</label>
+                <strong style="font-size: 1.05rem; color: #1e293b;">${employeeName}</strong>
             </div>
         </div>
 
-        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-            <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 6px;">
-                <i class="fas fa-align-left" style="margin-right:4px;"></i> Work Description
-            </span>
-            <div style="font-size: 0.9rem; color: #334155; line-height: 1.5;">
-                "${reasonText}"
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div>
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Duration</label><br>
+                <strong style="font-size: 1rem; color: #1e293b;">${otRecord ? otRecord.total_value : "0"} ${otRecord ? otRecord.ot_unit : "hours"}</strong>
             </div>
-            ${attachmentHtml}
+            <div>
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Status</label><br>
+                <strong style="font-size: 1rem; color: ${statusBadgeColor};">${currentStatus}</strong>
+            </div>
+            <div style="grid-column: span 2;">
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Work Description</label><br>
+                <span style="font-size: 0.95rem; color: #334155; font-style: italic;">"${reasonText}"</span>
+            </div>
+            <div>
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">OT Date</label><br>
+                <span>${formatDateNice(otDate)}</span>
+            </div>
+            <div>
+                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">OT Type</label><br>
+                <span>${otType} OT</span>
+            </div>
         </div>
 
+        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Assigned Approver</label><br>
+            <span style="color: #2563eb; font-weight: 600;"><i class="fas fa-user-tie"></i> ${otRecord ? otRecord.approver_name : "Line Manager"}</span>
+        </div>
+
+        ${attachmentHtml}
         ${timelineHtml}
     `;
 
-    // --- 7. DYNAMIC BUTTON STYLING (Lock-and-Key Preserver) ---
-    approveBtn.style.display = "inline-flex";
-    rejectBtn.style.display = "inline-flex";
-    
-    // Center alignment fixes
-    approveBtn.style.alignItems = "center";
-    approveBtn.style.justifyContent = "center";
-    rejectBtn.style.alignItems = "center";
-    rejectBtn.style.justifyContent = "center";
+    // --- 6. BUTTON LOGIC (Preserved Lock-and-Key) ---
+    [approveBtn, rejectBtn].forEach(btn => {
+        btn.style.display = "inline-flex"; btn.style.alignItems = "center";
+        btn.style.justifyContent = "center"; btn.style.gap = "8px"; btn.className = "btn";
+    });
 
     if (actionType === "Approved") {
-        approveBtn.style.background = "#10b981";
-        approveBtn.style.color = "white";
+        approveBtn.style.background = "#10b981"; approveBtn.style.color = "white";
         approveBtn.style.borderColor = "#10b981";
         
         if (currentStatus === "Pending Cancel") {
-            approveBtn.innerHTML = '<i class="fas fa-check-circle" style="margin-right:5px;"></i> Confirm Cancel';
-            approveBtn.title = "Accept cancellation and remove OT";
+            approveBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Cancel';
         } else {
-            approveBtn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i> Approve';
-            approveBtn.title = "Approve this request";
+            approveBtn.innerHTML = '<i class="fas fa-check"></i> Approve';
         }
 
-        rejectBtn.style.background = "#f8fafc";
-        rejectBtn.style.color = "#64748b";
-        rejectBtn.style.borderColor = "#e2e8f0";
-        rejectBtn.innerHTML = 'Cancel';
-        rejectBtn.title = "Close window without saving";
+        rejectBtn.style.background = "white"; rejectBtn.style.color = "#64748b";
+        rejectBtn.style.border = "1px solid #cbd5e1"; rejectBtn.innerHTML = 'Go Back';
 
         approveBtn.onclick = () => {
             if (l2Container && l2Container.style.display !== "none" && !l2Select.value) {
                 let err = document.getElementById(errorId);
                 if (!err) {
-                    err = document.createElement("div");
-                    err.id = errorId;
-                    err.style.color = "#dc2626"; 
-                    err.style.fontSize = "0.75rem";
-                    err.style.marginTop = "8px";
-                    err.style.fontWeight = "600";
-                    err.innerText = "Level 2 Approver is required.";
-                    l2Container.appendChild(err);
+                    err = document.createElement("div"); err.id = errorId;
+                    err.style.color = "#dc2626"; err.style.fontSize = "0.75rem";
+                    err.style.marginTop = "8px"; err.style.fontWeight = "600";
+                    err.innerText = "Level 2 Approver is required."; l2Container.appendChild(err);
                 }
                 l2Select.style.borderColor = "#dc2626";
-                l2Select.animate([
-                    { transform: 'translateX(0)' }, { transform: 'translateX(-4px)' },
-                    { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }
-                ], { duration: 300 });
                 return; 
             }
             executeOTFinalDecision(otId, "Approved");
@@ -15934,23 +15939,18 @@ async function submitOTDecision(otId, actionType, otDate, otType, currentStatus)
         rejectBtn.onclick = () => closeReviewModal(); 
 
     } else {
-        rejectBtn.style.background = "#ef4444";
-        rejectBtn.style.color = "white";
+        // REJECT MODE
+        rejectBtn.style.background = "#ef4444"; rejectBtn.style.color = "white";
         rejectBtn.style.borderColor = "#ef4444";
         
         if (currentStatus === "Pending Cancel") {
-            rejectBtn.innerHTML = '<i class="fas fa-times-circle" style="margin-right:5px;"></i> Deny Request';
-            rejectBtn.title = "Reject cancellation (OT remains Approved)";
+            rejectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Deny Request';
         } else {
-            rejectBtn.innerHTML = '<i class="fas fa-times" style="margin-right:5px;"></i> Reject';
-            rejectBtn.title = "Reject this request";
+            rejectBtn.innerHTML = '<i class="fas fa-times"></i> Reject';
         }
 
-        approveBtn.style.background = "#f8fafc";
-        approveBtn.style.color = "#64748b";
-        approveBtn.style.borderColor = "#e2e8f0";
-        approveBtn.innerHTML = 'Cancel';
-        approveBtn.title = "Close window without saving";
+        approveBtn.style.background = "white"; approveBtn.style.color = "#64748b";
+        approveBtn.style.border = "1px solid #cbd5e1"; approveBtn.innerHTML = 'Go Back';
 
         rejectBtn.onclick = () => executeOTFinalDecision(otId, "Rejected");
         approveBtn.onclick = () => closeReviewModal(); 
