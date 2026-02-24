@@ -838,6 +838,74 @@ div.swal2-container {
     position: relative;
     z-index: 2147483647 !important;
 }
+
+/* Standardizes SweetAlert buttons to be the same width */
+.swal-btn-standard {
+    width: 140px !important; /* Adjust width as needed */
+    padding: 10px 0 !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+}
+
+/* High-Density Team Pulse Styles */
+.pulse-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.pulse-row:hover {
+    background: #f1f5f9;
+    transform: translateX(3px);
+}
+.pulse-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.pulse-sub {
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+.pulse-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.pulse-section-title {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 15px 0 8px 5px;
+}
+
+#home_away_list {
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar for a clean look */
+#home_away_list::-webkit-scrollbar {
+    width: 4px;
+}
+#home_away_list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+
+
     </style>
   </head>
             <!-- ==========================================
@@ -1306,131 +1374,36 @@ div.swal2-container {
                 </div>
 
                 <div id="manager_action_center" style="display: none">
-                    <h3 style="
-                        font-size: 0.85rem;
-                        color: #64748b;
-                        text-transform: uppercase;
-                        margin-bottom: 20px;
-                        font-weight: 700;
-                        letter-spacing: 0.5px;
-                      ">
-                        Manager Action Center
-                    </h3>
-                    <div style="
-                        display: grid;
-                        grid-template-columns: 1.8fr 2fr;
-                        gap: 25px;
-                        margin-bottom: 30px;
-                      ">
-                        <div style="
-                          background: white;
-                          border-radius: 12px;
-                          padding: 20px;
-                          display: flex;
-                          gap: 15px;
-                          min-height: 100px;
-                          border: 1px solid #e2e8f0;
-                        ">
-                            <i class="fas fa-users" style="color: #94a3b8; margin-top: 5px"></i>
-                            <div style="flex: 1">
-                                <div style="
-                              display: flex;
-                              justify-content: space-between;
-                              align-items: center;
-                              margin-bottom: 10px;
-                            ">
-                                    <small style="
-                                font-weight: 700;
-                                color: #64748b;
-                                font-size: 0.65rem;
-                                text-transform: uppercase;
-                                display: block;
-                              ">Who's Away Today</small>
-                                </div>
-                                <ul id="home_away_list" style="
-                              list-style: none;
-                              padding: 0;
-                              margin: 0;
-                              color: #475569;
-                            "></ul>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px">
-                            <div onclick="showSection('manager_requests')" style="
-                            background: #eff6ff;
-                            border: 1px solid #bfdbfe;
-                            border-radius: 12px;
-                            padding: 15px;
-                            cursor: pointer;
-                            transition: 0.2s;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: space-between;
-                          " onmouseover="this.style.backgroundColor='#dbeafe'" onmouseout="this.style.backgroundColor='#eff6ff'">
-                                <div>
-                                    <small style="
-                                font-weight: 700;
-                                color: #1e40af;
-                                font-size: 0.6rem;
-                                text-transform: uppercase;
-                              ">Pending Leaves</small>
-                                    <div id="home_leave_count" style="
-                                font-size: 1.8rem;
-                                font-weight: 800;
-                                color: #1e3a8a;
-                                margin-top: 5px;
-                              ">
-                                        0
-                                    </div>
-                                </div>
-                                <span id="home_leave_badge" class="status-badge status-pending" style="
-                              display: none;
-                              font-size: 0.6rem;
-                              width: fit-content;
-                              padding: 2px 6px;
-                            ">New</span>
-                            </div>
-
-                            <div onclick="showSection('manager_ot_requests')" style="
-                            background: #fff7ed;
-                            border: 1px solid #ffedd5;
-                            border-radius: 12px;
-                            padding: 15px;
-                            cursor: pointer;
-                            transition: 0.2s;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: space-between;
-                          " onmouseover="this.style.backgroundColor='#ffedd5'" onmouseout="this.style.backgroundColor='#fff7ed'">
-                                <div>
-                                    <small style="
-                                font-weight: 700;
-                                color: #9a3412;
-                                font-size: 0.6rem;
-                                text-transform: uppercase;
-                              ">Pending OT</small>
-                                    <div id="home_ot_count" style="
-                                font-size: 1.8rem;
-                                font-weight: 800;
-                                color: #7c2d12;
-                                margin-top: 5px;
-                              ">
-                                        0
-                                    </div>
-                                </div>
-                                <span id="home_ot_badge" class="status-badge status-rejected" style="
-                              display: none;
-                              font-size: 0.6rem;
-                              width: fit-content;
-                              padding: 2px 6px;
-                              background: #fee2e2;
-                              color: #991b1b;
-                            ">Urgent</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                  <div style="display: grid; grid-template-columns: 1.8fr 2fr; gap: 25px; margin-bottom: 30px;">
+                      
+                      <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0;">
+                          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                              <i class="fas fa-users" style="color: #94a3b8;"></i>
+                              <small id="away_today_title" style="font-weight: 700; color: #64748b; font-size: 0.65rem; text-transform: uppercase;">Who's Away Today</small>
+                          </div>
+                          <div id="home_away_list"></div> </div>
+              
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px">
+                          
+                          <div onclick="showSection('manager_requests')" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 15px; cursor: pointer;">
+                              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                  <small style="font-weight: 700; color: #1e40af; font-size: 0.6rem; text-transform: uppercase;">Pending Leaves</small>
+                                  <div id="home_leave_count" style="font-size: 1.5rem; font-weight: 800; color: #1e3a8a;">0</div>
+                              </div>
+                              <div id="tile_leave_inbox" style="margin-top: 10px; border-top: 1px solid rgba(30, 64, 175, 0.1); padding-top: 8px;"></div>
+                          </div>
+              
+                          <div onclick="showSection('manager_ot_requests')" style="background: #fff7ed; border: 1px solid #ffedd5; border-radius: 12px; padding: 15px; cursor: pointer;">
+                              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                  <small style="font-weight: 700; color: #9a3412; font-size: 0.6rem; text-transform: uppercase;">Pending OT</small>
+                                  <div id="home_ot_count" style="font-size: 1.5rem; font-weight: 800; color: #7c2d12;">0</div>
+                              </div>
+                              <div id="tile_ot_inbox" style="margin-top: 10px; border-top: 1px solid rgba(154, 52, 18, 0.1); padding-top: 8px;"></div>
+                          </div>
+              
+                      </div>
+                  </div>
+              </div>
 
                 <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 50px; text-align: center; opacity: 0.8;">
                   © 2026 <span style="color: #236ee7; font-weight: 600;">IdeaMakr</span> 
@@ -7032,11 +7005,13 @@ function toggleAdminView() {
 
 
 
-// 🚀 REPLACES BOTH DUPLICATES
-async function requestCancelLeave(leaveId) {
+/**
+ * 🚀 REQUEST CANCELLATION (Leave)
+ * Standardized Button Sizes
+ */
+ async function requestCancelLeave(leaveId) {
     Swal.fire({
         title: 'Cancel Approved Leave',
-        // Custom HTML to include the Textarea AND the Counter Span
         html: `
             <p style="color:#64748b; font-size:0.9rem; margin-bottom:15px;">
                 Please provide a reason for cancelling this approved leave. Your manager will need to review this.
@@ -7044,55 +7019,49 @@ async function requestCancelLeave(leaveId) {
             <div style="position: relative;">
                 <textarea id="swal-cancel-reason" class="saas-form-control" rows="3" maxlength="200"
                     style="width: 100%; padding: 10px; font-family: inherit; resize: none; border: 1px solid #cbd5e1; border-radius: 6px;"
-                    placeholder="e.g. Change of plans / Trip postponed..."></textarea>
-                
+                    placeholder="e.g. Change of plans..."></textarea>
                 <div style="text-align: right; font-size: 0.75rem; color: #94a3b8; margin-top: 5px;">
                     <span id="swal-char-count">0</span>/200
                 </div>
             </div>
         `,
         showCancelButton: true,
-        confirmButtonText: 'Submit Request',
-        confirmButtonColor: '#ef4444', // Red for "Cancel" action
+        confirmButtonText: 'Send for Approval',
+        confirmButtonColor: '#ef4444', 
         cancelButtonText: 'Cancel',
+        // 🚀 APPLY STANDARDIZED CLASS
+        customClass: {
+            confirmButton: 'swal-btn-custom',
+            cancelButton: 'swal-btn-custom'
+        },
         focusConfirm: false, 
         didOpen: () => {
-            // 🚀 LIVE COUNTER LOGIC
             const input = document.getElementById('swal-cancel-reason');
             const counter = document.getElementById('swal-char-count');
-            
-            // Auto-focus the input
             if(input) input.focus();
-
             if(input && counter) {
                 input.oninput = () => {
                     const len = input.value.length;
                     counter.innerText = len;
-                    
-                    // Turn red if maxed out
-                    if(len >= 200) counter.style.color = '#ef4444';
-                    else counter.style.color = '#94a3b8';
+                    counter.style.color = len >= 200 ? '#ef4444' : '#94a3b8';
                 };
             }
         },
         preConfirm: () => {
-            // 🚀 MANUAL VALIDATION
-            const input = document.getElementById('swal-cancel-reason');
-            const value = input ? input.value.trim() : "";
-            
-            if (!value || value.length < 5) {
-                Swal.showValidationMessage('Please provide a meaningful reason (at least 5 characters).');
+            const val = document.getElementById('swal-cancel-reason')?.value.trim();
+            if (!val || val.length < 5) {
+                Swal.showValidationMessage('Please provide a reason (min 5 chars).');
                 return false;
             }
-            return value;
+            return val;
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            // Pass the reason to the submit handler (Logic Preserved)
             executeCancellationSubmit(leaveId, "LEAVE", result.value);
         }
     });
 }
+
 
 function viewLeaveDetails(leave) {
     const modal = document.getElementById("leaveDetailModal");
@@ -8194,14 +8163,8 @@ async function cancelOT(id) {
 
 
 /**
- * 🚀 FIXED: OT Cancellation Request
- * - Uses SweetAlert (Reliable, no hidden HTML modals).
- * - Sends the reason to the backend.
- * - L2 Agnostic: Works for both ON/OFF modes (Routing happens on the backend).
- */
-/**
  * 🚀 REQUEST CANCELLATION (OT)
- * Opens a SweetAlert modal to capture the reason.
+ * Standardized Button Sizes & Clear Labels
  */
  async function requestCancelOT(otId) {
     Swal.fire({
@@ -8221,9 +8184,14 @@ async function cancelOT(id) {
             </div>
         `,
         showCancelButton: true,
-        confirmButtonText: 'Submit Request',
+        confirmButtonText: 'Submit for Approval',
         confirmButtonColor: '#ef4444', 
-        cancelButtonText: 'Cancel',
+        cancelButtonText: 'Cancel', // 🚀 Standardized Label
+        // 🚀 APPLY STANDARDIZED CLASS
+        customClass: {
+            confirmButton: 'swal-btn-custom',
+            cancelButton: 'swal-btn-custom'
+        },
         focusConfirm: false, 
         didOpen: () => {
             // Live Character Counter
@@ -13994,160 +13962,165 @@ function toggleUserStatus(userId, fullName) {
 // 3. Helper to load the form data (Intelligent Dashboard Engine)
 // 3. Helper to load the form data (Intelligent Dashboard Engine)
 async function loadHomeLeadershipInsights() {
-        const isHR = userRoles.includes("hr_admin");
-        const isManager = userRoles.includes("manager");
-        const isBoss = isHR || isManager;
+    const isHR = userRoles.includes("hr_admin");
+    const isManager = userRoles.includes("manager");
+    const isBoss = isHR || isManager;
 
-        const panel = document.getElementById("leadership_panel");
-        const miniStats = document.getElementById("leadership_mini_stats");
-        const actionCenter = document.getElementById("manager_action_center");
-        const listEl = document.getElementById("home_away_list");
+    const panel = document.getElementById("leadership_panel");
+    const miniStats = document.getElementById("leadership_mini_stats");
+    const actionCenter = document.getElementById("manager_action_center");
+    
+    const listEl = document.getElementById("home_away_list");
+    const leaveInbox = document.getElementById("tile_leave_inbox");
+    const otInbox = document.getElementById("tile_ot_inbox");
 
-        if (panel) panel.style.display = "block";
-        if (miniStats) miniStats.style.display = isBoss ? "flex" : "none";
-        if (actionCenter) actionCenter.style.display = isManager ? "block" : "none";
+    if (panel) panel.style.display = "block";
+    if (miniStats) miniStats.style.display = isBoss ? "flex" : "none";
+    if (actionCenter) actionCenter.style.display = isBoss ? "block" : "none";
 
-        try {
-            // 🚀 TIMEZONE-SAFE LOCAL DATE
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const todayStr = `${year}-${month}-${day}`; // Strictly YYYY-MM-DD
-            
-            const dayOfWeek = now.getDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const todayStr = now.toISOString().split('T')[0];
 
-            // 🚀 HIGH-PERFORMANCE CONCURRENT FETCHING
-            const fetchPromises = [
-                fetchWithAuth(`${API_URL}/leaves/public-holidays`),
-                fetchWithAuth(`${API_URL}/leaves/public-calendar`),
-                fetchWithAuth(`${API_URL}/leaves/history?employee_name=${encodeURIComponent(currentUser)}&page_size=100`)
-            ];
+        // 1. CONCURRENT FETCHING
+        const fetchPromises = [
+            fetchWithAuth(`${API_URL}/leaves/public-holidays`),
+            fetchWithAuth(`${API_URL}/leaves/public-calendar`),
+            fetchWithAuth(`${API_URL}/leaves/history?employee_name=${encodeURIComponent(currentUser)}&page_size=100`)
+        ];
 
-            if (isBoss) {
-                const roleParam = isHR ? "hr_admin" : "manager";
-                fetchPromises.push(
-                    fetchWithAuth(`${API_URL}/leaves/manager/all?user_role=${roleParam}&approver_name=${encodeURIComponent(currentUser)}`)
-                );
-            }
-
-            const responses = await Promise.all(fetchPromises);
-
-            const holidays = responses[0] && responses[0].ok ? await responses[0].json() : [];
-            const publicLeaves = responses[1] && responses[1].ok ? await responses[1].json() : [];
-            const myHistoryData = responses[2] && responses[2].ok ? await responses[2].json() : { leaves: [] };
-            const myLeaves = myHistoryData.leaves || [];
-            
-            const mgrData = isBoss && responses[3] && responses[3].ok ? await responses[3].json() : { requests: [] };
-            const mgrLeaves = mgrData.requests || [];
-
-            // --- 🗓️ 1. UPCOMING HOLIDAY TILE (30-Day Window) ---
-            const holidayLimit = new Date(year, now.getMonth(), now.getDate() + 30);
-            const hlYear = holidayLimit.getFullYear();
-            const hlMonth = String(holidayLimit.getMonth() + 1).padStart(2, '0');
-            const hlDay = String(holidayLimit.getDate()).padStart(2, '0');
-            const holidayLimitStr = `${hlYear}-${hlMonth}-${hlDay}`;
-
-            const nextHoliday = holidays
-                .filter(h => h.holiday_date >= todayStr && h.holiday_date <= holidayLimitStr)
-                .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date))[0];
-
-            const holidayEl = document.getElementById("home_next_holiday");
-            if (holidayEl) {
-                if (nextHoliday) {
-                    const [y, m, d] = nextHoliday.holiday_date.split("-");
-                    const hDate = new Date(y, m - 1, d);
-                    const diffTime = hDate.getTime() - new Date(year, now.getMonth(), now.getDate()).getTime();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    let countdownText = diffDays === 0 ? "TODAY" : `In ${diffDays} days`;
-
-                    holidayEl.innerHTML = `
-                        <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Next Holiday</div>
-                        <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.2;">${nextHoliday.name}</div>
-                        <small style="color: #0369a1; font-weight: 600; font-size: 0.75rem;">${countdownText} (${formatDateNice(nextHoliday.holiday_date)})</small>`;
-                } else {
-                    holidayEl.innerHTML = `
-                        <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Next Holiday</div>
-                        <div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No holidays in the next 30 days.</div>`;
-                }
-            }
-
-            // --- ✈️ 2. MY UPCOMING LEAVE TILE ---
-            const personalUpcoming = myLeaves
-                .filter((l) =>
-                    (l.status || "").trim().toLowerCase() === "approved" &&
-                    l.start_date > todayStr &&
-                    l.start_date <= holidayLimitStr
-                )
-                .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
-
-            const leaveEl = document.getElementById("home_my_next_leave");
-            if (leaveEl) {
-                if (personalUpcoming) {
-                    const [y, m, d] = personalUpcoming.start_date.split("-");
-                    const lDate = new Date(y, m - 1, d);
-                    const diffTime = lDate.getTime() - new Date(year, now.getMonth(), now.getDate()).getTime();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    let countdownText = diffDays === 1 ? "Tomorrow" : `In ${diffDays} days`;
-
-                    leaveEl.innerHTML = `
-                        <div style="font-size: 0.7rem; font-weight: 700; color: #ef4444; text-transform: uppercase; margin-bottom: 4px;">
-                            <i class="fas fa-plane-departure"></i> Starting Soon
-                        </div>
-                        <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.2;">
-                            ${formatDateNice(personalUpcoming.start_date)}
-                        </div>
-                        <small style="color: #15803d; font-weight: 600; font-size: 0.75rem;">Approved • ${personalUpcoming.days_taken} Day(s)</small>`;
-                } else {
-                    leaveEl.innerHTML = `
-                        <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Upcoming Leave</div>
-                        <div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No approved leave in the next 30 days.</div>`;
-                }
-            }
-
-            // --- 🟢 3. TEAM AVAILABILITY LOGIC (Away Today) ---
-            if (listEl) {
-                const todayHoliday = holidays.find((h) => h.holiday_date === todayStr);
-
-                if (todayHoliday) {
-                    listEl.innerHTML = `<li style="color: #0369a1; font-weight: 600; padding: 10px;"><i class="fas fa-umbrella-beach"></i> Office Closed: ${todayHoliday.name}</li>`;
-                } else if (isWeekend) {
-                    listEl.innerHTML = `<li style="color: #64748b; padding: 10px;"><i class="fas fa-couch"></i> Office Closed for the weekend.</li>`;
-                } else {
-                    // 🚀 THE FIX: Everyone uses the Public Calendar for "Who's Away Today"
-                    const awayToday = publicLeaves.filter((l) => todayStr >= l.start_date && todayStr <= l.end_date);
-
-                    listEl.innerHTML = awayToday.length === 0
-                        ? `<li style="color: #94a3b8; padding: 10px;"><i class="fas fa-check-circle"></i> Everyone is present today.</li>`
-                        : awayToday.map((l) => `
-                            <li style="margin-bottom: 8px; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 8px; padding: 5px 10px;">
-                                <span style="width: 8px; height: 8px; background: #e57d70; border-radius: 50%;"></span>
-                                ${l.employee_name} <small style="font-weight: normal; color: #94a3b8;">(${l.leave_type.replace(" Leave", "")})</small>
-                            </li>`
-                          ).join("");
-                }
-            }
-
-            // --- 📊 4. MINI STATS (Boss Only) ---
-            if (isBoss && miniStats) {
-                const approved = mgrLeaves.filter((l) => (l.status || "").trim().toLowerCase() === "approved");
-                const medical = approved.filter((l) => l.leave_type === "Medical Leave").length;
-
-                if (document.getElementById("home_stat_total")) document.getElementById("home_stat_total").innerText = mgrLeaves.length;
-                if (document.getElementById("home_stat_approved")) document.getElementById("home_stat_approved").innerText = approved.length;
-                
-                if (document.getElementById("home_stat_medical")) {
-                    const userRes = await fetchWithAuth(`${API_URL}/users/all`);
-                    const allUsers = userRes && userRes.ok ? await userRes.json() : [];
-                    const activeCount = allUsers.filter((u) => u.is_active !== false).length || 1;
-                    document.getElementById("home_stat_medical").innerText = Math.round((medical / activeCount) * 100) + "%";
-                }
-            }
-        } catch (err) {
-            console.error("Home Refresh Error:", err);
+        if (isBoss) {
+            const roleParam = isHR ? "hr_admin" : "manager";
+            fetchPromises.push(fetchWithAuth(`${API_URL}/leaves/manager/all?user_role=${roleParam}&approver_name=${encodeURIComponent(currentUser)}`));
+            fetchPromises.push(fetchWithAuth(`${API_URL}/overtime/manager-requests?approver_name=${encodeURIComponent(currentUser)}`));
         }
+
+        const responses = await Promise.all(fetchPromises);
+
+        const holidays = responses[0]?.ok ? await responses[0].json() : [];
+        const publicLeaves = responses[1]?.ok ? await responses[1].json() : [];
+        const myHistoryData = responses[2]?.ok ? await responses[2].json() : { leaves: [] };
+        const myLeaves = myHistoryData.leaves || [];
+        
+        const mgrData = isBoss && responses[3]?.ok ? await responses[3].json() : { requests: [] };
+        const mgrLeaves = mgrData.requests || [];
+
+        const otData = isBoss && responses[4]?.ok ? await responses[4].json() : [];
+        const pendingOT = (Array.isArray(otData) ? otData : []).filter(r => r.status.includes("Pending"));
+        const pendingLeaves = mgrLeaves.filter(l => l.status === "Pending");
+
+        // --- 🗓️ 1. NEXT HOLIDAY TILE (Unlimited Search) ---
+        const nextHoliday = holidays.filter(h => h.holiday_date >= todayStr).sort((a, b) => a.holiday_date.localeCompare(b.holiday_date))[0];
+        const holidayEl = document.getElementById("home_next_holiday");
+        if (holidayEl) {
+            if (nextHoliday) {
+                const hDate = new Date(nextHoliday.holiday_date);
+                const diffDays = Math.ceil((hDate - new Date(todayStr)) / (1000 * 60 * 60 * 24));
+                holidayEl.innerHTML = `
+                    <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Next Holiday</div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.2;">${nextHoliday.name}</div>
+                    <small style="color: #0369a1; font-weight: 600; font-size: 0.75rem;">${diffDays === 0 ? 'TODAY' : 'In '+diffDays+' days'} (${formatDateNice(nextHoliday.holiday_date)})</small>`;
+            } else {
+                holidayEl.innerHTML = `
+                    <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Next Holiday</div>
+                    <div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No upcoming holidays.</div>`;
+            }
+        }
+
+        // --- ✈️ 2. MY UPCOMING SCHEDULE (Personal Leave) ---
+        // Looks ahead 30 days for your own approved leaves
+        const holidayLimit = new Date(year, now.getMonth(), now.getDate() + 30);
+        const holidayLimitStr = holidayLimit.toISOString().split('T')[0];
+        const personalUpcoming = myLeaves
+            .filter(l => (l.status || "").toLowerCase() === "approved" && l.start_date > todayStr && l.start_date <= holidayLimitStr)
+            .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
+
+        const leaveEl = document.getElementById("home_my_next_leave");
+        if (leaveEl) {
+            if (personalUpcoming) {
+                const lDate = new Date(personalUpcoming.start_date);
+                const diffDays = Math.ceil((lDate - new Date(todayStr)) / (1000 * 60 * 60 * 24));
+                leaveEl.innerHTML = `
+                    <div style="font-size: 0.7rem; font-weight: 700; color: #ef4444; text-transform: uppercase; margin-bottom: 4px;">
+                        <i class="fas fa-plane-departure"></i> Starting Soon
+                    </div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.2;">${formatDateNice(personalUpcoming.start_date)}</div>
+                    <small style="color: #15803d; font-weight: 600; font-size: 0.75rem;">${diffDays === 1 ? 'Tomorrow' : 'In ' + diffDays + ' days'} • ${personalUpcoming.days_taken} Day(s)</small>`;
+            } else {
+                leaveEl.innerHTML = `
+                    <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Upcoming Leave</div>
+                    <div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No approved leave in 30 days.</div>`;
+            }
+        }
+
+        // --- 🔵 3. LEAVE TILE (Inbox Rows) ---
+        if (document.getElementById("home_leave_count")) document.getElementById("home_leave_count").innerText = pendingLeaves.length;
+        if (leaveInbox) {
+            leaveInbox.innerHTML = pendingLeaves.length > 0 
+                ? pendingLeaves.slice(0, 3).map(l => `
+                    <div class="pulse-row" style="background:rgba(255,255,255,0.6); border-left: 3px solid #f59e0b; padding: 6px 8px; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;" onclick="showSection('manager_requests')">
+                        <div style="display:flex; flex-direction:column;">
+                            <span class="pulse-name" style="font-size:0.75rem; font-weight:700;">${l.employee_name.split(' ')[0]}</span>
+                            <span style="font-size:0.6rem; color:#64748b;">${l.days_taken}d Leave</span>
+                        </div>
+                        <span class="pulse-label" style="background:#fff7ed; color:#f59e0b; font-size:0.55rem; padding: 2px 4px; font-weight:800;">REVIEW</span>
+                    </div>`).join("")
+                : `<div style="font-size:0.65rem; opacity:0.5; font-style:italic;">All clear!</div>`;
+        }
+
+        // --- 🟠 4. OT TILE (Inbox Rows) ---
+        if (document.getElementById("home_ot_count")) document.getElementById("home_ot_count").innerText = pendingOT.length;
+        if (otInbox) {
+            otInbox.innerHTML = pendingOT.length > 0 
+                ? pendingOT.slice(0, 3).map(o => `
+                    <div class="pulse-row" style="background:rgba(255,255,255,0.6); border-left: 3px solid #3b82f6; padding: 6px 8px; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;" onclick="showSection('manager_ot_requests')">
+                        <div style="display:flex; flex-direction:column;">
+                            <span class="pulse-name" style="font-size:0.75rem; font-weight:700;">${o.employee_name.split(' ')[0]}</span>
+                            <span style="font-size:0.6rem; color:#64748b;">${o.total_value}${o.ot_unit[0]} Claim</span>
+                        </div>
+                        <span class="pulse-label" style="background:#eff6ff; color:#3b82f6; font-size:0.55rem; padding: 2px 4px; font-weight:800;">OT</span>
+                    </div>`).join("")
+                : `<div style="font-size:0.65rem; opacity:0.5; font-style:italic;">All clear!</div>`;
+        }
+
+        // --- 🟢 5. ATTENDANCE (Away Sidebar) ---
+        if (listEl) {
+            const awayToday = publicLeaves.filter(l => todayStr >= l.start_date && todayStr <= l.end_date);
+            if (document.getElementById("away_today_title")) {
+                document.getElementById("away_today_title").innerText = `Who's Away Today (${awayToday.length})`;
+            }
+            listEl.innerHTML = awayToday.length === 0 
+                ? `<div style="font-size:0.75rem; color:#94a3b8; padding:10px 0; font-style:italic;">Everyone is present.</div>`
+                : awayToday.map(l => `
+                    <div class="pulse-row" style="background:#f8fafc; border-left: 3px solid #e57d70; padding: 8px 10px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #f1f5f9;">
+                        <div style="display:flex; flex-direction:column;">
+                            <span class="pulse-name" style="font-size:0.85rem; font-weight:700; color:#1e293b;">${l.employee_name}</span>
+                            <span style="font-size:0.65rem; color:#64748b;">Until ${formatDateNice(l.end_date)}</span>
+                        </div>
+                        <span class="pulse-label" style="background:#fef2f2; color:#e57d70; font-size:0.6rem; padding: 2px 6px; border-radius: 4px; font-weight:800; text-transform: uppercase;">
+                            ${l.leave_type.split(' ')[0]}
+                        </span>
+                    </div>`).join("");
+        }
+
+        // --- 📊 6. MINI STATS (Yellow Card) ---
+        if (isBoss && miniStats) {
+            const approved = mgrLeaves.filter(l => (l.status || "").toLowerCase() === "approved");
+            const medical = approved.filter(l => l.leave_type === "Medical Leave").length;
+            document.getElementById("home_stat_total").innerText = mgrLeaves.length;
+            document.getElementById("home_stat_approved").innerText = approved.length;
+            
+            const userRes = await fetchWithAuth(`${API_URL}/users/all`);
+            const allUsers = userRes && userRes.ok ? await userRes.json() : [];
+            const activeCount = allUsers.filter(u => u.is_active !== false).length || 1;
+            document.getElementById("home_stat_medical").innerText = Math.round((medical / activeCount) * 100) + "%";
+        }
+
+    } catch (err) {
+        console.error("Dashboard Refresh Error:", err);
     }
+}
 
  // 🚀 MY PROFILE: Modern Digital Dossier (Zero-Bug Version)
  async function loadUserProfile() {
