@@ -264,7 +264,7 @@ async def create_leave(
         if real_cost > rem_bal:
              raise HTTPException(
                 status_code=400, 
-                detail=f"Insufficient Balance: You have {rem_bal} Annual Leave days, but tried to Carry Forward {real_cost}."
+                detail=f"Insufficient Balance: You have {rem_bal} Annual Leave days, but you attempted to carry forward {real_cost}."
             )
 
     elif leave_type != "Unpaid Leave":
@@ -581,6 +581,8 @@ async def cancel_leave_request( # 🚀 Changed to async
 
 # --- MANAGER PENDING VIEW ---
 # --- MANAGER PENDING VIEW ---
+# In app/routers/leave.py
+
 @router.get("/manager/pending")
 def get_manager_pending(
     approver_name: str,  # Required
@@ -592,20 +594,23 @@ def get_manager_pending(
     end_date: str = "",     
     leave_type: str = "",   
     status: str = "",
-    # user: models.User = Depends(validate_session) # Optional
 ):
-    # 1. 🚀 ROBUST QUERY (Using Strings to prevent Enum crashes)
+    # 1. 🚀 ROBUST QUERY
     query = db.query(models.Leave).filter(
         or_(
-            # Lane 1: I am the L1 Manager (Standard Requests)
+            # Lane 1: L1 Manager (Sarah)
+            # She sees "Pending" (New Requests) AND "Pending Cancel" (Cancellation Requests)
             and_(
                 models.Leave.approver_name == approver_name,
                 models.Leave.status.in_(["Pending", "Pending Cancel"])
             ),
-            # Lane 2: I am the L2 Manager (Escalated Requests)
+            
+            # Lane 2: L2 Manager (Tony)
+            # 🚀 FIX: REMOVED "Pending Cancel" from here.
+            # Tony only sees the request when it is explicitly escalated to "Pending L2 Approval".
             and_(
                 models.Leave.approver_l2 == approver_name,
-                models.Leave.status.in_(["Pending L2 Approval", "Pending Cancel"])
+                models.Leave.status.in_(["Pending L2 Approval"]) 
             )
         )
     )
@@ -625,8 +630,7 @@ def get_manager_pending(
     # 3. Pagination Logic
     total_count = query.count()
     
-    # 🚀 FIX: Use 'models.Leave.id.desc()' instead of 'desc(...)'.
-    # This solves the "NameError: name 'desc' is not defined" crash.
+    # Using desc() on ID to show newest first
     results = query.order_by(models.Leave.id.desc()).offset((page-1)*page_size).limit(page_size).all()
     
     # 4. Return Dictionary
@@ -677,10 +681,12 @@ def fix_db_schema(db: Session = Depends(get_db)):
 
 
 
+# app/routers/leave.py
+
 @router.post("/manager/action/{leave_id}")
-async def approve_leave(  # 🚀 Added 'async' here so it works nicely with BackgroundTasks
+async def approve_leave( 
     leave_id: int, 
-    background_tasks: BackgroundTasks, # 🚀 Added BackgroundTasks
+    background_tasks: BackgroundTasks, 
     status: str = Query(...),       
     remarks: str = Query(""),       
     approver_name: str = Query(""), 
@@ -695,131 +701,149 @@ async def approve_leave(  # 🚀 Added 'async' here so it works nicely with Back
     acting_mgr = db.query(models.User).filter(models.User.full_name == approver_name).first()
     is_senior = acting_mgr.is_senior_manager if acting_mgr else False
     is_l1 = (approver_name == leave.approver_name)
-
+    
     # 2. Get Global Policy for L2 Toggle
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     l2_active = policy.l2_approval_enabled if policy else False
 
-    # 3. 📝 PREPARE VARIABLES (Consolidated & Safe)
+    # 3. 📝 PREPARE VARIABLES
     current_status = leave.status
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     note_str = f" | Note: {remarks}" if remarks else ""
-    
-    # Handle Enum conversion safely
     l_type_str = str(leave.leave_type.value) if hasattr(leave.leave_type, 'value') else str(leave.leave_type)
 
+    # 🕵️ CRITICAL FIX: DETECT CANCELLATION JOURNEY
+    # We check if this is a cancellation flow by looking at status OR history.
+    # This ensures that even if status is "Pending L2 Approval", we know it's a cancellation.
+    history_log = leave.status_history or ""
+    is_cancellation_journey = (
+        current_status == "Pending Cancel" or 
+        "Cancellation" in history_log or
+        "Request Cancellation" in history_log
+    )
+
     # =========================================================================
-    # 4. HANDLE CANCELLATION REQUESTS (Pending Cancel)
+    # 4. HANDLE CANCELLATION LOGIC (For BOTH L1 and L2 Stages)
     # =========================================================================
-    if current_status == "Pending Cancel":
+    if is_cancellation_journey:
         if status == "Approved":
-            
-            # 🚀 NEW: SUPER-ADMIN OVERRIDE
+            # 🚀 SUPER-ADMIN OVERRIDE
             is_hr_admin = acting_mgr and (acting_mgr.role == "hr_admin" or any(r.role_name == "hr_admin" for r in acting_mgr.assigned_roles))
 
-            # 🔶 SCENARIO A: L1 Approves Cancellation -> Route to L2
-            if not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2:
+            # 🔶 SCENARIO A: L1 Approves Cancellation -> Route to L2 (Only if L2 is active & required)
+            # Logic: If we are strictly at L1 stage ("Pending Cancel") AND L2 is required
+            if current_status == "Pending Cancel" and not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2:
                 l2_user = db.query(models.User).filter(models.User.full_name == leave.approver_l2).first()
                 l2_still_valid = l2_user and l2_user.is_active and l2_user.is_senior_manager
 
                 if l2_still_valid:
                     # Log History and Route
+                    leave.status = "Pending L2 Approval"
                     leave.status_history += f" > L1 Approved Cancellation. Routed to {leave.approver_l2} ({timestamp}){note_str}"
                     
-                    # 📧 Notify L2 Manager (Via Background Task)
-                    if l2_user.email:
-                        body = template_l2_cancellation_request(
-                            l2_manager_name=l2_user.full_name, 
-                            l1_manager_name=approver_name, 
-                            employee_name=leave.employee_name, 
-                            type=l_type_str, 
-                            start=str(leave.start_date), 
-                            end=str(leave.end_date)
-                        )
-                        background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: L2 Cancellation - {leave.employee_name}", body)
+                    # 📧 Notify L2 Manager
+                    try:
+                        if l2_user.email:
+                            body = template_l2_cancellation_request(
+                                l2_manager_name=l2_user.full_name, 
+                                l1_manager_name=approver_name, 
+                                employee_name=leave.employee_name, 
+                                type=l_type_str, 
+                                start=str(leave.start_date), 
+                                end=str(leave.end_date)
+                            )
+                            background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: L2 Cancellation - {leave.employee_name}", body)
+                    except Exception as e:
+                        print(f"⚠️ Email Error (L2 Route): {e}")
 
                     db.commit()
                     return {"message": "Cancellation approved by L1. Routed to L2."}
                 
-                else:
-                    leave.status = "Cancelled"
-                    leave.status_history += f" > Cancellation FINALIZED by {approver_name} {{Note: Assigned L2 Power Revoked}} ({timestamp}){note_str}"
-
-            # 🟢 SCENARIO B: Final Cancellation (L2 acted, Senior acted, OR HR Admin acted)
-            else:
-                leave.status = "Cancelled"
-                admin_note = " by HR Admin" if is_hr_admin else ""
-                leave.status_history += f" > Cancellation FINALIZED{admin_note} by {approver_name} ({timestamp}){note_str}"
+            # 🟢 SCENARIO B: Final Cancellation 
+            # This executes if:
+            # 1. It is L1 but L2 is OFF
+            # 2. It is L1 but User is Senior
+            # 3. It is already at L2 ("Pending L2 Approval") <-- THIS FIXES YOUR BUG
+            leave.status = "Cancelled"
+            admin_note = " by HR Admin" if is_hr_admin else ""
+            leave.status_history += f" > Cancellation FINALIZED{admin_note} by {approver_name} ({timestamp}){note_str}"
             
-            # 📧 Notify Employee (Via Background Task)
-            emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
-            if emp and emp.email:
-                body = template_cancellation_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                background_tasks.add_task(send_email, emp.email, f"Leave Cancelled: {l_type_str}", body)
+            # 📧 Notify Employee
+            try:
+                emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
+                if emp and emp.email:
+                    body = template_cancellation_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                    background_tasks.add_task(send_email, emp.email, f"Leave Cancelled: {l_type_str}", body)
+            except Exception as e:
+                print(f"⚠️ Email Error (Final Cancel): {e}")
 
         else:
             # 🔴 SCENARIO C: Cancellation Rejected (Revert to Approved)
+            # If ANYONE rejects the cancellation, it goes back to being an Active Approved Leave
             leave.status = "Approved" 
             leave.status_history += f" > Cancellation REJECTED by {approver_name} ({timestamp}){note_str}"
             
-            # 📧 Notify Employee (Via Background Task)
-            emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
-            if emp and emp.email:
-                body = template_cancellation_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks)
-                background_tasks.add_task(send_email, emp.email, f"Cancellation Denied: {l_type_str}", body)
-    
+            # 📧 Notify Employee
+            try:
+                emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
+                if emp and emp.email:
+                    body = template_cancellation_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks)
+                    background_tasks.add_task(send_email, emp.email, f"Cancellation Denied: {l_type_str}", body)
+            except Exception as e:
+                print(f"⚠️ Email Error (Cancel Reject): {e}")
+
     # =========================================================================
-    # 5. HANDLE STANDARD APPROVALS (New Requests)
+    # 5. HANDLE NORMAL LEAVE REQUESTS (Pending -> Approved/Rejected)
     # =========================================================================
-    elif status == "Approved":
-        # 🔶 Route to L2 if policy enabled, it's a new request, and manager isn't senior
-        if l2_active and current_status == "Pending" and not is_senior:
-            if not l2_name:
-                raise HTTPException(status_code=400, detail="L2 Manager must be selected.")
-            
-            leave.status = "Pending L2 Approval"
-            leave.approver_l2 = l2_name
-            leave.status_history += f" > L1 Approved by {approver_name}. Routed to {l2_name} ({timestamp}){note_str}"
-            
-            # 📧 Notify L2 Manager (Via Background Task)
-            l2_mgr_rec = db.query(models.User).filter(models.User.full_name == l2_name).first()
-            if l2_mgr_rec and l2_mgr_rec.email:
-                body = template_l2_request(l2_mgr_rec.full_name, approver_name, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                background_tasks.add_task(send_email, l2_mgr_rec.email, f"ACTION REQUIRED: L2 Approval - {leave.employee_name}", body)
-        
-        else:
+    else:
+        if status == "Approved":
+            # 🔶 L1 Approval -> Route to L2
+            if l2_name: 
+                leave.status = "Pending L2 Approval"
+                leave.approver_l2 = l2_name
+                leave.status_history += f" > L1 Approved. Routed to {l2_name} ({timestamp}){note_str}"
+                
+                # Notify L2
+                try:
+                    l2_user = db.query(models.User).filter(models.User.full_name == l2_name).first()
+                    if l2_user and l2_user.email:
+                        body = template_l2_request(l2_name, approver_name, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                        background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: L2 Approval - {leave.employee_name}", body)
+                except Exception as e:
+                    print(f"⚠️ Email Error (Normal L2): {e}")
+
             # 🟢 Final Approval
-            leave.status = "Approved"
-            leave.approved_at = datetime.now()
-            leave.status_history += f" > Final Approval by {approver_name} ({timestamp}){note_str}"
-            
-            # 📧 Notify Employee (Via Background Task)
-            emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
-            if emp and emp.email:
-                body = template_request_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                background_tasks.add_task(send_email, emp.email, f"Leave Approved: {l_type_str}", body)
+            else: 
+                leave.status = "Approved"
+                leave.approved_at = datetime.now()
+                leave.status_history += f" > Fully Approved by {approver_name} ({timestamp}){note_str}"
+                
+                # Notify Employee
+                try:
+                    emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
+                    if emp and emp.email:
+                        body = template_request_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                        background_tasks.add_task(send_email, emp.email, f"Leave Approved: {l_type_str}", body)
+                except Exception as e:
+                    print(f"⚠️ Email Error (Normal Approve): {e}")
 
-    # =========================================================================
-    # 6. HANDLE STANDARD REJECTIONS
-    # =========================================================================
-    elif status == "Rejected":
-        leave.status = "Rejected"
-        leave.rejected_at = datetime.now()
-        leave.status_history += f" > Rejected by {approver_name} ({timestamp}){note_str}"
-        
-        # 📧 Notify Employee (Via Background Task)
-        emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
-        if emp and emp.email:
-            body = template_request_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks)
-            background_tasks.add_task(send_email, emp.email, f"Leave Rejected: {l_type_str}", body)
+        else: 
+            # 🔴 Rejection
+            leave.status = "Rejected"
+            leave.rejected_at = datetime.now()
+            leave.status_history += f" > Rejected by {approver_name} ({timestamp}){note_str}"
 
-    # 7. Save remarks cleanly
-    base_reason = leave.reason.split(" | Manager Note:")[0] if leave.reason else ""
-    if remarks:
-        leave.reason = f"{base_reason} | Manager Note: {remarks}"
-    
+            # Notify Employee
+            try:
+                emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
+                if emp and emp.email:
+                    body = template_request_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks)
+                    background_tasks.add_task(send_email, emp.email, f"Leave Rejected: {l_type_str}", body)
+            except Exception as e:
+                print(f"⚠️ Email Error (Normal Reject): {e}")
+
     db.commit()
-    return {"message": "Action recorded successfully"}
+    return {"message": "Request processed successfully"}
 
 
 @router.get("/manager/all")

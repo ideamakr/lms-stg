@@ -1,15 +1,17 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Query, BackgroundTasks # 🚀 Added BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Query, BackgroundTasks, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from app.database import get_db
 from app import models
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Optional
+from pydantic import BaseModel
 import tempfile
+import re
 
 # ============================================================
-# 🌍 GLOBAL CONFIGURATION (Environment Aware)
+# 🌍 GLOBAL CONFIGURATION
 # ============================================================
 
 if os.getenv("ENV") == "PROD":
@@ -20,20 +22,35 @@ else:
 if not os.path.exists(TARGET_DIR):
     os.makedirs(TARGET_DIR, exist_ok=True)
 
-from app.utils.email_service import (
-    send_email, 
-    template_new_ot_request, 
-    template_ot_decision,
-    template_l2_ot_request
-)
+# Email imports with fallback
+try:
+    from app.utils.email_service import (
+        send_email, 
+        template_new_ot_request, 
+        template_ot_decision,
+        template_l2_ot_request,
+        template_cancellation_request,      
+        template_cancellation_approved,
+        template_cancellation_rejected
+    )
+except ImportError:
+    from app.utils.email_service import (
+        send_email, 
+        template_new_ot_request, 
+        template_ot_decision,
+        template_l2_ot_request
+    )
 
 router = APIRouter(prefix="/overtime", tags=["Overtime"])
 
+# ✅ Schema for Cancellation Reason (Required for JSON payload)
+class CancelRequestSchema(BaseModel):
+    reason: Optional[str] = None
 
 # 1. APPLY FOR OVERTIME
 @router.post("/apply")
 async def apply_overtime(
-    background_tasks: BackgroundTasks, # 🚀 INJECTED: Background worker
+    background_tasks: BackgroundTasks, 
     employee_name: str = Form(...),
     approver_name: str = Form(...),
     ot_date: str = Form(...),
@@ -45,12 +62,11 @@ async def apply_overtime(
     file: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
-    # --- 1. SANITIZE & PARSE ---
     employee_name = employee_name.strip()
     approver_name = approver_name.strip()
     ot_date_obj = date.fromisoformat(ot_date)
 
-    # --- 2. DUPLICATE CHECK ---
+    # Check Duplicates
     existing_ot = db.query(models.Overtime).filter(
         models.Overtime.employee_name == employee_name,
         models.Overtime.ot_date == ot_date_obj,
@@ -59,32 +75,24 @@ async def apply_overtime(
     ).first()
 
     if existing_ot:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Duplicate Request: You already have a {existing_ot.status} claim for this date and type."
-        )
+        raise HTTPException(status_code=400, detail=f"Duplicate Request: {existing_ot.status} claim exists.")
 
-    # --- 3. FILE HANDLING ---
+    # Save File
     saved_filename = None
     if file and file.filename:
         file_ext = os.path.splitext(file.filename)[1]
         date_stamp = ot_date.replace("-", "")
         time_stamp = datetime.now().strftime("%H%M%S")
         saved_filename = f"{employee_name}_OT_{date_stamp}_{time_stamp}{file_ext}"
-        
         file_path = os.path.join(TARGET_DIR, saved_filename)
-        
         try:
-            if not os.path.exists(TARGET_DIR):
-                os.makedirs(TARGET_DIR, exist_ok=True)
-                
             with open(file_path, "wb") as buffer:
                 content = await file.read()
                 buffer.write(content)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail="Could not save OT attachment.")
+        except Exception:
+            raise HTTPException(status_code=500, detail="Could not save attachment.")
 
-    # --- 4. DURATION CALCULATION ---
+    # Calculate Value
     total_val = 1.0 
     if ot_unit == "hours" and start_time and end_time:
         try:
@@ -95,9 +103,9 @@ async def apply_overtime(
                 raise HTTPException(status_code=400, detail="End time must be after start time")
             total_val = round(diff.total_seconds() / 3600, 2)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid time format. Use HH:MM")
+            raise HTTPException(status_code=400, detail="Invalid time format.")
 
-    # --- 5. SAVE RECORD ---
+    # Create Record
     new_ot = models.Overtime(
         employee_name=employee_name,
         approver_name=approver_name,
@@ -116,54 +124,51 @@ async def apply_overtime(
     db.commit()
     db.refresh(new_ot)
 
-    # --- 6. EMAIL TRIGGER (Background Queue) ---
+    # Email Manager
     manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
     if manager and manager.email:
-        duration_str = f"{total_val} {ot_unit}"
-        body = template_new_ot_request(
-            manager_name=manager.full_name, 
-            employee_name=employee_name, 
-            ot_type=ot_type, 
-            ot_date=ot_date, 
-            duration=duration_str
-        )
-        # 🚀 Send via background task instantly
-        background_tasks.add_task(send_email, manager.email, f"Action Required: OT Claim from {employee_name}", body)
+        body = template_new_ot_request(manager.full_name, employee_name, ot_type, ot_date, f"{total_val} {ot_unit}")
+        background_tasks.add_task(send_email, manager.email, f"Action Required: OT Claim - {employee_name}", body)
 
     return {"message": "Overtime request submitted successfully", "id": new_ot.id}
 
 
-# 2. GET ALL OT REQUESTS (Audit Log)
+# 2. GET ALL REQUESTS (Admin Audit)
 @router.get("/all-requests")
 def get_all_overtime_requests(db: Session = Depends(get_db)):
-    try:
-        results = db.query(models.Overtime).order_by(models.Overtime.id.desc()).all()
-        return [{
-            "id": o.id,
-            "employee_name": o.employee_name,
-            "approver_name": o.approver_name,
-            "ot_date": o.ot_date.strftime("%Y-%m-%d"),
-            "ot_type": o.ot_type,
-            "ot_unit": o.ot_unit,
-            "total_value": o.total_value,
-            "status": o.status,
-            "reason": o.reason,
-            "attachment_path": o.attachment_path,
-            "manager_remarks": o.manager_remarks or "",
-            "status_history": o.status_history or "Pending"
-        } for o in results]
-    except Exception as e:
-        print(f"Audit Log Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+    results = db.query(models.Overtime).order_by(models.Overtime.id.desc()).all()
+    return [{
+        "id": o.id,
+        "employee_name": o.employee_name,
+        "approver_name": o.approver_name,
+        "ot_date": o.ot_date.strftime("%Y-%m-%d"),
+        "ot_type": o.ot_type,
+        "ot_unit": o.ot_unit,
+        "total_value": o.total_value,
+        "status": o.status,
+        "reason": o.reason,
+        "attachment_path": o.attachment_path,
+        "manager_remarks": o.manager_remarks or "",
+        "status_history": o.status_history or "Pending"
+    } for o in results]
 
-# 3. GET MANAGER'S PENDING TASKS
+
+# 3. GET MANAGER PENDING REQUESTS
 @router.get("/manager-requests")
 def get_manager_ot_requests(approver_name: str, db: Session = Depends(get_db)):
-    # Shows L1 tasks (Pending) AND L2 tasks (Pending L2 Approval)
+    # 🚀 ROBUST QUERY: Matches Leave Logic
+    # Lane 1: L1 sees 'Pending' and 'Pending Cancel'
+    # Lane 2: L2 sees 'Pending L2 Approval' ONLY
     results = db.query(models.Overtime).filter(
         or_(
-            and_(models.Overtime.approver_name == approver_name, models.Overtime.status == "Pending"),
-            and_(models.Overtime.approver_l2 == approver_name, models.Overtime.status == "Pending L2 Approval")
+            and_(
+                models.Overtime.approver_name == approver_name, 
+                models.Overtime.status.in_(["Pending", "Pending Cancel"])
+            ),
+            and_(
+                models.Overtime.approver_l2 == approver_name, 
+                models.Overtime.status == "Pending L2 Approval"
+            )
         )
     ).all()
     
@@ -184,11 +189,11 @@ def get_manager_ot_requests(approver_name: str, db: Session = Depends(get_db)):
     } for o in results]
 
 
-# 4. PROCESS MANAGER ACTION (Approve/Reject)
+# 4. PROCESS MANAGER ACTION
 @router.post("/manager-action/{ot_id}")
-async def process_ot_action( # 🚀 Changed to async
+async def process_ot_action( 
     ot_id: int, 
-    background_tasks: BackgroundTasks, # 🚀 INJECTED: Background worker
+    background_tasks: BackgroundTasks, 
     status: str, 
     remarks: str = "", 
     approver_name: str = "", 
@@ -201,88 +206,149 @@ async def process_ot_action( # 🚀 Changed to async
 
     acting_mgr = db.query(models.User).filter(models.User.full_name == approver_name).first()
     is_senior = getattr(acting_mgr, 'is_senior_manager', False)
+    is_l1 = (approver_name == ot.approver_name)
 
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     l2_active = policy.l2_approval_enabled if policy else False
     
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
     current_status = ot.status
-    send_employee_email = False 
+    
+    # 🚀 DETECT CANCELLATION JOURNEY (Deep Check)
+    is_cancellation_journey = (
+        current_status == "Pending Cancel" or 
+        "Cancellation" in (ot.status_history or "")
+    )
 
-    # --- 2. HANDLE APPROVALS ---
-    if status == "Approved":
-        # Route to L2
-        if l2_active and current_status == "Pending" and not is_senior:
-            if not l2_name:
-                raise HTTPException(status_code=400, detail="L2 Manager must be selected.")
+    # =========================================================
+    # A. CANCELLATION LOGIC
+    # =========================================================
+    if is_cancellation_journey:
+        if status == "Approved":
+            # 1. Route to L2 if needed
+            if current_status == "Pending Cancel" and l2_active and is_l1 and not is_senior and ot.approver_l2:
+                ot.status = "Pending L2 Approval"
+                ot.status_history += f" > L1 Approved Cancellation. Routed to {ot.approver_l2} ({timestamp})"
+                db.commit()
+                return {"message": "Cancellation approved by L1. Routed to L2."}
             
-            ot.status = "Pending L2 Approval"
-            ot.approver_l2 = l2_name
-            ot.status_history += f" > L1 Approved by {approver_name}. Routed to {l2_name} ({timestamp})"
+            # 2. Final Cancellation
+            ot.status = "Cancelled"
+            ot.status_history += f" > Cancellation FINALIZED by {approver_name} ({timestamp})"
             
-            # 🚀 EMAIL TO L2 MANAGER (Background Task)
-            l2_user = db.query(models.User).filter(models.User.full_name == l2_name).first()
-            if l2_user and l2_user.email:
-                duration_str = f"{ot.total_value} {ot.ot_unit}"
-                body = template_l2_ot_request(
-                    l2_manager_name=l2_name,
-                    l1_manager_name=approver_name,
-                    employee_name=ot.employee_name,
-                    ot_type=ot.ot_type,
-                    ot_date=str(ot.ot_date),
-                    duration=duration_str
-                )
-                background_tasks.add_task(send_email, l2_user.email, f"Action Required: L2 OT Approval for {ot.employee_name}", body)
+            # Email Employee
+            try:
+                emp = db.query(models.User).filter(models.User.full_name == ot.employee_name).first()
+                if emp and emp.email and 'template_cancellation_approved' in globals():
+                    body = template_cancellation_approved(ot.employee_name, approver_name, f"Overtime ({ot.ot_type})", str(ot.ot_date), str(ot.ot_date))
+                    background_tasks.add_task(send_email, emp.email, "OT Cancellation Approved", body)
+            except: pass
 
         else:
-            # Final Approval
+            # Rejection -> Revert to Approved
             ot.status = "Approved"
-            ot.status_history += f" > Final Approval by {approver_name} ({timestamp})"
-            send_employee_email = True 
+            ot.status_history += f" > Cancellation REJECTED by {approver_name} ({timestamp})"
+            try:
+                emp = db.query(models.User).filter(models.User.full_name == ot.employee_name).first()
+                if emp and emp.email and 'template_cancellation_rejected' in globals():
+                    body = template_cancellation_rejected(ot.employee_name, approver_name, f"Overtime ({ot.ot_type})", str(ot.ot_date), str(ot.ot_date), remarks)
+                    background_tasks.add_task(send_email, emp.email, "OT Cancellation Rejected", body)
+            except: pass
+
+    # =========================================================
+    # B. NORMAL APPROVAL LOGIC
+    # =========================================================
+    else:
+        if status == "Approved":
+            # Route to L2
+            if l2_active and current_status == "Pending" and not is_senior:
+                if not l2_name:
+                    raise HTTPException(status_code=400, detail="L2 Manager must be selected.")
+                
+                ot.status = "Pending L2 Approval"
+                ot.approver_l2 = l2_name
+                ot.status_history += f" > L1 Approved by {approver_name}. Routed to {l2_name} ({timestamp})"
+                
+                # Email L2
+                l2_user = db.query(models.User).filter(models.User.full_name == l2_name).first()
+                if l2_user and l2_user.email:
+                    body = template_l2_ot_request(l2_name, approver_name, ot.employee_name, ot.ot_type, str(ot.ot_date), f"{ot.total_value} {ot.ot_unit}")
+                    background_tasks.add_task(send_email, l2_user.email, f"Action Required: L2 OT Approval", body)
+
+            else:
+                # Final Approval
+                ot.status = "Approved"
+                ot.status_history += f" > Final Approval by {approver_name} ({timestamp})"
+                
+                # Email Employee
+                try:
+                    emp = db.query(models.User).filter(models.User.full_name == ot.employee_name).first()
+                    if emp and emp.email:
+                        body = template_ot_decision(ot.employee_name, approver_name, ot.status, ot.ot_type, str(ot.ot_date), remarks or "No remarks.")
+                        background_tasks.add_task(send_email, emp.email, f"✅ OT Claim Approved", body)
+                except: pass
+
+        elif status == "Rejected":
+            ot.status = "Rejected"
+            ot.status_history += f" > Rejected by {approver_name} ({timestamp})"
             
-    # --- 3. HANDLE REJECTIONS ---
-    elif status == "Rejected":
-        ot.status = "Rejected"
-        ot.status_history += f" > Rejected by {approver_name} ({timestamp})"
-        send_employee_email = True 
+            # Email Employee
+            try:
+                emp = db.query(models.User).filter(models.User.full_name == ot.employee_name).first()
+                if emp and emp.email:
+                    body = template_ot_decision(ot.employee_name, approver_name, ot.status, ot.ot_type, str(ot.ot_date), remarks or "No remarks.")
+                    background_tasks.add_task(send_email, emp.email, f"❌ OT Claim Rejected", body)
+            except: pass
 
     ot.manager_remarks = remarks
     db.commit()
-
-    # 🚀 EMAIL TO EMPLOYEE (Background Task)
-    if send_employee_email:
-        employee = db.query(models.User).filter(models.User.full_name == ot.employee_name).first()
-        if employee and employee.email:
-            body = template_ot_decision(
-                ot.employee_name,
-                approver_name,
-                ot.status,
-                ot.ot_type,
-                str(ot.ot_date),
-                remarks or "No remarks provided."
-            )
-            subject_icon = "✅" if ot.status == "Approved" else "❌"
-            background_tasks.add_task(send_email, employee.email, f"{subject_icon} OT Claim {ot.status}", body)
-
-    return {"message": f"Action recorded successfully"}
+    return {"message": "Action recorded successfully"}
 
 
+# 5. CANCEL/WITHDRAW REQUEST
 @router.put("/{ot_id}/cancel")
-def cancel_overtime_claim(ot_id: int, db: Session = Depends(get_db)):
+async def cancel_overtime_claim(
+    ot_id: int, 
+    background_tasks: BackgroundTasks,
+    payload: CancelRequestSchema = Body(None), # 🚀 FIX: Accepts JSON Payload now
+    db: Session = Depends(get_db)
+):
     ot = db.query(models.Overtime).filter(models.Overtime.id == ot_id).first()
     if not ot:
         raise HTTPException(status_code=404, detail="OT claim not found")
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    current_status = ot.status
+    
+    # Extract Reason safely
+    reason_val = payload.reason if (payload and payload.reason) else "No reason provided"
+    reason_text = f" (Reason: {reason_val})"
 
-    # Withdrawal from Employee (No email needed as it just deletes a pending request)
-    if ot.status in ["Pending", "Pending L2 Approval"]:
+    # 1. WITHDRAWAL (Pending)
+    if current_status in ["Pending", "Pending L2 Approval"]:
         ot.status = "Withdrawn"
-        ot.status_history += f" > Withdrawn by Employee ({timestamp})"
+        ot.status_history += f" > Withdrawn by Employee{reason_text} ({timestamp})"
         db.commit()
         return {"message": "Overtime claim successfully withdrawn."}
     
-    raise HTTPException(status_code=400, detail="Only pending or partially approved claims can be withdrawn.")
+    # 2. CANCELLATION REQUEST (Approved)
+    # 🚀 FIX: Allows 'Approved' claims to be cancelled (Moves to Pending Cancel)
+    elif current_status == "Approved":
+        ot.status = "Pending Cancel"
+        ot.status_history += f" > Cancellation Requested by Employee{reason_text} ({timestamp})"
+        
+        # Email Manager (Safely)
+        try:
+            manager = db.query(models.User).filter(models.User.full_name == ot.approver_name).first()
+            if manager and manager.email and 'template_cancellation_request' in globals():
+                body = template_cancellation_request(manager.full_name, ot.employee_name, f"Overtime ({ot.ot_type})", str(ot.ot_date), str(ot.ot_date), reason_val)
+                background_tasks.add_task(send_email, manager.email, "OT Cancellation Request", body)
+        except: pass
+        
+        db.commit()
+        return {"message": "Cancellation request sent to manager."}
+    
+    raise HTTPException(status_code=400, detail="Cannot cancel this claim in its current state.")
 
 @router.get("/my-requests")
 def get_my_overtime_requests(employee_name: str, db: Session = Depends(get_db)):

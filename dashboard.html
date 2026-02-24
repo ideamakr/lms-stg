@@ -8,10 +8,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-<!-- 
-    <script src="http://127.0.0.1:8000/static/sweetalert2.js"></script>
-    <link rel="stylesheet" href="http://127.0.0.1:8000/static/css/all.min.css" />
-     -->
+
+    <!-- <script src="http://127.0.0.1:8000/static/sweetalert2.js"></script>
+    <link rel="stylesheet" href="http://127.0.0.1:8000/static/css/all.min.css" /> -->
+    
     <!-- <script src="static/sweetalert2.js"></script>
     <link rel="stylesheet" href="static/css/all.min.css" /> -->
 <!-- 
@@ -819,6 +819,25 @@ div.swal2-container {
       padding-left: 25px; /* Slight slide effect */
   }
 
+  /* Makes the mini-scrollbars inside calendar days very thin and clean */
+.calendar-day div::-webkit-scrollbar {
+    width: 4px;
+}
+.calendar-day div::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1; /* Light gray */
+    border-radius: 10px;
+}
+
+/* 🚀 NUCLEAR OPTION: Force the Confirmation Modal to the absolute top layer */
+#universalModal, .modal-overlay, .swal2-container {
+    z-index: 2147483647 !important; /* Max integer value */
+}
+
+/* Ensure the white card content is also at the max layer */
+#universalModal .modal-content {
+    position: relative;
+    z-index: 2147483647 !important;
+}
     </style>
   </head>
             <!-- ==========================================
@@ -1846,18 +1865,18 @@ div.swal2-container {
           
                           <div style="display: flex; gap: 8px; align-items: center;">
     
-                            <button type="button" onclick="resetManagerLeaveFilters()" title="Reset Filters" 
-                                style="background: white; color: #64748b; border: 1px solid #cbd5e1; width: 42px; height: 42px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"
+                            <button type="button" onclick="resetHistoryFilters()" title="Reset Filters" 
+                                style="background: white; color: #64748b; border: 1px solid #cbd5e1; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"
                                 onmouseover="this.style.background='#f1f5f9'" 
                                 onmouseout="this.style.background='white'">
                                 <i class="fas fa-undo"></i>
                             </button>
-          
-                              <button type="button" id="refreshBtn" onclick="loadHistory(1)" 
-                                  style="background: #2563eb; color: white; border: none; padding: 0 18px; height: 42px; border-radius: 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                  <i class="fas fa-sync-alt" id="refreshIcon"></i> Refresh
-                              </button>
-                          </div>
+                        
+                            <button type="button" id="refreshBtn" onclick="loadHistory(1)" 
+                                style="background: #2563eb; color: white; border: none; padding: 0 18px; height: 36px; border-radius: 6px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <i class="fas fa-sync-alt" id="refreshIcon"></i> Refresh
+                            </button>
+                        </div>
                       </div>
                   </div>
           
@@ -1867,9 +1886,9 @@ div.swal2-container {
                           <thead style="position: sticky; top: 0; z-index: 10;">
                             <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                                 
-                                <th onclick="sortHistoryTable('leave_type')" style="width: 8%; padding: 12px 15px; text-align: left; color: #475569; cursor: pointer; user-select: none;">
-                                    Type
-                                </th>
+                              <th onclick="sortHistoryTable('type')" style="width: 12%; padding: 12px 15px; text-align: left; color: #475569; cursor: pointer; user-select: none;">
+                                Type <i id="hist-sort-type" class="fas fa-sort" style="margin-left: 5px; color: #cbd5e1;"></i>
+                            </th>
                                 <th onclick="sortHistoryTable('leave_type')" style="width: 22%; padding: 12px 15px; text-align: left; color: #475569; cursor: pointer; user-select: none;">
                                     Category <i id="hist-sort-leave_type" class="fas fa-sort" style="margin-left: 5px; color: #cbd5e1;"></i>
                                 </th>
@@ -5434,6 +5453,9 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
             // 🚀 Leave Manager Pagination
             let mgrCurrentPage = 1;
             const mgrPageSize = 10;
+
+
+            const processedActionIds = new Set();
         
             // 🚀 Overtime Manager Pagination
             let mgrOTCurrentPage = 1;
@@ -6589,18 +6611,22 @@ async function loadHistory(page = 1, size = 10) {
     }
 }
 
-// 🚀 3. RENDER FUNCTION (Handles Sorting, Pagination & HTML)
+// 🚀 3. RENDER FUNCTION (Focus: Type Badges & Unified Sorting)
 function sortAndRenderHistory() {
     const tbody = document.getElementById("historyTableBody");
     if (!tbody) return;
 
-    // A. SORT (Hardened for Unified Merged Lists)
+    // A. SORT (Enhanced for Type Badges)
     rawHistoryData.sort((a, b) => {
         let valA, valB;
 
-        // 🚀 THE CRITICAL FIX: Sort by the exact submission timestamp instead of DB ID.
-        // This ensures OT and Leaves are perfectly interleaved by the minute they were submitted.
-        if (historySortState.key === 'id' || historySortState.key === 'sort_date') {
+        // 🟢 NEW: Logic for sorting by the "Type" column
+        if (historySortState.key === 'type') {
+            valA = a.record_type; // "OT" or "Leave"
+            valB = b.record_type;
+        } 
+        // Timestamp Sort (Default)
+        else if (historySortState.key === 'id' || historySortState.key === 'sort_date') {
             valA = new Date(a.sort_date).getTime() || 0;
             valB = new Date(b.sort_date).getTime() || 0;
         } 
@@ -6617,36 +6643,39 @@ function sortAndRenderHistory() {
             valB = (b[historySortState.key] || "").toString().toLowerCase();
         }
 
-        // Apply direction logic
         if (valA < valB) return historySortState.direction === 'asc' ? -1 : 1;
         if (valA > valB) return historySortState.direction === 'asc' ? 1 : -1;
         
-        // Ultimate Tie-Breaker (If they were submitted in the exact same minute)
         return historySortState.direction === 'asc' ? (a.id - b.id) : (b.id - a.id);
     });
 
-    // B. PAGINATE
+    // B. PAGINATE (Logic remains the same)
     const totalRecords = rawHistoryData.length;
     const totalPages = Math.ceil(totalRecords / historyPageSize) || 1;
-    
     if (historyCurrentPage > totalPages) historyCurrentPage = 1;
     const startIndex = (historyCurrentPage - 1) * historyPageSize;
     const visibleRecords = rawHistoryData.slice(startIndex, startIndex + historyPageSize);
 
-    // C. DRAW HTML 
-    tbody.innerHTML = "";
+// C. DRAW HTML 
+tbody.innerHTML = "";
     if (visibleRecords.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:40px; color:#64748b;">No records found.</td></tr>`;
+        return; // Add return here to stop processing if empty
     }
 
     visibleRecords.forEach((item) => {
+        // 1. Identify if it's OT or Leave
         const isOT = item.record_type === "OT";
         const rawStatus = item.status || "Pending";
         const statusClass = `status-${rawStatus.toLowerCase().replace(/\s+/g, "-")}`;
-        
-        // 🛡️ JSON SECURITY: Double escape to ensure names with apostrophes don't break the HTML
         const itemData = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
         
+        // 🎨 2. The New Type Badge logic
+        const typeBadge = isOT 
+            ? `<span style="background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Overtime</span>`
+            : `<span style="background: rgba(99, 102, 241, 0.1); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Leave</span>`;
+
+        // 3. Action Buttons logic
         let actionButtons = `<button class="icon-btn" onclick='${isOT ? "viewOTDetails" : "viewLeaveDetails"}(${itemData})' title="View"><i class="fas fa-eye"></i></button>`;
         
         if (rawStatus === "Pending") {
@@ -6657,10 +6686,11 @@ function sortAndRenderHistory() {
             actionButtons += ` <span style="font-size:0.65rem; color:#f59e0b; font-style:italic; font-weight:700; margin-left:5px;">WAIT APPROVAL</span>`;
         }
 
+        // 4. Build the Row
         tbody.innerHTML += `
             <tr style="border-bottom: 1px solid #f1f5f9; transition: all 0.2s ease;" onmouseover="this.style.background='#f8fafc';" onmouseout="this.style.background='transparent';">
                 <td style="padding: 14px 15px; vertical-align: middle;">
-                    <span class="status-badge" style="background:${isOT ? "#818cf8" : "#38bdf8"}; color:white; font-size:0.6rem; font-weight:900; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">${item.record_type}</span>
+                    ${typeBadge}
                 </td>
                 <td style="padding: 14px 15px; vertical-align: middle;">
                     <div style="display:flex; flex-direction:column; line-height: 1.3;">
@@ -6671,7 +6701,6 @@ function sortAndRenderHistory() {
                 <td class="text-center" style="padding: 14px 15px; vertical-align: middle;">
                     <span style="background: #f1f5f9; color: #1e293b; font-weight: 800; font-size: 0.8rem; padding: 5px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${item.display_amount}</span>
                 </td>
-
                 <td style="padding: 14px 15px; vertical-align: middle; color: #475569; font-size: 0.85rem;">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
                         <div style="display: flex; align-items: center; min-width: 95px;">
@@ -6683,7 +6712,6 @@ function sortAndRenderHistory() {
                         </div>
                     </div>
                 </td>
-
                 <td class="text-center" style="padding: 14px 15px; vertical-align: middle;">
                     <span class="status-badge ${statusClass}" style="font-size:0.7rem; padding: 5px 12px; font-weight: 800; border-radius: 20px; text-transform: uppercase;">${rawStatus}</span>
                 </td>
@@ -6693,31 +6721,57 @@ function sortAndRenderHistory() {
             </tr>`;
     });
 
-    // D. UPDATE PAGINATION UI 
+    // D. UPDATE PAGINATION UI (Logic remains the same)
     const countSpan = document.getElementById("totalRecordsSpan");
     if (countSpan) countSpan.innerText = totalRecords;
 
     const paginationControls = document.getElementById("paginationControls");
     if (paginationControls) {
         paginationControls.style.display = totalRecords > 0 ? "flex" : "none";
-        
         const prevBtn = document.getElementById("prevPageBtn");
         const nextBtn = document.getElementById("nextPageBtn");
-        
         if (prevBtn) {
             prevBtn.disabled = (historyCurrentPage === 1);
             prevBtn.onclick = function() { changeHistoryPage(historyCurrentPage - 1); };
         }
-        
         if (nextBtn) {
             nextBtn.disabled = (historyCurrentPage >= totalPages);
             nextBtn.onclick = function() { changeHistoryPage(historyCurrentPage + 1); };
         }
-        
         const pageInfo = document.getElementById("pageLabelInfo");
         if (pageInfo) pageInfo.innerText = `Page ${historyCurrentPage} of ${totalPages}`;
     }
 }
+
+// 🚀 4. SORTING HELPER (Handles header clicks and icon updates)
+function sortHistoryTable(key) {
+    // 1. Toggle direction if the same key is clicked, otherwise default to Ascending
+    if (historySortState.key === key) {
+        historySortState.direction = historySortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        historySortState.key = key;
+        historySortState.direction = 'asc';
+    }
+
+    // 2. Reset ALL icons in the history table headers to neutral gray
+    document.querySelectorAll('#historyTable thead i').forEach(i => {
+        i.className = 'fas fa-sort';
+        i.style.color = '#cbd5e1'; 
+    });
+
+    // 3. Highlight the ACTIVE column icon in Royal Blue
+    const activeIcon = document.getElementById(`hist-sort-${key}`);
+    if (activeIcon) {
+        // Change icon shape based on direction
+        activeIcon.className = historySortState.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        activeIcon.style.color = '#2563eb';
+    }
+
+    // 4. Trigger the Render Function we just verified
+    sortAndRenderHistory();
+}
+
+
 // 🧹 RESET BUTTON LOGIC
 function resetHistoryFilters() {
     // 1. Clear Dropdowns (Reset to first option)
@@ -6978,65 +7032,67 @@ function toggleAdminView() {
 
 
 
+// 🚀 REPLACES BOTH DUPLICATES
 async function requestCancelLeave(leaveId) {
-        // 🚀 THE FIX: Use a SweetAlert Textarea instead of a hidden HTML modal
-        // This bypasses the need for 'cancelReasonModal' entirely.
-        Swal.fire({
-          title: 'Cancel Approved Leave',
-          text: 'Please provide a reason for cancelling this approved leave. Your manager will need to review this.',
-          input: 'textarea',
-          inputPlaceholder: 'e.g., Change of plans / Trip postponed...',
-          inputAttributes: {
-            'maxlength': 200,
-            'aria-label': 'Type your reason here'
-          },
-          showCancelButton: true,
-          confirmButtonText: 'Submit Request',
-          confirmButtonColor: '#ef4444', // Destructive red
-          cancelButtonText: 'Go Back',
-          inputValidator: (value) => {
-            if (!value || value.trim().length < 5) {
-              return 'Please provide a meaningful reason (at least 5 characters).'
+    Swal.fire({
+        title: 'Cancel Approved Leave',
+        // Custom HTML to include the Textarea AND the Counter Span
+        html: `
+            <p style="color:#64748b; font-size:0.9rem; margin-bottom:15px;">
+                Please provide a reason for cancelling this approved leave. Your manager will need to review this.
+            </p>
+            <div style="position: relative;">
+                <textarea id="swal-cancel-reason" class="saas-form-control" rows="3" maxlength="200"
+                    style="width: 100%; padding: 10px; font-family: inherit; resize: none; border: 1px solid #cbd5e1; border-radius: 6px;"
+                    placeholder="e.g. Change of plans / Trip postponed..."></textarea>
+                
+                <div style="text-align: right; font-size: 0.75rem; color: #94a3b8; margin-top: 5px;">
+                    <span id="swal-char-count">0</span>/200
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Submit Request',
+        confirmButtonColor: '#ef4444', // Red for "Cancel" action
+        cancelButtonText: 'Go Back',
+        focusConfirm: false, 
+        didOpen: () => {
+            // 🚀 LIVE COUNTER LOGIC
+            const input = document.getElementById('swal-cancel-reason');
+            const counter = document.getElementById('swal-char-count');
+            
+            // Auto-focus the input
+            if(input) input.focus();
+
+            if(input && counter) {
+                input.oninput = () => {
+                    const len = input.value.length;
+                    counter.innerText = len;
+                    
+                    // Turn red if maxed out
+                    if(len >= 200) counter.style.color = '#ef4444';
+                    else counter.style.color = '#94a3b8';
+                };
             }
-          }
-        }).then((result) => {
-          if (result.isConfirmed) {
-            // Send the reason to your execution function
-            executeCancellationSubmit(leaveId, "LEAVE", result.value.trim());
-          }
-        });
-      }
-
-
-      async function requestCancelLeave(leaveId) {
-        // 🚀 THE FIX: Use a SweetAlert Textarea instead of a hidden HTML modal
-        // This bypasses the need for 'cancelReasonModal' entirely.
-        Swal.fire({
-          title: 'Cancel Approved Leave',
-          text: 'Please provide a reason for cancelling this approved leave. Your manager will need to review this.',
-          input: 'textarea',
-          inputPlaceholder: 'e.g., Change of plans / Trip postponed...',
-          inputAttributes: {
-            'maxlength': 200,
-            'aria-label': 'Type your reason here'
-          },
-          showCancelButton: true,
-          confirmButtonText: 'Submit Request',
-          confirmButtonColor: '#ef4444', // Destructive red
-          cancelButtonText: 'Go Back',
-          inputValidator: (value) => {
-            if (!value || value.trim().length < 5) {
-              return 'Please provide a meaningful reason (at least 5 characters).'
+        },
+        preConfirm: () => {
+            // 🚀 MANUAL VALIDATION
+            const input = document.getElementById('swal-cancel-reason');
+            const value = input ? input.value.trim() : "";
+            
+            if (!value || value.length < 5) {
+                Swal.showValidationMessage('Please provide a meaningful reason (at least 5 characters).');
+                return false;
             }
-          }
-        }).then((result) => {
-          if (result.isConfirmed) {
-            // Send the reason to your execution function
-            executeCancellationSubmit(leaveId, "LEAVE", result.value.trim());
-          }
-        });
-      }
-
+            return value;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Pass the reason to the submit handler (Logic Preserved)
+            executeCancellationSubmit(leaveId, "LEAVE", result.value);
+        }
+    });
+}
 
 function viewLeaveDetails(leave) {
     const modal = document.getElementById("leaveDetailModal");
@@ -8137,99 +8193,75 @@ async function cancelOT(id) {
       }
 
 
-      async function requestCancelOT(otId) {
-    // 1. Store IDs for the submit function
-    pendingCancelId = otId;
-    window.currentCancelSource = "OT"; 
+/**
+ * 🚀 FIXED: OT Cancellation Request
+ * - Uses SweetAlert (Reliable, no hidden HTML modals).
+ * - Sends the reason to the backend.
+ * - L2 Agnostic: Works for both ON/OFF modes (Routing happens on the backend).
+ */
+/**
+ * 🚀 REQUEST CANCELLATION (OT)
+ * Opens a SweetAlert modal to capture the reason.
+ */
+ async function requestCancelOT(otId) {
+    Swal.fire({
+        title: 'Cancel Approved Overtime',
+        html: `
+            <p style="color:#64748b; font-size:0.9rem; margin-bottom:15px;">
+                Please provide a reason for cancelling this approved overtime. Your manager will need to review this.
+            </p>
+            <div style="position: relative;">
+                <textarea id="swal-ot-cancel-reason" class="saas-form-control" rows="3" maxlength="200"
+                    style="width: 100%; padding: 10px; font-family: inherit; resize: none; border: 1px solid #cbd5e1; border-radius: 6px;"
+                    placeholder="e.g. Calculation error / Plans changed..."></textarea>
+                
+                <div style="text-align: right; font-size: 0.75rem; color: #94a3b8; margin-top: 5px;">
+                    <span id="swal-ot-char-count">0</span>/200
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Submit Request',
+        confirmButtonColor: '#ef4444', 
+        cancelButtonText: 'Go Back',
+        focusConfirm: false, 
+        didOpen: () => {
+            // Live Character Counter
+            const input = document.getElementById('swal-ot-cancel-reason');
+            const counter = document.getElementById('swal-ot-char-count');
+            
+            if(input) input.focus();
 
-    const input = document.getElementById("cancel_reason_input");
-    const countSpan = document.getElementById('char_count');
-    const modal = document.getElementById("cancelReasonModal");
-
-    // 2. Clear UI
-    if (input) input.value = "";
-    if (countSpan) {
-        countSpan.innerText = "0";
-        countSpan.style.color = "#94a3b8";
-    }
-
-    // 3. Show Modal with OT Title
-    if (modal) {
-        const title = modal.querySelector("h3");
-        if (title) title.innerHTML = `<i class="fas fa-stopwatch"></i> Cancel Approved OT`;
-        modal.style.display = "flex";
-    }
-} 
+            if(input && counter) {
+                input.oninput = () => {
+                    const len = input.value.length;
+                    counter.innerText = len;
+                    if(len >= 200) counter.style.color = '#ef4444';
+                    else counter.style.color = '#94a3b8';
+                };
+            }
+        },
+        preConfirm: () => {
+            const input = document.getElementById('swal-ot-cancel-reason');
+            const value = input ? input.value.trim() : "";
+            
+            if (!value || value.length < 5) {
+                Swal.showValidationMessage('Please provide a reason (at least 5 characters).');
+                return false;
+            }
+            return value;
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            // 🚀 EXECUTION: Send to Backend using the worker function
+            await executeCancellationSubmit(otId, "OT", result.value);
+        }
+    });
+}
 
 
       // 1. Global variable to store the Leave ID
       let pendingCancelId = null;
-
-
-      // 3. Submits the Reason to Backend
-      async function submitCancellation() {
-  const reasonInput = document.getElementById("cancel_reason_input");
-  const reason = reasonInput ? reasonInput.value.trim() : "";
-
-  // 🛡️ Only check if empty. Min-length restriction removed.
-  if (!reason) {
-    showModal(
-      "Reason Required",
-      "Please provide a reason for the cancellation so your manager can review it.",
-      "warning"
-    );
-    return;
-  }
-
-  // 2. Hide the input modal immediately to show the user the "processing" state
-  document.getElementById("cancelReasonModal").style.display = "none";
-
-  // 🚀 THE DYNAMIC ROUTING FIX
-  const endpoint = (window.currentCancelSource === "OT")
-    ? `${API_URL}/overtime/${pendingCancelId}/cancel`
-    : `${API_URL}/leaves/${pendingCancelId}/cancel`;
-
-  try {
-    const res = await fetchWithAuth(endpoint, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: reason }),
-    });
-
-    if (!res) return;
-
-    if (res.ok) {
-      // ✅ SUCCESS RESET: Keep character counter sync
-      reasonInput.value = ""; 
-      const countSpan = document.getElementById('char_count');
-      if (countSpan) {
-          countSpan.innerText = "0"; // Counter stays, just resets to 0
-          countSpan.style.color = "#94a3b8";
-      }
-      
-      window.currentCancelSource = null;
-
-      showModal(
-        "Request Submitted",
-        "Your cancellation request has been sent to your Manager.",
-        "success", 
-        () => {
-          loadHistory(currentPage, pageSize);
-        }
-      );
-    } else {
-      const err = await res.json();
-      showModal(
-        "Error",
-        err.detail || "Failed to submit request.",
-        "error"
-      );
-    }
-  } catch (e) {
-    console.error("Cancel Request Error:", e);
-    showModal("Network Error", "Please check your connection.", "error");
-  }
-}
 
 
       // 1. 🚀 ADD THIS AT THE VERY TOP OF YOUR SCRIPT (outside any function)
@@ -8365,10 +8397,18 @@ function renderManagerQueueTable() {
         return;
     }
 
-    // D. Render Rows
-    currentManagerRequests.forEach((r) => {
+ // D. Render Rows
+ currentManagerRequests.forEach((r) => {
         // 🎨 Avatar Initials
         const initials = (r.employee_name || "??").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+
+        // 🟢 NEW: Determine the Badge for the Manager View
+        const isCF = (r.reason || "").includes("[CARRY FORWARD");
+        
+        // 🎨 The New Type Badge
+        const typeBadge = isCF 
+            ? `<span style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase;">Carry Fwd</span>`
+            : `<span style="background: rgba(99, 102, 241, 0.1); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase;">Leave</span>`;
 
         // 🎨 Smart Duration Pill Logic
         let rawVal = parseFloat(r.days_taken) || 0;
@@ -8379,7 +8419,7 @@ function renderManagerQueueTable() {
         let displayVal = rawVal;
 
         // Handle Carry Forward Tag formatting
-        if ((r.reason || "").includes("[CARRY FORWARD")) {
+        if (isCF) {
             const match = r.reason.match(/\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]/i); 
             if (match) displayVal = match[1];
             durIcon = "fa-piggy-bank";
@@ -8411,8 +8451,9 @@ function renderManagerQueueTable() {
             statusClass = "status-pending-l2-approval";
         }
 
-        const row = `
-          <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+// 🚀 PART 1 FIX: ADDED UNIQUE ID (mgr_row_${r.id}) TO THE TR TAG
+const row = `
+          <tr id="mgr_row_${r.id}" style="border-bottom: 1px solid #f1f5f9; transition: all 0.5s ease;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
               
               <td style="padding: 12px 15px;">
                 <div style="display:flex; align-items:center; gap:12px;">
@@ -8421,14 +8462,20 @@ function renderManagerQueueTable() {
                     </div>
                     <div>
                         <div style="font-weight:700; color:#1e293b; font-size:0.9rem;">${r.employee_name}</div>
-                        <div style="font-size:0.75rem; color:#64748b;">${r.leave_type}</div>
+                        
+                        <div style="margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+                            ${typeBadge}
+                            <span style="font-size:0.7rem; color:#64748b; font-weight: 600;">${r.leave_type}</span>
+                        </div>
+
                     </div>
                 </div>
               </td>
 
               <td style="padding: 12px 15px; vertical-align:middle;">${durationPill}</td>
               <td style="padding: 12px 15px; vertical-align:middle;">${dateDisplay}</td>
-              <td style="display:none;"></td> <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">
+              <td style="display:none;"></td> 
+              <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">
                   <span class="status-badge ${statusClass}" style="font-size:0.75rem; padding:4px 10px;">${statusLabel}</span>
               </td>
 
@@ -8807,7 +8854,7 @@ function renderManagerQueueTable() {
         </td></tr>`;
 
         try {
-          // 1. Fetch ALL users (No params - we filter locally for speed & reliability)
+          // 1. Fetch ALL users
           const res = await fetchWithAuth(`${API_URL}/users/all`);
           if (!res) return;
 
@@ -8815,36 +8862,21 @@ function renderManagerQueueTable() {
           window.allUsersList = allUsers; // Store global copy for edit modals
 
           // 2. Get Filter Inputs
-          const searchVal =
-            document
-              .getElementById("hr_user_search")
-              ?.value.toLowerCase()
-              .trim() || "";
-          const roleVal =
-            document.getElementById("hr_role_filter")?.value || "";
-          const statusVal =
-            document.getElementById("hr_status_filter")?.value || "";
+          const searchVal = document.getElementById("hr_user_search")?.value.toLowerCase().trim() || "";
+          const roleVal = document.getElementById("hr_role_filter")?.value || "";
+          const statusVal = document.getElementById("hr_status_filter")?.value || "";
 
-          // 3. Apply Filtering Logic (Client-Side)
+          // 3. Apply Filtering Logic
           const filteredUsers = allUsers.filter((u) => {
-            // A. Name/Username Search
-            const nameMatch =
-              (u.full_name || "").toLowerCase().includes(searchVal) ||
-              (u.username || "").toLowerCase().includes(searchVal);
-
-            // B. Role Filter (Checks inside the roles_list array)
+            const nameMatch = (u.full_name || "").toLowerCase().includes(searchVal) || (u.username || "").toLowerCase().includes(searchVal);
+            
             let roleMatch = true;
             if (roleVal) {
-              const userRoles = (u.roles_list || []).map((r) =>
-                r.toLowerCase()
-              );
-              // Also check the legacy 'role' string field just in case
+              const userRoles = (u.roles_list || []).map((r) => r.toLowerCase());
               if (u.role) userRoles.push(u.role.toLowerCase());
-
               roleMatch = userRoles.includes(roleVal.toLowerCase());
             }
 
-            // C. Status Filter
             let statusMatch = true;
             if (statusVal === "active") statusMatch = u.is_active === true;
             if (statusVal === "inactive") statusMatch = u.is_active === false;
@@ -8852,16 +8884,13 @@ function renderManagerQueueTable() {
             return nameMatch && roleMatch && statusMatch;
           });
 
-          // 4. Update Summary Tiles (Reflects Global Totals)
+          // 4. Update Summary Tiles
           if (document.getElementById("summary_total_users"))
-            document.getElementById("summary_total_users").innerText =
-              allUsers.length;
+            document.getElementById("summary_total_users").innerText = allUsers.length;
           if (document.getElementById("summary_active_users"))
-            document.getElementById("summary_active_users").innerText =
-              allUsers.filter((u) => u.is_active).length;
+            document.getElementById("summary_active_users").innerText = allUsers.filter((u) => u.is_active).length;
           if (document.getElementById("summary_inactive_users"))
-            document.getElementById("summary_inactive_users").innerText =
-              allUsers.filter((u) => !u.is_active).length;
+            document.getElementById("summary_inactive_users").innerText = allUsers.filter((u) => !u.is_active).length;
 
           // 5. Handle Empty Results
           if (filteredUsers.length === 0) {
@@ -8871,67 +8900,31 @@ function renderManagerQueueTable() {
             return;
           }
 
-          // 6. Render Rows (Using your exact 5-column layout)
-          tbody.innerHTML = filteredUsers
-            .map((u) => {
+          // 6. Render Rows
+ // 6. Render Rows
+ tbody.innerHTML = filteredUsers.map((u) => {
               const rolesJson = JSON.stringify(u.roles_list || []);
-              const isSelf =
-                u.username === (currentUser ? currentUser.toLowerCase() : "");
+              const isSelf = u.username === (currentUser ? currentUser.toLowerCase() : "");
+              const safeName = (u.full_name || "").replace(/'/g, "\\'");
+              const initials = (u.full_name || "??").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 
-              // 🎨 1. Generate Avatar Initials
-              const initials = (u.full_name || "??")
-                .split(" ")
-                .map((n) => n[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase();
-
-              // 🎨 2. Professional Status Badge
+              // Status Badge Logic
               const statusBadge = u.is_active
-                ? `<span style="background: #f0fdf4; color: #15803d; padding: 4px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: bold; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fas fa-check-circle" style="font-size:0.6rem;"></i> Active
-                   </span>`
-                : `<span style="background: #fef2f2; color: #b91c1c; padding: 4px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: bold; border: 1px solid #fecaca; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fas fa-times-circle" style="font-size:0.6rem;"></i> Inactive
-                   </span>`;
+                ? `<span style="background: #f0fdf4; color: #15803d; padding: 4px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: bold; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> Active</span>`
+                : `<span style="background: #fef2f2; color: #b91c1c; padding: 4px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: bold; border: 1px solid #fecaca; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-times-circle" style="font-size:0.6rem;"></i> Inactive</span>`;
 
-              // 🎨 3. Role Badges
+              // Role Badge Logic
               let roleBadges = "";
-              const roleColors = {
-                hr_admin: {
-                  bg: "#faf5ff",
-                  text: "#7e22ce",
-                  icon: "fa-user-shield",
-                }, // Purple
-                manager: {
-                  bg: "#fff7ed",
-                  text: "#c2410c",
-                  icon: "fa-user-tie",
-                }, // Orange
-                employee: { bg: "#f1f5f9", text: "#475569", icon: "fa-user" }, // Gray
-              };
-
+              const roleColors = { hr_admin: { bg: "#faf5ff", text: "#7e22ce", icon: "fa-user-shield" }, manager: { bg: "#fff7ed", text: "#c2410c", icon: "fa-user-tie" }, employee: { bg: "#f1f5f9", text: "#475569", icon: "fa-user" } };
+              
               if (u.roles_list && u.roles_list.length > 0) {
-                roleBadges = u.roles_list
-                  .map((r) => {
-                    const cfg =
-                      roleColors[r.toLowerCase()] || roleColors["employee"];
-                    return `<span style="background:${cfg.bg}; color:${
-                      cfg.text
-                    }; padding:2px 8px; border-radius:4px; margin:2px; font-size:0.65rem; font-weight:bold; display:inline-flex; align-items:center; gap:3px; border:1px solid rgba(0,0,0,0.05);">
-                                <i class="fas ${
-                                  cfg.icon
-                                }" style="font-size:0.6rem;"></i> ${r.toUpperCase()}
-                            </span>`;
-                  })
-                  .join("");
+                roleBadges = u.roles_list.map((r) => {
+                    const cfg = roleColors[r.toLowerCase()] || roleColors["employee"];
+                    return `<span style="background:${cfg.bg}; color:${cfg.text}; padding:2px 8px; border-radius:4px; margin:2px; font-size:0.65rem; font-weight:bold; display:inline-flex; align-items:center; gap:3px; border:1px solid rgba(0,0,0,0.05);"><i class="fas ${cfg.icon}" style="font-size:0.6rem;"></i> ${r.toUpperCase()}</span>`;
+                  }).join("");
               }
-
-              // Senior Manager Badge
               if (u.is_senior_manager) {
-                roleBadges += `<span style="font-size:0.65rem; padding:2px 8px; border-radius:4px; margin-left:4px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:bold; display:inline-flex; align-items:center; gap:3px;">
-                    <i class="fas fa-award"></i> L2 POWER
-                </span>`;
+                roleBadges += `<span style="font-size:0.65rem; padding:2px 8px; border-radius:4px; margin-left:4px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:bold; display:inline-flex; align-items:center; gap:3px;"><i class="fas fa-award"></i> L2 POWER</span>`;
               }
 
               return `
@@ -8943,20 +8936,14 @@ function renderManagerQueueTable() {
                                 ${initials}
                             </div>
                             <div>
-                                <div style="font-weight:700; color:#1e293b; font-size:0.9rem;">${
-                                  u.full_name
-                                }</div>
-                                <div style="font-size:0.7rem; color:#64748b;">${
-                                  u.job_title || "No Title"
-                                }</div>
+                                <div style="font-weight:700; color:#1e293b; font-size:0.9rem;">${u.full_name}</div>
+                                <div style="font-size:0.7rem; color:#64748b;">${u.job_title || "No Title"}</div>
                             </div>
                         </div>
                     </td>
 
                     <td style="padding: 12px 15px; vertical-align:middle;">
-                         <span style="font-family:monospace; color:#475569; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${
-                           u.username
-                         }</span>
+                         <span style="font-family:monospace; color:#475569; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${u.username}</span>
                     </td>
 
                     <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">${statusBadge}</td>
@@ -8967,54 +8954,27 @@ function renderManagerQueueTable() {
 
                     <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">
                         <div style="display: flex; gap: 8px; justify-content: center;">
-                            <button class="icon-btn" onclick="openFullProfileEditModalById(${
-                              u.id
-                            })" title="Edit Profile" style="color: #3b82f6;">
+                            <button class="icon-btn" onclick="event.stopPropagation(); openFullProfileEditModalById(${u.id})" title="Edit Profile" style="color: #3b82f6;">
                                 <i class="fas fa-user-edit"></i>
                             </button>
                             
-                            <button class="icon-btn" onclick='openUserEditModal(${
-                              u.id
-                            }, "${u.full_name.replace(
-                /'/g,
-                "\\'"
-              )}", ${rolesJson}, ${u.is_senior_manager})' 
+                            <button class="icon-btn" onclick='event.stopPropagation(); openUserEditModal(${u.id}, "${safeName}", ${rolesJson}, ${u.is_senior_manager})' 
                                     title="Permissions" style="color: #6366f1;">
                                 <i class="fas fa-shield-alt"></i>
                             </button>
                             
                             <button class="icon-btn" 
-                                style="color:${
-                                  u.is_active ? "#ef4444" : "#10b981"
-                                }; border-color:transparent; background: ${
-                u.is_active ? "#fef2f2" : "#f0fdf4"
-              }; opacity: ${isSelf ? "0.3" : "1"}; cursor: ${
-                isSelf ? "not-allowed" : "pointer"
-              };" 
-                                onclick="${
-                                  isSelf
-                                    ? "alert('🛡️ Security: You cannot deactivate your own account while logged in.')"
-                                    : `toggleUserStatus(${u.id})`
-                                }"
-                                title="${
-                                  isSelf
-                                    ? "Self-protection active"
-                                    : u.is_active
-                                    ? "Deactivate User"
-                                    : "Activate User"
-                                }">
-                                <i class="fas ${
-                                  u.is_active
-                                    ? "fa-user-slash"
-                                    : "fa-user-check"
-                                }"></i>
+                                style="color:${u.is_active ? "#ef4444" : "#10b981"}; border-color:transparent; background: ${u.is_active ? "#fef2f2" : "#f0fdf4"}; opacity: ${isSelf ? "0.3" : "1"}; cursor: ${isSelf ? "not-allowed" : "pointer"};" 
+                                onclick="${isSelf ? "event.stopPropagation(); alert('🛡️ Security: You cannot deactivate your own account while logged in.')" : `event.stopPropagation(); toggleUserStatus(${u.id})`}"
+                                title="${isSelf ? "Self-protection active" : u.is_active ? "Deactivate User" : "Activate User"}">
+                                <i class="fas ${u.is_active ? "fa-user-slash" : "fa-user-check"}"></i>
                             </button>
                         </div>
                     </td>
                 </tr>
             `;
-            })
-            .join("");
+            }).join("");
+            
         } catch (e) {
           console.error("User Load Error:", e);
           tbody.innerHTML = `<tr><td colspan='5' class='text-center' style='color:red;'>Failed to load users.</td></tr>`;
@@ -9357,45 +9317,41 @@ function changeMgrHistoryPage(direction) {
 }
 
 
-      // 1. OPEN MODAL to be deleted?
-      // 🚀 UPDATED SIGNATURE: Added 'currentStatus' at the end
-      /**
-       * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
-       * Opens the Manager Decision Hub with a modern summary card.
-       */
-   /**
- * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
- * Merged Version: Includes Reason & Attachment + All previous fixes.
- */
+ 
 /**
  * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
- * 🚀 FINAL VERIFIED VERSION
- * - Cleans Carry Forward Tags correctly.
- * - Injects Reason into Timeline.
- * - Prevents L2/Attachment errors.
+ * 🚀 FIXED: Button now sends 'Approved' payload to confirm cancellation (Matches Backend).
+ * 🛡️ VISUALS: Status labels reverted to 'Pending L2 Approval' and 'Waiting for Approval'.
  */
  async function processApproval(leaveId, actionType, startDate, endDate, leaveType, currentStatus) {
+    
+    // 🛡️ 1. GLOBAL SAFETY GUARD
+    if (typeof processedActionIds !== 'undefined' && processedActionIds.has(leaveId)) {
+         Swal.fire({
+            icon: 'warning',
+            title: 'Request Processed',
+            text: 'This request has already been processed. The table is refreshing...',
+            timer: 2000,
+            showConfirmButton: false
+        });
+        return;
+    }
+
     const modal = document.getElementById("reviewModal");
     const l2Container = document.getElementById("l2SelectorContainer");
     const l2Select = document.getElementById("l2_manager_select");
     const errorId = "l2_validation_error";
     
-    // 1. Reset UI Inputs
+    // --- 2. RESET UI ---
     document.getElementById("mgr_review_remarks").value = "";
-    const countSpan = document.getElementById("mgr_char_count");
-    if (countSpan) {
-        countSpan.innerText = "0/200";
-        countSpan.style.color = "#94a3b8";
+    if (document.getElementById("mgr_char_count")) {
+        document.getElementById("mgr_char_count").innerText = "0/200";
     }
 
-    // 2. Reset L2 Container
     const existingErr = document.getElementById(errorId);
     if (existingErr) existingErr.remove(); 
 
-    if (l2Container) {
-        // 🚀 SPACING FIX: Safely hide without destroying existing structural margins
-        l2Container.style.display = "none";
-    }
+    if (l2Container) l2Container.style.display = "none";
     if (l2Select) {
         l2Select.value = "";
         l2Select.style.borderColor = "#e2e8f0"; 
@@ -9408,115 +9364,98 @@ function changeMgrHistoryPage(direction) {
         };
     }
 
-    // 3. Status Badge Style
+    // --- 3. ROBUST DATA FETCHING ---
+    const leaveRecord = currentManagerRequests.find(r => r.id == leaveId);
+    
+    // 🚀 DETECTION: Is this a Cancellation Journey?
+    // We check status OR history to ensure L2s see this correctly.
+    const isCancellationFlow = 
+        currentStatus.includes("Cancel") || 
+        (leaveRecord && leaveRecord.status_history && 
+         (leaveRecord.status_history.includes("Cancellation Request") || 
+          leaveRecord.status_history.includes("Request Cancellation")));
+
+    // --- 4. RENDER BADGES (Reverted Labels) ---
     let statusText = (currentStatus || "PENDING").toUpperCase();
     let badgeClass = "status-pending";
-    if (statusText.includes("CANCEL")) badgeClass = "status-pending-cancel";
-    else if (statusText.includes("L2")) badgeClass = "status-pending-l2-approval";
+    
+    if (statusText.includes("CANCEL")) {
+        badgeClass = "status-pending-cancel";
+        statusText = "WAITING FOR APPROVAL"; // 🚀 User Requested Label
+    }
+    else if (statusText.includes("L2")) {
+        badgeClass = "status-pending-l2-approval";
+        statusText = "PENDING L2 APPROVAL"; // 🚀 User Requested Label
+    }
     else if (statusText.includes("REJECT")) badgeClass = "status-rejected";
     else if (statusText.includes("APPROVED")) badgeClass = "status-approved";
 
-    // 4. FETCH & CLEAN DATA
-    const leaveRecord = currentManagerRequests.find(r => r.id === leaveId);
-    
-    // A. Clean Reason
+    // --- 5. CLEAN DATA ---
     let rawReason = leaveRecord ? (leaveRecord.reason || "No reason provided.") : "N/A";
     let cleanReason = rawReason;
     let adminNameFound = "";
 
-    // Detect HR Admin Tag
     if (rawReason.includes("[HR_ADMIN_ACTION:")) {
         const adminMatch = rawReason.match(/\[HR_ADMIN_ACTION:\s*(.*?)\s*\]/);
         adminNameFound = adminMatch ? adminMatch[1] : "HR Admin";
         cleanReason = rawReason.replace(/\[HR_ADMIN_ACTION:.*?\]/g, "").replace("Reason:", "").trim();
     }
-
-    // Detect Carry Forward Tags
     const cfMatch = cleanReason.match(/\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]/i);
     if (cfMatch) {
         cleanReason = cleanReason.replace(cfMatch[0], "").trim();
         leaveType = "Carry Forward"; 
     }
-
     cleanReason = cleanReason.split("| Manager Note:")[0].trim();
     cleanReason = cleanReason.replace(/^"|"$/g, ''); 
-    if(!cleanReason) cleanReason = "No justification provided.";
 
-    // B. Attachment HTML
+    // Attachment
     let attachmentHtml = "";
     if (leaveRecord && leaveRecord.attachment_path) {
         const fileName = leaveRecord.attachment_path.split("/").pop();
         const fileUrl = `${API_URL}/uploads/${fileName}`;
-        
         attachmentHtml = `
             <div style="margin-top: 10px; padding: 10px 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
-                <div style="background: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #bae6fd;">
-                    <i class="fas fa-paperclip" style="color: #0284c7; font-size: 0.8rem;"></i>
-                </div>
-                <div style="flex: 1; overflow: hidden;">
-                    <label style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block; line-height: 1;">Attachment</label>
-                    <a href="${fileUrl}" target="_blank" style="font-size: 0.85rem; color: #0284c7; font-weight: 600; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
-                        ${fileName} <i class="fas fa-external-link-alt" style="font-size: 0.7rem; margin-left: 3px;"></i>
-                    </a>
-                </div>
+                <i class="fas fa-paperclip" style="color: #0284c7;"></i>
+                <a href="${fileUrl}" target="_blank" style="font-size: 0.85rem; color: #0284c7; font-weight: 600; text-decoration: none;">${fileName}</a>
             </div>`;
     }
 
-    // C. TIMELINE GENERATION 
+    // Timeline
     let timelineHtml = "";
     if (leaveRecord && leaveRecord.status_history) {
         const historySteps = leaveRecord.status_history.split(" > ");
-        
-        timelineHtml = `
-            <div style="margin-top: 25px; border-top: 2px solid #f1f5f9; padding-top: 15px;">
-                <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 15px; letter-spacing: 0.5px;">Decision History Log</label>
-                <div style="position: relative; padding-left: 25px; border-left: 2px solid #e2e8f0; margin-left: 10px;">`;
+        timelineHtml = `<div style="margin-top: 25px; border-top: 2px solid #f1f5f9; padding-top: 15px;">
+             <label style="font-size: 0.7rem; color: #64748b; font-weight: bold; display: block; margin-bottom: 15px;">DECISION HISTORY</label>
+             <div style="position: relative; padding-left: 25px; border-left: 2px solid #e2e8f0; margin-left: 10px;">`;
 
         historySteps.forEach((step, index) => {
             const isLast = index === historySteps.length - 1;
             const isFirst = index === 0;
-
             const dateRegex = /\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)/;
             const timeMatch = step.match(dateRegex);
             let timeText = timeMatch ? timeMatch[1] : (isFirst ? startDate : "N/A");
-            
             let statusLabel = step.replace(dateRegex, "").trim();
-            let stepRemark = "";
             
-            if (isFirst) {
-                stepRemark = cleanReason;
-            } else if (statusLabel.includes("| Note:")) {
-                const parts = statusLabel.split("| Note:");
-                statusLabel = parts[0].trim();
-                stepRemark = parts[1].trim();
-            } else {
-                const noteMatch = statusLabel.match(/\{Note:\s*(.*?)\}/i);
-                if (noteMatch) {
-                    stepRemark = noteMatch[1];
-                    statusLabel = statusLabel.replace(noteMatch[0], "").trim();
-                }
-            }
-
-            let dotColor = isLast ? (currentStatus === "Approved" ? "#10b981" : "#f59e0b") : "#cbd5e1";
-            if (statusLabel.includes("Rejected")) dotColor = "#ef4444";
-            if (statusLabel.includes("Cancelled") || statusLabel.includes("Withdrawn")) dotColor = "#64748b";
+            let dotColor = isLast ? "#3b82f6" : "#cbd5e1";
+            if (statusLabel.toLowerCase().includes("approved")) dotColor = "#10b981";
+            if (statusLabel.toLowerCase().includes("rejected")) dotColor = "#ef4444";
 
             timelineHtml += `
                 <div style="margin-bottom: 20px; position: relative;">
-                    <div style="position: absolute; left: -30px; top: 4px; width: 8px; height: 8px; background: white; border: 2.5px solid ${dotColor}; border-radius: 50%; z-index: 1;"></div>
-                    <div style="font-weight: 600; font-size: 0.8rem; color: ${isLast ? "#1e293b" : "#64748b"};">${statusLabel}</div>
+                    <div style="position: absolute; left: -30px; top: 4px; width: 8px; height: 8px; background: white; border: 2.5px solid ${dotColor}; border-radius: 50%;"></div>
+                    <div style="font-weight: 600; font-size: 0.8rem;">${statusLabel}</div>
                     <div style="font-size: 0.7rem; color: #94a3b8;">${timeText}</div>
-                    ${stepRemark ? `<div style="margin-top:4px; font-size:0.8rem; color:#475569; background:#f1f5f9; padding:6px 10px; border-radius:6px; border-left:3px solid ${dotColor}; font-style:italic;">"${stepRemark}"</div>` : ""}
                 </div>`;
         });
         timelineHtml += `</div></div>`;
     }
 
-    // 5. L2 Logic (Hardened Guard)
+    // --- 6. L2 LOGIC (Strictly for New Requests) ---
     const isSenior = localStorage.getItem("is_senior_manager") === "true";
     const isFirstStage = currentStatus === "Pending";
 
-    if (actionType === "Approved" && isFirstStage && !isSenior) {
+    // Only show L2 selection if: Action is Approve AND Not Senior AND Not Cancellation
+    if (actionType === "Approved" && isFirstStage && !isSenior && !isCancellationFlow) {
         try {
             const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
             if (res && res.ok) {
@@ -9524,36 +9463,17 @@ function changeMgrHistoryPage(direction) {
                 if (policy.l2_approval_enabled) {
                     if (l2Container) {
                         l2Container.style.display = "block";
-                        l2Container.style.background = "#f8fafc"; 
-                        l2Container.style.border = "1px solid #e2e8f0"; 
-                        l2Container.style.borderRadius = "6px";
-                        
-                        // 🚀 REDUCED PADDING: Changed from 15px to make the box tighter
-                        l2Container.style.padding = "10px 12px"; 
-                        
-                        l2Container.style.marginTop = "20px";
-                        // 🚀 SPACING FIX: Force a gap between the L2 box and the Remarks box
-                        l2Container.style.marginBottom = "20px"; 
+                        await populateL2ManagerDropdown();
                     }
-                    await populateL2ManagerDropdown();
-                } else {
-                    if (l2Container) l2Container.style.display = "none";
                 }
             }
-        } catch (e) { 
-            console.error("L2 Policy Check Error:", e);
-            if (l2Container) l2Container.style.display = "none";
-        }
-    } else {
-        if (l2Container) {
-            l2Container.style.display = "none";
-        }
+        } catch (e) { console.error("L2 Policy Check Error:", e); }
     }
 
-    // 6. GENERATE SUMMARY 
+    // --- 7. RENDER SUMMARY ---
     const dateDisplay = (startDate === endDate) 
         ? formatDateNice(startDate) 
-        : `${formatDateNice(startDate)} <span style="color:#94a3b8; margin:0 5px;">➔</span> ${formatDateNice(endDate)}`;
+        : `${formatDateNice(startDate)} <span style="color:#94a3b8;">➔</span> ${formatDateNice(endDate)}`;
 
     const currentApprover = (currentStatus === "Pending L2 Approval") 
         ? (leaveRecord.approver_l2 || "L2 Manager")
@@ -9561,157 +9481,118 @@ function changeMgrHistoryPage(direction) {
 
     let proxyBannerHtml = "";
     if (adminNameFound) {
-        proxyBannerHtml = `
-        <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; border-left: 4px solid #f59e0b;">
-            <div style="background: #f59e0b; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <i class="fas fa-user-shield" style="font-size: 0.8rem;"></i>
-            </div>
-            <div>
-                <div style="font-size: 0.7rem; color: #b45309; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Admin Override</div>
-                <div style="font-size: 0.9rem; color: #92400e; margin-top: 2px;">Submitted on behalf of employee by <strong>${adminNameFound}</strong></div>
-            </div>
-        </div>`;
+        proxyBannerHtml = `<div style="background: #fffbeb; border: 1px solid #fde68a; padding: 10px; margin-bottom: 15px; border-radius: 6px; color: #92400e; font-size: 0.8rem;"><strong>Admin Override:</strong> Submitted by ${adminNameFound}</div>`;
     }
 
-    // 🚀 SPACING FIX: Added "margin-bottom: 25px;" to the main wrapper to push the Remarks box away
+    let summaryTitle = isCancellationFlow ? "Review Cancellation" : "Confirm Decision";
+
     document.getElementById("reviewSummary").innerHTML = `
         ${proxyBannerHtml}
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; position: relative; margin-bottom: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                <div style="flex: 1;">
-                    <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Request Type</span>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-top: 2px;">${leaveType}</div>
-                    
-                    <div style="margin-top: 15px;">
-                        <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Date(s)</span>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; font-weight: 600; color: #334155;">
-                            <i class="far fa-calendar-alt" style="color: #94a3b8;"></i>
-                            ${dateDisplay}
-                        </div>
-                    </div>
-                </div>
-
-                <div style="text-align: right; display: flex; flex-direction: column; gap: 15px; min-width: 160px; padding-left: 15px; border-left: 1px dashed #e2e8f0;">
-                    <div>
-                        <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Review Phase</span>
-                        <span style="background: #fffbeb; color: #b45309; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid #fcd34d; text-transform: uppercase; display: inline-block;">
-                            <i class="fas fa-eye"></i> Manager Review
-                        </span>
-                    </div>
-                    <div>
-                        <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Current Status</span>
-                        <span class="status-badge ${badgeClass}" style="padding: 5px 12px; font-size: 0.75rem; font-weight: 800; display: inline-block;">
-                            ${statusText}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div style="background: #f0f9ff; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                <div style="background: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #bae6fd;">
-                    <i class="fas fa-user-tie" style="color: #2563eb; font-size: 0.8rem;"></i>
-                </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+             <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
                 <div>
-                    <label style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block; line-height: 1;">Assigned Approver</label>
-                    <span style="color: #2563eb; font-weight: 700; font-size: 0.9rem;">${currentApprover}</span>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Request Type</span>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">${leaveType}</div>
                 </div>
-            </div>
-
-            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
-                <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 6px;">
-                    <i class="fas fa-comment-alt" style="margin-right:4px;"></i> Reason / Justification
-                </span>
-                <div style="font-size: 0.9rem; color: #334155; line-height: 1.5; font-style: italic;">
-                    "${cleanReason}"
+                <div style="text-align: right;">
+                    <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Current Status</span><br>
+                    <span class="status-badge ${badgeClass}">${statusText}</span>
                 </div>
-                ${attachmentHtml} 
-            </div>
+             </div>
+             
+             <div style="background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Justification</span>
+                <div style="font-size: 0.9rem; color: #334155; margin-top: 5px; font-style: italic;">"${cleanReason}"</div>
+                ${attachmentHtml}
+             </div>
 
-            ${timelineHtml}
+             <div style="margin-top: 15px; font-size: 0.9rem;">
+                <i class="far fa-calendar-alt" style="color: #94a3b8; margin-right: 5px;"></i> <strong>${dateDisplay}</strong>
+             </div>
+             
+             <div style="margin-top: 12px; font-size: 0.8rem; color: #475569; background: #e0f2fe; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-user-tie" style="color: #0369a1;"></i>
+                <span>Assigned to: <strong>${currentApprover}</strong></span>
+             </div>
 
-            <div style="margin-top: 15px; font-size: 0.7rem; color: #cbd5e1; font-family: monospace;">
-                REF #${leaveId}
-            </div>
+             ${timelineHtml}
         </div>`;
 
     // ---------------------------------------------------------
-    // 7. DYNAMIC BUTTON STYLING (THE LAYOUT PRESERVER)
+    // 8. DYNAMIC BUTTON LOGIC (THE FIX)
     // ---------------------------------------------------------
     const approveBtn = document.getElementById("modalApproveBtn");
     const rejectBtn = document.getElementById("modalRejectBtn");
 
-    approveBtn.style.display = "inline-flex";
-    rejectBtn.style.display = "inline-flex";
-
-    // Center text vertically and horizontally
+    approveBtn.style.display = "flex";
+    rejectBtn.style.display = "flex";
     approveBtn.style.alignItems = "center";
     approveBtn.style.justifyContent = "center";
+    approveBtn.style.gap = "8px";
+    
     rejectBtn.style.alignItems = "center";
     rejectBtn.style.justifyContent = "center";
+    rejectBtn.style.gap = "8px";
 
+    // --- CASE 1: APPROVAL CLICKED ---
     if (actionType === "Approved") {
         approveBtn.style.background = "#10b981";
-        approveBtn.style.color = "white";
         approveBtn.style.borderColor = "#10b981";
-        
-        if (currentStatus === "Pending Cancel") {
-            approveBtn.innerHTML = '<i class="fas fa-check-circle" style="margin-right:5px;"></i> Confirm Cancel';
+        approveBtn.style.color = "white";
+
+        // 🚀 SUB-CASE: CANCELLATION (Priority)
+        if (isCancellationFlow) {
+            approveBtn.innerHTML = '<i class="fas fa-check-circle"></i><span>Confirm Cancel</span>';
             approveBtn.title = "Accept cancellation and remove leave";
+            
+            // 🛡️ ACTION: Send "Approved". 
+            // Why? Because your backend listens for "Approved" to trigger the cancellation logic.
+            // Sending "Cancelled" here caused the backend to treat it as a Rejection!
+            approveBtn.onclick = () => submitDecision(leaveId, "Approved");
+
         } else {
-            approveBtn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i> Approve';
+            // 🚀 SUB-CASE: NORMAL APPROVAL
+            approveBtn.innerHTML = '<i class="fas fa-check"></i><span>Approve</span>';
             approveBtn.title = "Approve this request";
+            
+            approveBtn.onclick = () => {
+                if (l2Container.style.display !== "none" && !l2Select.value) {
+                    Swal.fire("Action Required", "Please select a Department Head for L2 Approval.", "warning");
+                    return; 
+                }
+                submitDecision(leaveId, "Approved");
+            };
         }
 
         rejectBtn.style.background = "#f8fafc";
         rejectBtn.style.color = "#64748b";
         rejectBtn.style.borderColor = "#e2e8f0";
         rejectBtn.innerHTML = 'Cancel';
-        rejectBtn.title = "Close window without saving";
-
-        approveBtn.onclick = () => {
-            if (l2Container && l2Container.style.display !== "none" && !l2Select.value) {
-                let err = document.getElementById(errorId);
-                if (!err) {
-                    err = document.createElement("div");
-                    err.id = errorId;
-                    err.style.color = "#dc2626"; 
-                    err.style.fontSize = "0.75rem";
-                    err.style.marginTop = "8px";
-                    err.style.fontWeight = "600";
-                    err.innerText = "Level 2 Approver is required.";
-                    l2Container.appendChild(err);
-                }
-                l2Select.style.borderColor = "#dc2626";
-                l2Select.animate([
-                    { transform: 'translateX(0)' }, { transform: 'translateX(-4px)' },
-                    { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }
-                ], { duration: 300 });
-                return; 
-            }
-            submitDecision(leaveId, "Approved");
-        };
         rejectBtn.onclick = () => closeReviewModal(); 
 
     } else {
+        // --- CASE 2: REJECTION CLICKED ---
         rejectBtn.style.background = "#ef4444";
         rejectBtn.style.color = "white";
         rejectBtn.style.borderColor = "#ef4444";
-        
-        if (currentStatus === "Pending Cancel") {
-            rejectBtn.innerHTML = '<i class="fas fa-times-circle" style="margin-right:5px;"></i> Deny Request';
-            rejectBtn.title = "Reject cancellation (Leave remains Approved)";
+
+        if (isCancellationFlow) {
+            rejectBtn.innerHTML = '<i class="fas fa-times-circle"></i><span>Deny Request</span>';
+            rejectBtn.title = "Reject cancellation (Leave remains Active)";
+            
+            // 🛡️ ACTION: "Rejected" -> Backend sets status to "Approved" (Active)
+            rejectBtn.onclick = () => submitDecision(leaveId, "Rejected");
+
         } else {
-            rejectBtn.innerHTML = '<i class="fas fa-times" style="margin-right:5px;"></i> Reject';
+            rejectBtn.innerHTML = '<i class="fas fa-times"></i><span>Reject</span>';
             rejectBtn.title = "Reject this request";
+            rejectBtn.onclick = () => submitDecision(leaveId, "Rejected");
         }
 
         approveBtn.style.background = "#f8fafc";
         approveBtn.style.color = "#64748b";
         approveBtn.style.borderColor = "#e2e8f0";
         approveBtn.innerHTML = 'Cancel';
-        approveBtn.title = "Close window without saving";
-
-        rejectBtn.onclick = () => submitDecision(leaveId, "Rejected");
         approveBtn.onclick = () => closeReviewModal(); 
     }
 
@@ -9799,12 +9680,14 @@ function resetManagerLeaveFilters() {
        async function submitDecision(leaveId, status) {
     const remarks = document.getElementById("mgr_review_remarks").value;
     const l2Container = document.getElementById("l2SelectorContainer");
-    const l2Name = document.getElementById("l2_manager_select").value;
+    
+    // 🛡️ Safe Access
+    const l2Select = document.getElementById("l2_manager_select");
+    const l2Name = l2Select ? l2Select.value : "";
     const approverName = localStorage.getItem("currentUser");
 
     // 1. Validation: L2 Selection Check
-    if (status === "Approved" && l2Container.style.display !== "none" && !l2Name) {
-        // Keeping your standardized SweetAlert warning for consistency
+    if (status === "Approved" && l2Container && l2Container.style.display !== "none" && !l2Name) {
         Swal.fire({
             title: "Routing Required",
             text: "Please select a Department Head (L2 Approver) to route this request.",
@@ -9815,14 +9698,13 @@ function resetManagerLeaveFilters() {
     }
 
     try {
-        // Build URL
         let url = `${API_URL}/leaves/manager/action/${leaveId}?status=${status}&remarks=${encodeURIComponent(remarks)}&approver_name=${encodeURIComponent(approverName)}`;
 
         if (status === "Approved" && l2Name) {
             url += `&l2_name=${encodeURIComponent(l2Name)}`;
         }
 
-        // Show a subtle loading state during the API call
+        // Show a subtle loading state
         Swal.fire({
             title: 'Processing Decision...',
             allowOutsideClick: false,
@@ -9833,28 +9715,41 @@ function resetManagerLeaveFilters() {
         if (!res) return;
 
         if (res.ok) {
-            // --- 🚀 SMART MESSAGING LOGIC ---
+            // 🛡️ 1. LOCK THIS ID: Prevents opening the modal again
+            if (typeof processedActionIds !== 'undefined') {
+                processedActionIds.add(leaveId);
+            }
+
+            // 🚀 2. OPTIMISTIC UI: Remove row INSTANTLY using the unique ID
+            // This is the specific fix for the "Pending Leave still showing" bug
+            const row = document.getElementById(`mgr_row_${leaveId}`);
+            if (row) {
+                row.style.opacity = "0";
+                row.style.transform = "translateX(20px)";
+                setTimeout(() => row.remove(), 300); // Remove from DOM after fade
+            }
+
+            // --- SMART MESSAGING LOGIC ---
             let modalTitle = "";
             let modalMsg = "";
             let iconType = "success";
 
             if (status === "Rejected") {
                 modalTitle = "Request Rejected";
-                modalMsg = "The leave request has been rejected and closed.";
-                iconType = "info"; // Professional blue for rejection
+                modalMsg = "The request has been rejected and closed.";
+                iconType = "info"; 
             } else if (l2Name) {
                 modalTitle = "Routed for Final Approval";
-                modalMsg = `L1 Check complete. Request has been routed to <strong>${l2Name}</strong> for final Approval.`;
+                modalMsg = `Request routed to <strong>${l2Name}</strong>.`;
             } else {
-                modalTitle = "Leave Approved";
-                modalMsg = "The leave request has been fully approved and entitlements deducted.";
+                modalTitle = "Request Approved";
+                modalMsg = "The request has been successfully processed.";
             }
 
-            // 1. Close the Review Modal FIRST to clear the UI
+            // Close the Review Modal FIRST
             closeReviewModal();
 
-            // 🚀 THE CRITICAL SYNC FIX: Wait for the manager to click "OK"
-            // This acts as a synchronous lock ensuring the user is ready for the refresh
+            // Show Success Message
             await Swal.fire({
                 title: modalTitle,
                 html: modalMsg,
@@ -9864,20 +9759,12 @@ function resetManagerLeaveFilters() {
                 allowOutsideClick: false
             });
 
-            // 2. REFRESH ALL DATA (Only after OK is clicked)
-            console.log("🔄 Synchronizing queue and badges...");
-            
-            // Await the queue load so the row is guaranteed to be gone
+            // 3. REFRESH DATA (Background Sync)
+            console.log("🔄 Synchronizing queue...");
             await loadManagerRequests(); 
             
             if (typeof refreshManagerBadges === "function") {
                 refreshManagerBadges();
-            }
-
-            // Sync Team History if the manager is currently viewing that tab
-            const historySection = document.getElementById("manager_history");
-            if (historySection && historySection.classList.contains("active")) {
-                await loadTeamHistory();
             }
 
         } else {
@@ -9893,15 +9780,20 @@ function resetManagerLeaveFilters() {
         console.error("Decision Submission Error:", e);
         Swal.fire({
             title: "Network Error",
-            text: "Could not reach the server. Please check your connection.",
+            text: "Could not reach the server.",
             icon: "error",
             confirmButtonColor: "#ef4444"
         });
     }
 }
+
  // 🚀 THE FIX: Unified Cancel Logic (Fixed ReferenceError & Zero-Freeze)
-// 🚀 THE FIX: Unified Cancel Logic (Fixed ReferenceError & Zero-Freeze)
-async function cancelLeave(id, currentStatus) {
+ async function cancelLeave(id, currentStatus) {
+    // 🛡️ SAFETY GUARD: Prevent double-clicking
+    if (typeof processedActionIds !== 'undefined' && processedActionIds.has(id)) {
+        return; 
+    }
+
     if (currentStatus === "Approved") {
         // 🟡 Approved Leave: Route to the Reason-Prompt workflow
         if (typeof requestCancelLeave === "function") {
@@ -9928,6 +9820,9 @@ async function cancelLeave(id, currentStatus) {
                         didOpen: () => { Swal.showLoading(); }
                     });
 
+                    // 🛡️ LOCK ID immediately to prevent race conditions
+                    if (typeof processedActionIds !== 'undefined') processedActionIds.add(id);
+
                     const res = await fetchWithAuth(`${API_URL}/leaves/${id}/cancel`, { 
                         method: "PUT" 
                     });
@@ -9941,18 +9836,23 @@ async function cancelLeave(id, currentStatus) {
                             icon: 'success',
                             confirmButtonColor: '#2563eb'
                         }).then(() => {
-                            // 🔄 THE REFRESH FIX: Use historyCurrentPage instead of currentPage
+                            // 🔄 REFRESH DATA
                             if (typeof loadHistory === "function") {
                                 loadHistory(historyCurrentPage, historyPageSize);
                             }
                             if (typeof prefetchBalances === "function") prefetchBalances();
                         });
                     } else {
+                        // If failed, UNLOCK the ID so they can try again
+                        if (typeof processedActionIds !== 'undefined') processedActionIds.delete(id);
+                        
                         const err = await res.json();
                         Swal.fire("Error", err.detail || "Could not delete request.", "error");
                     }
                 } catch(e) {
                     console.error("Cancel Leave Error:", e);
+                    // If network error, UNLOCK the ID
+                    if (typeof processedActionIds !== 'undefined') processedActionIds.delete(id);
                     Swal.fire("Network Error", "Connection failed.", "error");
                 }
             }
@@ -9961,12 +9861,25 @@ async function cancelLeave(id, currentStatus) {
 }
 
 // 🚀 THE MISSING WORKER: Sends the cancellation reason to the Python Backend
-async function executeCancellationSubmit(id, source, reason) {
+// 🚀 THE MISSING WORKER: Sends the cancellation reason to the Python Backend
+/**
+ * 🚀 EXECUTION WORKER (Shared by Leave & OT)
+ * Sends the cancellation request to the backend.
+ */
+ async function executeCancellationSubmit(id, source, reason) {
+    // 🛡️ 1. SAFETY CHECK: Stop if we are already processing this ID
+    if (typeof processedActionIds !== 'undefined' && processedActionIds.has(id)) {
+        return; 
+    }
+
     const endpoint = (source === "OT")
         ? `${API_URL}/overtime/${id}/cancel`
         : `${API_URL}/leaves/${id}/cancel`;
 
     try {
+        // 🛡️ 2. LOCK THE ID
+        if (typeof processedActionIds !== 'undefined') processedActionIds.add(id);
+
         Swal.fire({ 
             title: 'Submitting Request...', 
             allowOutsideClick: false, 
@@ -9979,7 +9892,10 @@ async function executeCancellationSubmit(id, source, reason) {
             body: JSON.stringify({ reason: reason }),
         });
 
-        if (!res) return;
+        if (!res) {
+            if (typeof processedActionIds !== 'undefined') processedActionIds.delete(id);
+            return;
+        }
 
         if (res.ok) {
             Swal.fire({
@@ -9988,21 +9904,33 @@ async function executeCancellationSubmit(id, source, reason) {
                 text: 'Your cancellation request has been sent to your Manager.',
                 confirmButtonColor: '#2563eb'
             }).then(() => {
-                // 🔄 THE REFRESH FIX: Use historyCurrentPage instead of currentPage
+                // 🔄 THE REFRESH FIX
                 if (typeof loadHistory === "function") {
-                    loadHistory(historyCurrentPage, historyPageSize);
+                    // Safety check: Use global variables if they exist, otherwise default to 1
+                    const p = (typeof historyCurrentPage !== 'undefined') ? historyCurrentPage : 1;
+                    const s = (typeof historyPageSize !== 'undefined') ? historyPageSize : 10;
+                    loadHistory(p, s);
+                }
+                // Also refresh badges if the function exists
+                if (typeof refreshManagerBadges === "function") {
+                    refreshManagerBadges();
                 }
             });
         } else {
+            // 🔓 UNLOCK ID
+            if (typeof processedActionIds !== 'undefined') processedActionIds.delete(id);
+
             const err = await res.json();
             Swal.fire("Error", err.detail || "Failed to submit request.", "error");
         }
     } catch (e) {
+        // 🔓 UNLOCK ID
+        if (typeof processedActionIds !== 'undefined') processedActionIds.delete(id);
+
         console.error("Cancel Request Error:", e);
         Swal.fire("Network Error", "Please check your connection.", "error");
     }
 }
-
 
       function logout() {
         // 1. Clear the "Active Tab" memory so the next login starts at Home
@@ -10976,10 +10904,14 @@ async function addCompanyHoliday(event) {
         return false;
       }
 
-      // 🚀 GENERIC CONFIRMATION MODAL HELPER
-      // Reuses the Settings Modal for Deletes & Status Changes
-      function openGenericConfirm(title, message, btnText, btnColor, callback) {
+ // 🚀 GENERIC CONFIRMATION MODAL HELPER
+ function openGenericConfirm(title, message, btnText, btnColor, callback) {
         const modal = document.getElementById("universalModal");
+        
+        // 🚀 THE FIX: Force this modal to be the absolute top layer on screen
+        // 2147483647 is the maximum Z-Index value allowed in browsers.
+        modal.style.zIndex = "2147483647"; 
+        
         const content = document.getElementById("uModalContent");
         const icon = document.getElementById("uModalIcon");
         const titleEl = document.getElementById("uModalTitle");
@@ -10988,7 +10920,7 @@ async function addCompanyHoliday(event) {
         const confirmBtn = document.getElementById("uModalConfirmBtn");
 
         // 1. Reset & Setup UI
-        if (warnBox) warnBox.style.display = "none"; // Hide specific warning box
+        if (warnBox) warnBox.style.display = "none";
         modal.style.display = "flex";
 
         // 2. Set Content
@@ -10999,23 +10931,20 @@ async function addCompanyHoliday(event) {
 
         // 3. Set Color Theme based on action type
         if (btnColor === "#ef4444" || btnColor === "#dc2626") {
-          // Red Theme (Destructive)
           content.style.borderTopColor = "#ef4444";
           icon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
           icon.style.color = "#ef4444";
         } else {
-          // Blue/Green Theme (Update)
           content.style.borderTopColor = btnColor;
           icon.innerHTML = '<i class="fas fa-info-circle"></i>';
           icon.style.color = btnColor;
         }
 
         // 4. Bind the Callback Action
-        // We unbind previous clicks first to prevent stacking actions
         confirmBtn.onclick = async () => {
-          closeUniversalModal(); // Close first
+          closeUniversalModal();
           if (typeof callback === "function") {
-            await callback(); // Run the actual logic
+            await callback();
           }
         };
       }
@@ -13471,16 +13400,19 @@ function clearError(elementId) {
         }, 500);
       }
 
-      // 1. TRIGGER: Opens the Orange Confirmation Modal
-      function toggleUserStatus(userId) {
-        openGenericConfirm(
-          "Change Account Status?",
-          "Are you sure you want to toggle this user's access?<br><strong>Inactive users cannot log in.</strong>",
-          "Confirm Change",
-          "#f59e0b", // Orange Color for Warning
-          () => executeUserStatusToggle(userId) // Callback
-        );
-      }
+// 1. TRIGGER: Opens the Orange Confirmation Modal with the Name
+function toggleUserStatus(userId, fullName) {
+    // 🛡️ Fallback if name is missing for some reason
+    const displayName = fullName || "this user"; 
+
+    openGenericConfirm(
+        "Change Account Status?",
+        `Are you sure you want to toggle access for <strong>${displayName}</strong>?<br>Inactive users cannot log in.`,
+        "Confirm Change",
+        "#f59e0b", // Orange Color for Warning
+        () => executeUserStatusToggle(userId) // Callback
+    );
+}
 
  // 2. EXECUTION: The actual API Call
  async function executeUserStatusToggle(userId) {
@@ -14652,9 +14584,9 @@ async function renderCalendar() {
           const daysInMonth = new Date(year, month + 1, 0).getDate();
           let cellsInjected = 0;
 
-          // 1. Previous month padding
+          // 1. Previous month padding (Updated to fixed height)
           for (let i = 0; i < firstDayIndex; i++) {
-            finalHTML += `<div style="background: #f8fafc; border: 1px solid #f1f5f9; min-height: 100px;"></div>`;
+            finalHTML += `<div style="background: #f8fafc; border: 1px solid #f1f5f9; height: 110px;"></div>`;
             cellsInjected++;
           }
 
@@ -14681,16 +14613,19 @@ async function renderCalendar() {
 
             const dayBg = holidayToday ? "background-color: #f1f5f9;" : "";
 
+            // 🚀 THE FIX: Fixed height of 110px, overflow hidden, flex column
             let dayHtml = `
-              <div class="calendar-day ${isToday ? "today" : ""}" style="${dayBg} min-height: 100px;">
-                  <div style="font-weight: 800; font-size: 0.75rem; color: ${isToday ? "#b45309" : "#64748b"};">
+              <div class="calendar-day ${isToday ? "today" : ""}" style="${dayBg} height: 110px; overflow: hidden; display: flex; flex-direction: column;">
+                  <div style="font-weight: 800; font-size: 0.75rem; color: ${isToday ? "#b45309" : "#64748b"}; margin-bottom: 4px; flex-shrink: 0;">
                     ${day}
-                  </div>`;
+                  </div>
+                  
+                  <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 2px;">`;
 
             if (holidayToday) {
               dayHtml += `
                 <div class="leave-pill" title="Public Holiday: ${holidayToday.name}"
-                     style="background: #e2e8f0; color: #475569; border-left: 3px solid #94a3b8; font-style: italic; margin-bottom: 4px;">
+                     style="background: #e2e8f0; color: #475569; border-left: 3px solid #94a3b8; font-style: italic; margin-bottom: 0; flex-shrink: 0;">
                     <i class="fas fa-umbrella-beach" style="font-size: 0.6rem;"></i> ${holidayToday.name}
                 </div>`;
             }
@@ -14706,21 +14641,24 @@ async function renderCalendar() {
                 pillColor = "#fef3c7"; textColor = "#92400e";
               }
 
+              // Added flex-shrink: 0 to prevent the pills from shrinking when many exist
               dayHtml += `
                 <div class="leave-pill" title="${l.employee_name}: ${l.leave_type}"
-                     style="background: ${pillColor}; color: ${textColor}; border-left: 3px solid ${textColor};">
+                     style="background: ${pillColor}; color: ${textColor}; border-left: 3px solid ${textColor}; margin-bottom: 0; flex-shrink: 0;">
                     ${l.employee_name.split(" ")[0]}
                 </div>`;
             });
 
-            dayHtml += `</div>`;
+            dayHtml += `
+                  </div> </div> `;
+              
             finalHTML += dayHtml;
             cellsInjected++;
           }
 
-          // 3. Fill remaining cells
+          // 3. Fill remaining cells (Updated to fixed height)
           while (cellsInjected < 42) {
-            finalHTML += `<div style="background: #f8fafc; border: 1px solid #f1f5f9; min-height: 100px; opacity: 0.4;"></div>`;
+            finalHTML += `<div style="background: #f8fafc; border: 1px solid #f1f5f9; height: 110px; opacity: 0.4;"></div>`;
             cellsInjected++;
           }
 
@@ -15654,15 +15592,19 @@ function renderManagerOTTable() {
         return;
     }
 
-    data.forEach((ot) => {
-        // 🛡️ DATA SANITIZATION: Double escape to prevent HTML breakage from weird user text
+// D. Render Rows (Inside renderManagerOTTable)
+data.forEach((ot) => {
+        // 🛡️ DATA SANITIZATION
         const otJson = JSON.stringify(ot).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
         const initials = (ot.employee_name || "??").split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
         
         const rawStatus = ot.status || "Pending";
         const statusClass = `status-${rawStatus.toLowerCase().replace(/\s+/g, "-")}`;
         let statusLabel = rawStatus;
-        if (rawStatus === "Pending L2 Approval") statusLabel = "Waiting L2";
+        if (rawStatus === "Pending L2 Approval") statusLabel = "Wait L2";
+
+        // 🎨 THE PREMIUM TYPE BADGE (Blue Theme)
+        const typeBadge = `<span style="background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;">Overtime</span>`;
 
         let catColor = "#475569"; let catBg = "#f1f5f9";
         const safeType = ot.ot_type || "Overtime";
@@ -15681,10 +15623,15 @@ function renderManagerOTTable() {
           <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
               <td style="padding: 12px 15px;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="width:36px; height:36px; background:#e0f2fe; color:#0369a1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">${initials}</div>
+                    <div style="width:36px; height:36px; background:#e0f2fe; color:#0369a1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                        ${initials}
+                    </div>
                     <div>
                         <div style="font-weight:700; color:#1e293b; font-size:0.9rem;">${ot.employee_name || "Unknown"}</div>
-                        <div style="font-size:0.7rem; color:#64748b; font-family:monospace;">#OT-${String(ot.id || 0).padStart(4, "0")}</div>
+                        <div style="margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+                            ${typeBadge}
+                            <span style="font-size:0.7rem; color:#64748b; font-weight: 600;">#OT-${String(ot.id || 0).padStart(4, "0")}</span>
+                        </div>
                     </div>
                 </div>
               </td>
