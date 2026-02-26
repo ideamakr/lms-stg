@@ -16,7 +16,7 @@ API_KEY = os.getenv("Render-API")
 
 # 🚀 THE VERIFIED SENDER 
 # IMPORTANT: Use the address Brevo recognizes to avoid Gmail DMARC blocks
-SENDER_EMAIL = "a2ebdf001@smtp-brevo.com"
+SENDER_EMAIL = "leavesystemnotif@gmail.com"
 
 
 def send_email(to_email: str, subject: str, body: str):
