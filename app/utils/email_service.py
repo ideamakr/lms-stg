@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 USE_MOCK_EMAIL = False 
 
 SMTP_SERVER = "smtp-relay.brevo.com"
-SMTP_PORT = 465
+SMTP_PORT = 2525
 
 # The system login Brevo gave you
 SMTP_LOGIN = "a2ebdf001@smtp-brevo.com" 
