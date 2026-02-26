@@ -11,18 +11,13 @@ from email.mime.multipart import MIMEMultipart
 # ---------------------------------------------------------
 USE_MOCK_EMAIL = False 
 
-SMTP_SERVER = "smtp-relay.brevo.com"
-SMTP_PORT = 2525
+# 🔑 BREVO API V3 KEY (Required for Render API Bypass)
+API_KEY = os.getenv("BREVO_API_KEY")
 
-# The system login Brevo gave you
-SMTP_LOGIN = "a2ebdf001@smtp-brevo.com" 
+# 🚀 THE VERIFIED SENDER 
+# IMPORTANT: Use the address Brevo recognizes to avoid Gmail DMARC blocks
+SENDER_EMAIL = "a2ebdf001@smtp-brevo.com"
 
-# Your password (API/SMTP Key)
-SMTP_PASSWORD = "xsmtpsib-c746ebe28cd18fe158d1b8521e7632500138d07f9f2f9492ecef3b098c0f74f2-9ExGRZxcjZ8qJFLv"
-
-# 🚀 The Verified Sender Email
-# If Gmail blocks this later, change to a2ebdf001@smtp-brevo.com
-SENDER_EMAIL = "leavesystemnotif@gmail.com"
 
 def send_email(to_email: str, subject: str, body: str):
     """
@@ -64,7 +59,7 @@ def send_email(to_email: str, subject: str, body: str):
         url = "https://api.brevo.com/v3/smtp/email"
         headers = {
             "accept": "application/json",
-            "api-key": SMTP_PASSWORD, 
+            "api-key": API_KEY, 
             "content-type": "application/json"
         }
         
