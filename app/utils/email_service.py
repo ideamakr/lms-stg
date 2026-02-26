@@ -5,6 +5,7 @@ import json
 import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import urllib.request
 
 # ---------------------------------------------------------
 # ⚙️ CONFIGURATION
@@ -21,12 +22,19 @@ SENDER_EMAIL = "leavesystemnotif@gmail.com"
 
 def send_email(to_email: str, subject: str, body: str):
     """
-    Sends an email using Brevo HTTP API to bypass Render SMTP restrictions.
+    Sends a professional HTML email using Brevo HTTP API.
+    Bypasses Render's SMTP port restrictions (Port 587/465).
     """
     # 🛡️ Safety Guard
     if not to_email or to_email == "---" or "@" not in str(to_email):
         print(f"⚠️ Skipping email: Invalid recipient address '{to_email}'")
         return False
+
+    # 🔑 CONFIGURATION
+    # Matches the Key exactly as seen in your Render Dashboard
+    API_KEY = os.getenv("Render-API") 
+    SENDER_EMAIL = "leavesystemnotif@gmail.com"
+    SYSTEM_URL = "https://lms-stg.onrender.com" 
 
     if USE_MOCK_EMAIL:
         print("\n" + "="*60)
@@ -39,7 +47,7 @@ def send_email(to_email: str, subject: str, body: str):
         return True
 
     try:
-        # 🎨 THE MAGIC WRAPPER
+        # 🎨 THE MAGIC WRAPPER (HTML & BUTTON)
         formatted_body = body.replace('\n', '<br>').replace('--------------------------------', '<hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0;">')
         
         html_content = f"""
@@ -48,22 +56,22 @@ def send_email(to_email: str, subject: str, body: str):
                 <div style="color: #334155; font-size: 15px; line-height: 1.6;">
                     {formatted_body}
                 </div>
+                
+                <div style="margin-top: 25px; text-align: center;">
+                    <a href="{SYSTEM_URL}" style="background-color: #3b82f6; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                        Access System Dashboard
+                    </a>
+                </div>
+
                 <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center;">
-                    Automated message from your Company Leave Management System
+                    Automated message from your Company Leave Management System<br>
+                    <a href="{SYSTEM_URL}" style="color: #3b82f6; text-decoration: none;">{SYSTEM_URL}</a>
                 </div>
             </div>
         </div>
         """
         
-        # 🛡️ THE RENDER FIREWALL BYPASS: Use Brevo HTTP API instead of SMTP
-        url = "https://api.brevo.com/v3/smtp/email"
-        headers = {
-            "accept": "application/json",
-            "api-key": API_KEY, 
-            "content-type": "application/json"
-        }
-        
-        # Build the JSON package
+        # ✅ FIX: Standard single braces for dictionary payload
         payload = {
             "sender": {"name": "Leave System", "email": SENDER_EMAIL},
             "to": [{"email": to_email}],
@@ -71,20 +79,30 @@ def send_email(to_email: str, subject: str, body: str):
             "htmlContent": html_content
         }
 
-        # Fire it through the open web port (Port 443)
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method="POST")
-        
-        with urllib.request.urlopen(req) as response:
-            print(f"✅ Real Email sent successfully to {to_email} via API")
-            return True
+        # ✅ FIX: Standard single braces for headers
+        req = urllib.request.Request(
+            "https://api.brevo.com/v3/smtp/email",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "api-key": API_KEY,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            method="POST"
+        )
 
+        with urllib.request.urlopen(req) as response:
+            if response.getcode() in [200, 201, 202]:
+                print(f"✅ Real Email sent successfully to {to_email} via API")
+                return True
+            
     except Exception as e:
-        # If there's an HTTP error, this will catch the exact reason from Brevo
         try:
-            error_msg = e.read().decode('utf-8')
-            print(f"❌ Failed to send real email via Brevo API: {error_msg}")
+            # Captures exact error from Brevo if available
+            error_detail = e.read().decode('utf-8')
+            print(f"❌ Brevo API Error: {error_detail}")
         except:
-            print(f"❌ Failed to send real email via Brevo API: {str(e)}")
+            print(f"❌ Failed to send real email: {e}")
         return False
 
 # ---------------------------------------------------------
