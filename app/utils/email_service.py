@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 USE_MOCK_EMAIL = False 
 
 SMTP_SERVER = "smtp-relay.brevo.com"
-SMTP_PORT = 587
+SMTP_PORT = 465
 
 # The system login Brevo gave you
 SMTP_LOGIN = "a2ebdf001@smtp-brevo.com" 
@@ -67,13 +67,15 @@ def send_email(to_email: str, subject: str, body: str):
         
         # 🚀 Attach the styled HTML content instead of the raw body
         msg.attach(MIMEText(html_content, 'html'))
-
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls() 
+# 🛡️ Use SMTP_SSL for Port 465 (No starttls needed!)
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            
+            # 🔍 Turn on debug mode to see exact Brevo errors in Render logs
+            server.set_debuglevel(1) 
+            
             # 🚀 Authenticate using the system login, send using the verified sender
             server.login(SMTP_LOGIN, SMTP_PASSWORD) 
             server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
-        
         print(f"✅ Real Email sent successfully to {to_email}")
         return True
     except Exception as e:
