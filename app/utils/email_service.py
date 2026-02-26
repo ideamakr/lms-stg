@@ -1,6 +1,8 @@
 import smtplib
 import re
 import os
+import json
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -19,12 +21,12 @@ SMTP_LOGIN = "a2ebdf001@smtp-brevo.com"
 SMTP_PASSWORD = "xsmtpsib-c746ebe28cd18fe158d1b8521e7632500138d07f9f2f9492ecef3b098c0f74f2-9ExGRZxcjZ8qJFLv"
 
 # 🚀 The Verified Sender Email
+# If Gmail blocks this later, change to a2ebdf001@smtp-brevo.com
 SENDER_EMAIL = "leavesystemnotif@gmail.com"
 
 def send_email(to_email: str, subject: str, body: str):
     """
-    Sends an email using Brevo SMTP or prints to console if in Mock Mode.
-    Supports basic HTML for icons and formatting.
+    Sends an email using Brevo HTTP API to bypass Render SMTP restrictions.
     """
     # 🛡️ Safety Guard
     if not to_email or to_email == "---" or "@" not in str(to_email):
@@ -42,16 +44,9 @@ def send_email(to_email: str, subject: str, body: str):
         return True
 
     try:
-        msg = MIMEMultipart()
-        msg['From'] = f"Leave System <{SENDER_EMAIL}>" # What the user sees
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        
         # 🎨 THE MAGIC WRAPPER
-        # Converts Python newlines to HTML breaks, and turns your "---" into a clean divider line
         formatted_body = body.replace('\n', '<br>').replace('--------------------------------', '<hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0;">')
         
-        # Wraps the text in a modern, centered card design matching your dashboard
         html_content = f"""
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; padding: 40px 20px; margin: 0;">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-top: 4px solid #3b82f6;">
@@ -65,21 +60,36 @@ def send_email(to_email: str, subject: str, body: str):
         </div>
         """
         
-        # 🚀 Attach the styled HTML content instead of the raw body
-        msg.attach(MIMEText(html_content, 'html'))
-# 🛡️ Use SMTP_SSL for Port 465 (No starttls needed!)
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-            
-            # 🔍 Turn on debug mode to see exact Brevo errors in Render logs
-            server.set_debuglevel(1) 
-            
-            # 🚀 Authenticate using the system login, send using the verified sender
-            server.login(SMTP_LOGIN, SMTP_PASSWORD) 
-            server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
-        print(f"✅ Real Email sent successfully to {to_email}")
-        return True
+        # 🛡️ THE RENDER FIREWALL BYPASS: Use Brevo HTTP API instead of SMTP
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "accept": "application/json",
+            "api-key": SMTP_PASSWORD, 
+            "content-type": "application/json"
+        }
+        
+        # Build the JSON package
+        payload = {
+            "sender": {"name": "Leave System", "email": SENDER_EMAIL},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "htmlContent": html_content
+        }
+
+        # Fire it through the open web port (Port 443)
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method="POST")
+        
+        with urllib.request.urlopen(req) as response:
+            print(f"✅ Real Email sent successfully to {to_email} via API")
+            return True
+
     except Exception as e:
-        print(f"❌ Failed to send real email via Brevo: {str(e)}")
+        # If there's an HTTP error, this will catch the exact reason from Brevo
+        try:
+            error_msg = e.read().decode('utf-8')
+            print(f"❌ Failed to send real email via Brevo API: {error_msg}")
+        except:
+            print(f"❌ Failed to send real email via Brevo API: {str(e)}")
         return False
 
 # ---------------------------------------------------------
