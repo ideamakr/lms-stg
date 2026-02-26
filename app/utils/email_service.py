@@ -12,7 +12,7 @@ from email.mime.multipart import MIMEMultipart
 USE_MOCK_EMAIL = False 
 
 # 🔑 BREVO API V3 KEY (Required for Render API Bypass)
-API_KEY = os.getenv("BREVO_API_KEY")
+API_KEY = os.getenv("Render-API")
 
 # 🚀 THE VERIFIED SENDER 
 # IMPORTANT: Use the address Brevo recognizes to avoid Gmail DMARC blocks
