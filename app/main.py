@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
+# 👇 THIRD PARTY IMPORTS
 from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -14,13 +15,16 @@ from PIL import Image
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-# 👇 LOAD ENVIRONMENT VARIABLES
+# 👇 LOCAL APPLICATION IMPORTS (Absolute paths)
+from app.database import engine, Base, get_db
+from app import models, schemas
+from app.routers import leave, user, overtime, system_settings 
+
+# 👇 INITIALIZE ENVIRONMENT
 load_dotenv()
 
-# 👇 IMPORT ROUTERS & DATABASE
-from .database import engine, Base, get_db
-from . import models
-from app.routers import leave, user, overtime, system_settings 
+# 👇 APP INITIALIZATION
+app = FastAPI()
 
 # ============================================================
 # 🚀 1. INITIALIZE SUPABASE CLIENT
