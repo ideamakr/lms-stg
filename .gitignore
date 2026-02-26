@@ -1,15 +1,31 @@
-# Database
-*.db
-*.sqlite3
+# Secrets
+.env
+
+# Environments
+venv/
+env/
+ENV/
 
 # Python junk
 __pycache__/
 *.pyc
-venv/
-env/
+*.pyo
+*.pyd
+.pytest_cache/
+app/**/__pycache__/
 
-# Uploads & OS files
+# Database
+*.db
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
+
+# Local Uploads (Since we are now using Supabase Cloud)
 uploads/
 app/static/uploads/
-.DS_Store
-.vscode/

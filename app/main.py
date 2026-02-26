@@ -213,3 +213,7 @@ app.include_router(leave.router)
 app.include_router(user.router)
 app.include_router(overtime.router)
 app.include_router(system_settings.router)
+
+@app.get("/")
+def read_root():
+    return {"status": "Leave System API is Online", "docs": "/docs"}
