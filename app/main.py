@@ -54,16 +54,16 @@ class LoginRequest(BaseModel):
 # ============================================================
 # 🛠️ APP INITIALIZATION
 # ============================================================
-# 1. Initialize the app ONCE
+# 👇 APP INITIALIZATION (Initialize once with title)
 app = FastAPI(title="Leave System API")
 
-# 2. Add the CORS middleware ONCE with all URLs
+# 🔒 CORS Configuration (Unified block with all origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://127.0.0.1:5500", 
         "http://localhost:5500",
-        "https://ideamakr.github.io" 
+        "https://ideamakr.github.io"  # 🚀 Your GitHub Pages domain
     ], 
     allow_credentials=True,
     allow_methods=["*"],
