@@ -3,11 +3,11 @@ import math
 import pandas as pd
 import re
 import tempfile
-from typing import Union, Optional
-from datetime import date, datetime
+from typing import Union, Optional, List
+from datetime import date, datetime 
 
 # 🚀 FastAPI, Security & Background Tasks
-from fastapi import APIRouter, Depends, HTTPException, Form, Query, Body, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Form, Query, Body, UploadFile, File, BackgroundTasks, Header
 from sqlalchemy import func, or_, and_, desc, text, extract
 from sqlalchemy.orm import Session
 from pydantic import BaseModel 
@@ -17,25 +17,8 @@ from app import models
 from app.database import SessionLocal
 from app.dependencies import validate_session
 
-# ============================================================
-# 🌍 GLOBAL CONFIGURATION (Environment Aware)
-# ============================================================
-# Logic to prevent Uvicorn "Quick Refresh" loops during file uploads on Mac/Local.
-if os.getenv("ENV") == "PROD":
-    # Absolute path for Linux/Production servers
-    TARGET_DIR = "/var/www/uploads" 
-else:
-    # System temporary directory for development
-    TARGET_DIR = os.path.join(tempfile.gettempdir(), "leave_system_uploads")
-
-# 📂 Ensure the directory exists immediately on startup
-if not os.path.exists(TARGET_DIR):
-    os.makedirs(TARGET_DIR, exist_ok=True)
-
-# ============================================================
-# 📧 BULLETPROOF EMAIL SERVICE IMPORTS
-# ============================================================
-# This handles the complex pathing between 'app.utils' and local 'utils' folders.
+# 📧 Email Utilities
+# Robust import strategy to handle different environment paths
 try:
     from app.utils.email_service import (
         send_email, 
@@ -50,29 +33,19 @@ try:
         template_cancellation_rejected
     )
 except ImportError:
-    try:
-        # Fallback relative import for local linting/testing
-        from ..utils.email_service import (
-            send_email, 
-            template_new_request,
-            template_medical_request,
-            template_request_approved,
-            template_request_rejected,
-            template_l2_request,
-            template_cancellation_request,
-            template_l2_cancellation_request,
-            template_cancellation_approved,
-            template_cancellation_rejected
-        )
-    except ImportError:
-        # Final fallback for simple folder structures
-        from utils.email_service import (
-            send_email, 
-            template_new_request,
-            template_medical_request,
-            template_request_approved,
-            template_request_rejected
-        )
+    # Fallback for local testing
+    from utils.email_service import (
+        send_email, 
+        template_new_request,
+        template_medical_request,
+        template_request_approved,
+        template_request_rejected,
+        template_l2_request,
+        template_cancellation_request,
+        template_l2_cancellation_request,
+        template_cancellation_approved,
+        template_cancellation_rejected
+    )
 
 # ============================================================
 # 🏗️ ROUTER & SCHEMAS
@@ -82,12 +55,7 @@ class CancelRequestSchema(BaseModel):
 
 router = APIRouter(prefix="/leaves", tags=["Leaves"])
 
-# 📂 Path constant for URL serving
-UPLOAD_DIR = "uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
-
-# 🛠️ Database Dependency
+# 🛠️ Database Dependency (Ensures a fresh session for every request)
 def get_db():
     db = SessionLocal()
     try:
@@ -166,7 +134,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         "leave_type": target_entitlement_type,
         "entitlement": base_entitlement, 
         "carry_forward_total": cf_wallet, # 🚀 Passes CF to frontend to trigger Blue Tile
-        "remaining": remaining,           # 🚀 Now outputs 19!
+        "remaining": remaining,           # 🚀 Now outputs correct balance!
         "taken": total_used_days,
         "pending_total": pending_only_days
     }
@@ -201,11 +169,10 @@ async def create_leave(
     end_date: str = Form(...),
     reason: str = Form(...), 
     is_half_day: Union[bool, str] = Form(False),
-    # ❌ REMOVED applied_by from parameters
     file: UploadFile = File(None), 
     db: Session = Depends(get_db)
 ):
-    # 🚀 FIX 1: SANITIZE INPUTS (Prevents "Duplicate" bugs due to spaces)
+    # 🚀 FIX 1: SANITIZE INPUTS
     employee_name = employee_name.strip()
     approver_name = approver_name.strip()
     leave_type = leave_type.strip()
@@ -215,7 +182,7 @@ async def create_leave(
     end_obj = date.fromisoformat(end_date)
     is_half_day_bool = is_half_day in (True, "true")
 
-    # --- 1. DUPLICATE / OVERLAP CHECK (Safety Gate) ---
+    # --- 1. DUPLICATE / OVERLAP CHECK ---
     collision = db.query(models.Leave).filter(
         models.Leave.employee_name == employee_name,
         models.Leave.status.in_(["Pending", "Pending L2 Approval", "Approved", "Pending Cancel"]),
@@ -275,20 +242,20 @@ async def create_leave(
     else:
         ensure_leave_balance(db, employee_name, start_obj.year)
 
-    # --- 4. FILE HANDLING ---
-    new_filename = None
+# --- 4. FILE HANDLING (Safe Cloud Upload) ---
+    attachment_url = None 
+    
     if file and file.filename:
-        file_ext = os.path.splitext(file.filename)[1]
-        date_stamp = start_date.replace("-", "")
-        time_stamp = datetime.now().strftime("%H%M%S")
-        new_filename = f"{employee_name}_Leave_{date_stamp}_{time_stamp}{file_ext}"
-        saved_file_path = os.path.join(TARGET_DIR, new_filename)
         try:
-            with open(saved_file_path, "wb") as buffer:
-                content = await file.read()
-                buffer.write(content)
+            # ✅ CORRECTED: Removed the # to make the import active
+            from app.main import compress_and_upload
+            
+            # Now the function is loaded and ready to use
+            attachment_url = compress_and_upload(file, folder="mcs")
+            
         except Exception as e:
-            raise HTTPException(status_code=500, detail="System Error: Failed to save attachment.")
+            print(f"❌ Upload Failed: {e}")
+            raise HTTPException(status_code=500, detail="System Error: Failed to upload attachment to cloud.")
 
     # --- 5. SAVE RECORD ---
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -300,7 +267,7 @@ async def create_leave(
         end_date=end_obj, 
         reason=reason, 
         days_taken=days_requested,
-        attachment_path=new_filename, 
+        attachment_path=attachment_url, # ✅ Passes the Cloud URL (or None)
         status="Pending", 
         status_history=f"Submitted ({now_str})"
     )
@@ -309,7 +276,7 @@ async def create_leave(
     db.commit()
     db.refresh(new_leave)
 
-    # --- 6. EMAIL NOTIFICATION (Background Queue) ---
+    # --- 6. EMAIL NOTIFICATION ---
     manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
     
     if manager and manager.email:
@@ -334,7 +301,6 @@ async def create_leave(
                 days=days_requested
             )
         
-        # 🚀 Instant hand-off to Brevo worker (UI returns success instantly)
         background_tasks.add_task(send_email, manager.email, subject, body)
 
     return new_leave
@@ -429,6 +395,8 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
         "cf_total": cf_total
     }
 
+import os # 👈 Make sure this is imported at the top
+
 @router.get("/history")
 def get_leave_history(
     employee_name: str, 
@@ -443,20 +411,20 @@ def get_leave_history(
 ):
     skip = (page - 1) * page_size
     
-    # 1. Base query for this specific employee
+    # 1. Base query
     query = db.query(models.Leave).filter(models.Leave.employee_name == employee_name)
     
     # 2. Precise Date Filtering
     if start_date and start_date.strip():
         try:
-            target_start = date.fromisoformat(start_date)
+            target_start = datetime.strptime(start_date, "%Y-%m-%d").date() # Safer parsing
             query = query.filter(models.Leave.start_date == target_start)
         except ValueError:
             pass 
 
     if end_date and end_date.strip():
         try:
-            target_end = date.fromisoformat(end_date)
+            target_end = datetime.strptime(end_date, "%Y-%m-%d").date()
             query = query.filter(models.Leave.end_date == target_end)
         except ValueError:
             pass
@@ -474,17 +442,20 @@ def get_leave_history(
         except ValueError:
             pass 
 
-    # 4. Calculate totals for pagination
+    # 4. Pagination Totals
     total = query.count()
     total_pages = math.ceil(total / page_size) if total > 0 else 1
     
-    # 5. Fetch records 
-    # 🚀 FIX: Sorted by Start Date Descending (Newest Leave First)
-    # Added ID Descending as a tie-breaker for same-day leaves
+    # 5. Fetch records (Sorted Newest First)
     leaves = query.order_by(
         models.Leave.start_date.desc(), 
         models.Leave.id.desc()
     ).offset(skip).limit(page_size).all()
+    
+    # 🛡️ PREPARE SUPABASE CONSTANTS
+    # We grab these once to build the URL efficiently
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
     
     # 6. Formatted response
     formatted = []
@@ -492,6 +463,12 @@ def get_leave_history(
         l_type = l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type)
         l_status = l.status.value if hasattr(l.status, 'value') else str(l.status)
         
+        # 🚀 FIX: GENERATE FULL CLOUD URL
+        # If the path exists but doesn't start with 'http', we assume it's a filename in the 'mcs' folder
+        full_attachment_url = l.attachment_path
+        if full_attachment_url and not full_attachment_url.startswith("http"):
+            full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{l.attachment_path}"
+
         formatted.append({
             "id": l.id, 
             "employee_name": l.employee_name,
@@ -502,7 +479,7 @@ def get_leave_history(
             "status": l_status,
             "start_date": l.start_date.strftime("%Y-%m-%d") if l.start_date else "N/A",
             "end_date": l.end_date.strftime("%Y-%m-%d") if l.end_date else "N/A",
-            "attachment_path": l.attachment_path, 
+            "attachment_path": full_attachment_url, # 👈 Send the fixed URL
             "status_history": l.status_history or "Pending",
             "approved_at": l.approved_at.strftime("%Y-%m-%d %H:%M") if l.approved_at else None,
             "rejected_at": l.rejected_at.strftime("%Y-%m-%d %H:%M") if l.rejected_at else None,
@@ -515,41 +492,56 @@ def get_leave_history(
         "leaves": formatted
     }
 
+# --- 5. CANCELLATION LOGIC (SECURED) ---
 @router.put("/{leave_id}/cancel")
-async def cancel_leave_request( # 🚀 Changed to async
+async def cancel_leave_request(
     leave_id: int, 
-    background_tasks: BackgroundTasks, # 🚀 INJECTED: Background worker
+    background_tasks: BackgroundTasks, 
     payload: CancelRequestSchema = Body(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_username: str = Header(None) # 🔒 SECURITY BADGE
 ):
+    # 1. Security Check
+    if not x_username:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
     leave = db.query(models.Leave).filter(models.Leave.id == leave_id).first()
     if not leave:
         raise HTTPException(status_code=404, detail="Leave request not found")
 
+    # 2. Ownership Verification
+    current_user = db.query(models.User).filter(models.User.username == x_username).first()
+    
+    # Block if not owner AND not superuser
+    if not current_user or (leave.employee_name != current_user.full_name and current_user.role != "superuser"):
+        raise HTTPException(status_code=403, detail="You do not have permission to cancel this leave.")
+
     current_status = leave.status
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     
-    # Format reason for history and email
+    # Format reason
     reason_val = payload.reason if (payload and payload.reason) else "No reason provided"
     reason_text = f" (Reason: {reason_val})"
 
-    # --- 1. WITHDRAWAL (No email needed) ---
-    if current_status == models.LeaveStatus.PENDING:
-        leave.status = models.LeaveStatus.WITHDRAWN 
-        leave.status_history += f" > Withdrawn by Employee{reason_text} ({timestamp})"
+    # --- STATUS LOGIC ---
+    
+    # CASE A: WITHDRAWAL (Pending -> Withdrawn)
+    if current_status == "Pending":
+        leave.status = "Withdrawn"
+        leave.status_history = (leave.status_history or "") + f"\n > Withdrawn by Employee ({timestamp})"
         msg = "Request has been successfully withdrawn."
         
-    # --- 2. CANCELLATION (Approved or Pending L2) ---
-    elif current_status in [models.LeaveStatus.APPROVED, models.LeaveStatus.PENDING_L2]:
-        leave.status = models.LeaveStatus.PENDING_CANCEL
-        leave.status_history += f" > Cancellation Requested by Employee{reason_text} ({timestamp})"
+    # CASE B: CANCELLATION (Approved -> Pending Cancel)
+    elif current_status in ["Approved", "Pending L2 Approval"]:
+        leave.status = "Pending Cancel"
+        leave.status_history = (leave.status_history or "") + f"\n > Cancellation Requested by Employee{reason_text} ({timestamp})"
         msg = "Cancellation request sent to manager for review."
 
-        # 🚀 EMAIL NOTIFICATION TRIGGER (Background Task)
+        # 🚀 EMAIL NOTIFICATION
         manager = db.query(models.User).filter(models.User.full_name == leave.approver_name).first()
         
         if manager and manager.email:
-            # Ensure leave_type is a string for the template
+            # Safe enum conversion
             l_type = leave.leave_type.value if hasattr(leave.leave_type, 'value') else str(leave.leave_type)
             
             subject = f"ACTION REQUIRED: Cancellation Request - {leave.employee_name}"
@@ -561,10 +553,8 @@ async def cancel_leave_request( # 🚀 Changed to async
                 leave.end_date.strftime("%Y-%m-%d"),
                 reason_val
             )
-            
-            # 🚀 Instant hand-off to Brevo worker
             background_tasks.add_task(send_email, manager.email, subject, body)
-            
+
     else:
         raise HTTPException(status_code=400, detail="Request state cannot be modified.")
     
@@ -573,19 +563,19 @@ async def cancel_leave_request( # 🚀 Changed to async
         return {"message": msg}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Internal Server Error during cancellation.")
-
+        print(f"Error cancelling leave: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 # app/routers/leave.py
 
 # 🚀 Ensure these are imported at the top
 
-# --- MANAGER PENDING VIEW ---
-# --- MANAGER PENDING VIEW ---
-# In app/routers/leave.py
+# ============================================================
+# 7. MANAGER & ADMIN VIEWS
+# ============================================================
 
 @router.get("/manager/pending")
 def get_manager_pending(
-    approver_name: str,  # Required
+    approver_name: str, 
     db: Session = Depends(get_db), 
     page: int = 1, 
     page_size: int = 10,
@@ -595,61 +585,53 @@ def get_manager_pending(
     leave_type: str = "",   
     status: str = "",
 ):
-    # 1. 🚀 ROBUST QUERY
+    # 1. Base Query: Matches Lane 1 (L1) and Lane 2 (L2) logic
     query = db.query(models.Leave).filter(
         or_(
-            # Lane 1: L1 Manager (Sarah)
-            # She sees "Pending" (New Requests) AND "Pending Cancel" (Cancellation Requests)
-            and_(
-                models.Leave.approver_name == approver_name,
-                models.Leave.status.in_(["Pending", "Pending Cancel"])
-            ),
-            
-            # Lane 2: L2 Manager (Tony)
-            # 🚀 FIX: REMOVED "Pending Cancel" from here.
-            # Tony only sees the request when it is explicitly escalated to "Pending L2 Approval".
-            and_(
-                models.Leave.approver_l2 == approver_name,
-                models.Leave.status.in_(["Pending L2 Approval"]) 
-            )
+            and_(models.Leave.approver_name == approver_name, models.Leave.status.in_(["Pending", "Pending Cancel"])),
+            and_(models.Leave.approver_l2 == approver_name, models.Leave.status == "Pending L2 Approval")
         )
     )
-    
-    # 2. Apply Search Filters
-    if name:
-        query = query.filter(models.Leave.employee_name.ilike(f"%{name}%"))
-    if date_str:
-        query = query.filter(models.Leave.start_date.cast(models.String).ilike(f"%{date_str}%"))
-    if end_date:
-        query = query.filter(models.Leave.end_date.cast(models.String).ilike(f"%{end_date}%"))
-    if leave_type:
-        query = query.filter(models.Leave.leave_type == leave_type)
-    if status:
-        query = query.filter(models.Leave.status == status)
 
-    # 3. Pagination Logic
-    total_count = query.count()
+    # 2. Filters
+    if name: query = query.filter(models.Leave.employee_name.ilike(f"%{name}%"))
+    if date_str: query = query.filter(models.Leave.start_date.cast(models.String).ilike(f"%{date_str}%"))
+    if end_date: query = query.filter(models.Leave.end_date.cast(models.String).ilike(f"%{end_date}%"))
+    if leave_type: query = query.filter(models.Leave.leave_type == leave_type)
+    if status: query = query.filter(models.Leave.status == status)
     
-    # Using desc() on ID to show newest first
+    total_count = query.count()
     results = query.order_by(models.Leave.id.desc()).offset((page-1)*page_size).limit(page_size).all()
     
-    # 4. Return Dictionary
-    return {
-        "total": total_count,
-        "requests": [{
+    # 🛡️ PREPARE SUPABASE CONSTANTS
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
+
+    formatted_results = []
+    for r in results:
+        # 🚀 FIX: GENERATE FULL CLOUD URL
+        full_attachment_url = r.attachment_path
+        if full_attachment_url and not full_attachment_url.startswith("http"):
+            full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{r.attachment_path}"
+
+        formatted_results.append({
             "id": r.id,
             "employee_name": r.employee_name,
             "approver_name": r.approver_name,
-            "approver_l2": r.approver_l2, 
-            "leave_type": r.leave_type.value if hasattr(r.leave_type, 'value') else str(r.leave_type),
-            "status": r.status.value if hasattr(r.status, 'value') else str(r.status),
+            "approver_l2": r.approver_l2, # Critical for UI to show "Routed to..."
+            "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
+            "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
             "days_taken": r.days_taken,
             "start_date": r.start_date.strftime("%Y-%m-%d"),
             "end_date": r.end_date.strftime("%Y-%m-%d"),
             "reason": r.reason,
-            "attachment_path": r.attachment_path,
+            "attachment_path": full_attachment_url, # 👈 Send the fixed URL
             "status_history": r.status_history or "Pending"
-        } for r in results]
+        })
+    
+    return {
+        "total": total_count,
+        "requests": formatted_results
     }
 
 
@@ -857,55 +839,54 @@ def get_all_manager_leaves(
 ):
     query = db.query(models.Leave)
     
-    # 1. RBAC Check (The Critical Fix + The Memory Rule)
+    # 1. RBAC: Managers only see what they touched. Admins see all.
     if "hr_admin" not in user_role.lower():
         if approver_name:
-            safe_name = approver_name.strip()
             query = query.filter(
                 or_(
-                    models.Leave.approver_name.ilike(safe_name),
-                    models.Leave.approver_l2.ilike(safe_name),
-                    # 🚀 THE MAGIC FIX: Looks inside the history string to see if this manager ever touched it!
-                    models.Leave.status_history.ilike(f"%{safe_name}%") 
+                    models.Leave.approver_name.ilike(approver_name.strip()),
+                    models.Leave.approver_l2.ilike(approver_name.strip()),
+                    models.Leave.status_history.ilike(f"%{approver_name.strip()}%") 
                 )
             )
         else:
             return {"requests": []}
     
-    # 2. Search by Employee Name
-    if name and name.strip():
-        query = query.filter(models.Leave.employee_name.ilike(f"%{name.strip()}%"))
-        
-    # 3. Precise Date Filtering for Team View
-    if date_str and date_str.strip():
-        try:
-            target_date = date.fromisoformat(date_str)
-            query = query.filter(models.Leave.start_date == target_date)
-        except ValueError:
-            pass 
-        
-    # 4. Filter by Status
-    status_col = models.Leave.status.cast(models.String)
-    if status and status.strip() not in ["All", "All Decisions", "", "null"]:
-        query = query.filter(status_col.ilike(status.strip()))
+    if name: query = query.filter(models.Leave.employee_name.ilike(f"%{name.strip()}%"))
+    if date_str:
+        try: query = query.filter(models.Leave.start_date == date.fromisoformat(date_str))
+        except: pass
+    if status and status not in ["All", "All Decisions", ""]:
+        query = query.filter(models.Leave.status == status)
         
     results = query.order_by(models.Leave.id.desc()).all()
+    
+    # 🛡️ PREPARE SUPABASE CONSTANTS
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
 
-    # 5. Return Formatted Data
-    return {"requests": [{
-        "id": r.id,
-        "employee_name": r.employee_name,
-        "approver_name": r.approver_name,
-        "approver_l2": r.approver_l2,
-        "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
-        "days_taken": r.days_taken,
-        "start_date": r.start_date.strftime("%Y-%m-%d") if r.start_date else "N/A",
-        "end_date": r.end_date.strftime("%Y-%m-%d") if r.end_date else "N/A",
-        "reason": r.reason or "No reason provided",
-        "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
-        "attachment_path": r.attachment_path, 
-        "status_history": r.status_history or "Pending"
-    } for r in results]}
+    formatted = []
+    for r in results:
+        # 🚀 FIX: GENERATE FULL CLOUD URL
+        full_attachment_url = r.attachment_path
+        if full_attachment_url and not full_attachment_url.startswith("http"):
+            full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{r.attachment_path}"
+
+        formatted.append({
+            "id": r.id,
+            "employee_name": r.employee_name,
+            "approver_name": r.approver_name,
+            "approver_l2": r.approver_l2,
+            "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
+            "days_taken": r.days_taken,
+            "start_date": r.start_date.strftime("%Y-%m-%d"),
+            "end_date": r.end_date.strftime("%Y-%m-%d"),
+            "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
+            "attachment_path": full_attachment_url, # 👈 Send the fixed URL
+            "status_history": r.status_history or "Pending"
+        })
+
+    return {"requests": formatted}
 
 # Admin Query table
 @router.get("/admin/query/{table_name}")
@@ -1108,29 +1089,17 @@ def get_approvers(db: Session = Depends(get_db)):
 
 # 1. 🚀 ADDED GET: Fetch the list (This resolves the 405 error)
 @router.get("/public-holidays")
-def get_public_holidays(
-    db: Session = Depends(get_db)
-):
-    """
-    Returns the list of public holidays so the frontend can 
-    validate dates and highlight them on the calendar.
-    """
+def get_public_holidays(db: Session = Depends(get_db)):
     return db.query(models.PublicHoliday).order_by(models.PublicHoliday.holiday_date).all()
 
-# 2. POST: Add a new holiday (Keep your current logic)
 @router.post("/public-holidays")
 def add_public_holiday(
     holiday_date: str = Form(...), 
     name: str = Form(...), 
     db: Session = Depends(get_db)
 ):
-    """Allows HR Admin to add a new holiday with a character limit check."""
-    
-    # 1. NEW VALIDATION: Ensure holiday name isn't too long
     if len(name) > 50:
         raise HTTPException(status_code=400, detail="Holiday name cannot exceed 50 characters.")
-
-    # 2. DATE CONVERSION
     try:
         date_obj = date.fromisoformat(holiday_date)
     except ValueError:
@@ -1141,36 +1110,59 @@ def add_public_holiday(
     db.commit()
     return {"message": f"Holiday '{name}' added successfully."}
 
-
-
 @router.delete("/public-holidays/{holiday_id}")
 def delete_public_holiday(holiday_id: int, db: Session = Depends(get_db)):
-    """Allows HR Admin to remove a holiday."""
-    holiday = db.query(models.PublicHoliday).filter(models.PublicHoliday.id == holiday_id).first() #
+    holiday = db.query(models.PublicHoliday).filter(models.PublicHoliday.id == holiday_id).first()
     if not holiday:
-        raise HTTPException(status_code=404, detail="Holiday not found") #
-    
-    db.delete(holiday) #
-    db.commit() #
+        raise HTTPException(status_code=404, detail="Holiday not found")
+    db.delete(holiday)
+    db.commit()
     return {"message": "Holiday deleted"}
+
+@router.get("/public-calendar")
+def get_public_calendar(db: Session = Depends(get_db)):
+    # 🚀 FIX: Use string comparison "Approved" to match saved data
+    leaves = db.query(models.Leave).filter(models.Leave.status == "Approved").all()
+    public_data = []
+    for l in leaves:
+        public_data.append({
+            "employee_name": l.employee_name,
+            "start_date": str(l.start_date),
+            "end_date": str(l.end_date),
+            "leave_type": l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type)
+        })
+    return public_data
 
 @router.get("/admin/audit-logs")
 def get_global_audit_logs(db: Session = Depends(get_db)):
     """Fetches all leave requests for the System Audit Log (HR Admin only)."""
     results = db.query(models.Leave).order_by(models.Leave.id.desc()).all()
     
-    return [{
-        "id": l.id,
-        "employee_name": l.employee_name,
-        "approver_name": l.approver_name,
-        "leave_type": l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type),
-        "days_taken": l.days_taken,
-        "start_date": l.start_date.strftime("%Y-%m-%d"),
-        "end_date": l.end_date.strftime("%Y-%m-%d"),
-        "status": l.status.value if hasattr(l.status, 'value') else str(l.status),
-        "attachment_path": l.attachment_path,  # 🚀 ADD THIS LINE HERE
-        "status_history": l.status_history or "Pending"
-    } for l in results]
+    # 🛡️ PREPARE SUPABASE CONSTANTS
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
+
+    formatted = []
+    for l in results:
+        # 🚀 FIX: GENERATE FULL CLOUD URL
+        full_attachment_url = l.attachment_path
+        if full_attachment_url and not full_attachment_url.startswith("http"):
+            full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{l.attachment_path}"
+
+        formatted.append({
+            "id": l.id,
+            "employee_name": l.employee_name,
+            "approver_name": l.approver_name,
+            "leave_type": l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type),
+            "days_taken": l.days_taken,
+            "start_date": l.start_date.strftime("%Y-%m-%d"),
+            "end_date": l.end_date.strftime("%Y-%m-%d"),
+            "status": l.status.value if hasattr(l.status, 'value') else str(l.status),
+            "attachment_path": full_attachment_url, # 👈 Sends the valid link now
+            "status_history": l.status_history or "Pending"
+        })
+    
+    return formatted
 
 @router.put("/public-holidays/{holiday_id}")
 def update_public_holiday(
@@ -1202,66 +1194,75 @@ def update_public_holiday(
 
 @router.get("/admin/policy")
 def get_policy(db: Session = Depends(get_db)):
-    # Look for a global policy record (we use ID 1 as the master record)
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     if not policy:
-        # Default values if no policy has been saved yet
-        return {"annual": 14, "medical": 14, "emergency": 2, "compassionate": 3}
+        return {"annual": 14, "medical": 14, "emergency": 2, "compassionate": 3, "l2_enabled": False}
     return {
         "annual": policy.annual_days,
         "medical": policy.medical_days,
         "emergency": policy.emergency_days,
-        "compassionate": policy.compassionate_days
+        "compassionate": policy.compassionate_days,
+        "l2_enabled": policy.l2_approval_enabled
     }
 
 @router.post("/admin/policy")
 def update_policy(settings: dict = Body(...), db: Session = Depends(get_db)):
-    # 1. Fetch the master policy record (ID 1)
+    # 1. Fetch or create the master policy record
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
-    
     if not policy:
-        policy = models.GlobalPolicy(id=1)
+        # Initialize with hardcoded defaults if DB is empty
+        policy = models.GlobalPolicy(
+            id=1, 
+            annual_days=14.0, 
+            medical_days=14.0, 
+            emergency_days=2.0, 
+            compassionate_days=3.0,
+            l2_approval_enabled=False
+        )
         db.add(policy)
     
-    # 2. Update Standard Days (with fallbacks to current values)
+    # 2. Update Standard Days (Safely handle settings vs current DB values)
     policy.annual_days = settings.get("annual", policy.annual_days)
     policy.medical_days = settings.get("medical", policy.medical_days)
     policy.emergency_days = settings.get("emergency", policy.emergency_days)
     policy.compassionate_days = settings.get("compassionate", policy.compassionate_days)
 
-    # 🚀 NEW: Save the L2 Master Switch State
-    # The frontend will send true/false for "l2_enabled"
+    # 3. Save L2 Switch State
     if "l2_enabled" in settings:
         policy.l2_approval_enabled = settings["l2_enabled"]
     
-    # 3. SYNC: Update all existing employee "wallets" for the current year
-    # This ensures that changing the policy immediately updates everyone's remaining days
+    # Commit policy changes first to ensure values are saved
+    db.commit()
+    db.refresh(policy)
+
+    # 4. 🚀 SYNC LOGIC with None-Safety
     current_year = datetime.now().year
-    
     sync_map = [
-        (models.LeaveType.ANNUAL.value, policy.annual_days),
-        (models.LeaveType.MEDICAL.value, policy.medical_days),
-        (models.LeaveType.EMERGENCY.value, policy.emergency_days),
-        (models.LeaveType.COMPASSIONATE.value, policy.compassionate_days)
+        ("Annual Leave", policy.annual_days),
+        ("Medical Leave", policy.medical_days),
+        ("Emergency Leave", policy.emergency_days),
+        ("Compassionate Leave", policy.compassionate_days)
     ]
 
     for l_type_str, new_val in sync_map:
-        db.query(models.LeaveBalance).filter(
-            models.LeaveBalance.year == current_year,
-            models.LeaveBalance.leave_type == l_type_str
-        ).update({"entitlement": float(new_val)}, synchronize_session=False)
+        # 🛡️ THE FIX: Only attempt float conversion if new_val is not None
+        if new_val is not None:
+            try:
+                db.query(models.LeaveBalance).filter(
+                    models.LeaveBalance.year == current_year,
+                    models.LeaveBalance.leave_type == l_type_str
+                ).update({"entitlement": float(new_val)}, synchronize_session=False)
+            except (ValueError, TypeError) as e:
+                print(f"⚠️ Sync skipped for {l_type_str}: Invalid value {new_val}")
     
     db.commit()
-    return {"message": "Global policy and workflow settings updated and synced."}
+    return {"message": "Global policy updated and synced for all employees."}
 
 @router.post("/admin/adjust-individual")
 def adjust_individual_balance(data: dict = Body(...), db: Session = Depends(get_db)):
-    # This handles the "Individual Adjustments" tab in your UI
     name = data.get("employee_name")
     year = data.get("year")
     
-    # Logic: Map the frontend keys to the actual LeaveType strings
-    # Ensure all 4 types are included here
     types_mapping = {
         "Annual Leave": data.get("annual"),
         "Medical Leave": data.get("medical"),
@@ -1270,7 +1271,7 @@ def adjust_individual_balance(data: dict = Body(...), db: Session = Depends(get_
     }
     
     for leave_type, days in types_mapping.items():
-        if days is None: continue  # Skip if the frontend didn't send a value
+        if days is None: continue 
         
         balance = db.query(models.LeaveBalance).filter(
             models.LeaveBalance.employee_name == name,
@@ -1281,96 +1282,57 @@ def adjust_individual_balance(data: dict = Body(...), db: Session = Depends(get_
         if balance:
             balance.entitlement = float(days)
         else:
+            # Create if missing
             new_bal = models.LeaveBalance(
                 employee_name=name,
                 year=year,
                 leave_type=leave_type,
-                entitlement=float(days)
+                entitlement=float(days),
+                remaining=float(days),
+                carry_forward_total=0.0
             )
             db.add(new_bal)
             
     db.commit()
-    return {"message": f"Successfully updated all balances for {name}"}
+    return {"message": f"Successfully updated balances for {name}"}
 
-# --- HR ADMIN: SYSTEM REPORTING ---
+# ============================================================
+# 📊 HR ADMIN: REPORTING & AUDIT
+# ============================================================
 
-@router.get("/admin/report-summary")
-def get_report_summary(db: Session = Depends(get_db)):
-    today = date.today()
-    
-    # 1. AWAY TODAY: Count employees whose approved leave includes today
-    away_today = db.query(models.Leave).filter(
-        models.Leave.status == models.LeaveStatus.APPROVED,
-        models.Leave.start_date <= today,
-        models.Leave.end_date >= today
-    ).count()
-
-    # 2. PENDING TOTAL: Count all requests waiting for manager action
-    pending_total = db.query(models.Leave).filter(
-        models.Leave.status.in_([models.LeaveStatus.PENDING, models.LeaveStatus.PENDING_CANCEL])
-    ).count()
-
-    # 3. MEDICAL RATE: Percentage of all approved leaves that are Medical
-    total_approved = db.query(models.Leave).filter(
-        models.Leave.status == models.LeaveStatus.APPROVED
-    ).count()
-    
-    medical_approved = db.query(models.Leave).filter(
-        models.Leave.status == models.LeaveStatus.APPROVED,
-        models.Leave.leave_type == models.LeaveType.MEDICAL
-    ).count()
-    
-    medical_rate = round((medical_approved / total_approved * 100), 1) if total_approved > 0 else 0
-
-    # 4. RECENT ACTIVITY: Fetch the last 5 records that were approved
-    recent_records = db.query(models.Leave).filter(
-        models.Leave.status == models.LeaveStatus.APPROVED
-    ).order_by(models.Leave.id.desc()).limit(5).all()
-
-    return {
-        "away_today": away_today,
-        "pending_total": pending_total,
-        "medical_percentage": medical_rate,
-        "recent_activity": [{
-            "employee_name": r.employee_name,
-            "leave_type": r.leave_type.value if hasattr(r.leave_type, 'value') else str(r.leave_type),
-            "days_taken": r.days_taken
-        } for r in recent_records]
-    }
-
-# 1. Helper function to ensure wallets exist (Auto-heals old accounts)
 def ensure_leave_balance(db: Session, employee_name: str, year: int):
     """
     Ensures a complete set of leave buckets exists for the employee.
-    If any specific bucket (e.g., Unpaid or Medical) is missing, it creates it.
+    If any specific bucket is missing, it creates it with the correct initial remaining days.
     """
-    # 1. Fetch current policy for defaults
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     
     defaults = [
-        (models.LeaveType.ANNUAL, policy.annual_days if policy else 14.0),
-        (models.LeaveType.MEDICAL, policy.medical_days if policy else 14.0),
-        (models.LeaveType.EMERGENCY, policy.emergency_days if policy else 2.0),
-        (models.LeaveType.COMPASSIONATE, policy.compassionate_days if policy else 3.0),
-        (models.LeaveType.UNPAID, 0.0) 
+        ("Annual Leave", policy.annual_days if policy else 14.0),
+        ("Medical Leave", policy.medical_days if policy else 14.0),
+        ("Emergency Leave", policy.emergency_days if policy else 2.0),
+        ("Compassionate Leave", policy.compassionate_days if policy else 3.0),
+        ("Unpaid Leave", 0.0) 
     ]
 
     for l_type, days in defaults:
-        # 2. 🚀 CRITICAL FIX: Check for each specific leave type individually
-        # This 'Auto-Heals' users who might be missing just one specific row.
         type_exists = db.query(models.LeaveBalance).filter(
             models.LeaveBalance.employee_name == employee_name,
             models.LeaveBalance.year == year,
-            models.LeaveBalance.leave_type == l_type
+            or_(
+                models.LeaveBalance.leave_type == l_type,
+                models.LeaveBalance.leave_type == models.LeaveType[l_type.upper().split()[0]] if hasattr(models, 'LeaveType') else False
+            )
         ).first()
 
         if not type_exists:
+            # 🚀 Refinement: Explicitly set remaining = days so user starts with a full wallet
             db.add(models.LeaveBalance(
                 employee_name=employee_name,
-                leave_type=l_type,
+                leave_type=l_type, 
                 year=year,
                 entitlement=float(days),
-                remaining=float(days),
+                remaining=float(days), # 👈 Ensure this matches entitlement
                 carry_forward_total=0.0
             ))
     
@@ -1411,43 +1373,21 @@ def check_pending_l2(db: Session = Depends(get_db)):
     Finds all requests currently at the L2 stage. 
     Used by Admin to prevent 'orphaning' requests when turning L2 OFF.
     """
-    # 🚀 We look specifically for the new PENDING_L2 status defined in models.py
+    # 🚀 FIX: Query using the explicit string to match saved data
     pending = db.query(models.Leave).filter(
-        models.Leave.status == models.LeaveStatus.PENDING_L2
+        models.Leave.status == "Pending L2 Approval"
     ).all()
     
     return [{
         "id": p.id,
         "employee_name": p.employee_name,
+        # Safe handling of Enum or String for leave_type
         "leave_type": str(p.leave_type.value) if hasattr(p.leave_type, 'value') else str(p.leave_type),
-        "start_date": p.start_date.strftime("%Y-%m-%d"),
-        "status": p.status
+        "start_date": p.start_date.strftime("%Y-%m-%d") if p.start_date else "N/A",
+        "status": str(p.status)
     } for p in pending]
 
-# --- 🚀 NEW: PUBLIC TEAM CALENDAR (Visible to All) ---
-@router.get("/public-calendar")
-def get_public_calendar(db: Session = Depends(get_db)):
-    """
-    Returns ALL approved leaves for the company.
-    Filtered for privacy: Only Name, Dates, and Type are visible.
-    """
-    # 1. Fetch ONLY Approved leaves
-    leaves = db.query(models.Leave).filter(
-        models.Leave.status == models.LeaveStatus.APPROVED
-    ).all()
 
-    # 2. 🔒 DATA SANITIZATION: Only return safe fields
-    # We explicitly OMIT 'reason', 'attachment', and 'remarks' here for privacy.
-    public_data = []
-    for l in leaves:
-        public_data.append({
-            "employee_name": l.employee_name,
-            "start_date": str(l.start_date),
-            "end_date": str(l.end_date),
-            "leave_type": l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type)
-        })
-    
-    return public_data
 
 # =========================================================================
 # 🚀 HR ADMIN: CARRY FORWARD (CF) PROCESSING ENGINE
@@ -1458,11 +1398,10 @@ def get_cf_processing_list(
     name: str = "",
     year: str = "",
     status: str = "Pending",
-    employee_name: str = None, 
     db: Session = Depends(get_db)
 ):
     import re
-    # 1. Fetch all Leave requests that contain the Carry Forward tag
+    # 1. Fetch all requests with the CF tag
     query = db.query(models.Leave).filter(models.Leave.reason.like("%[CARRY FORWARD:%"))
     
     if name:
@@ -1472,10 +1411,11 @@ def get_cf_processing_list(
     result = []
     
     for req in cf_requests:
+        # Filter out invalid states
         if req.status in ["Pending", "Rejected", "Cancelled", "Withdrawn"]:
             continue
             
-        match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", req.reason)
+        match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", req.reason or "")
         cf_days = float(match.group(1)) if match else 0.0
         
         origin_year = req.start_date.strftime("%Y") if req.start_date else str(datetime.now().year)
@@ -1483,18 +1423,16 @@ def get_cf_processing_list(
         
         is_merged = (req.status == "Merged")
         
+        # UI Filtering logic
         if status == "Pending" and is_merged: continue
         if status == "Merged" and not is_merged: continue
         if year and year != "All" and origin_year != year: continue
         
-        # 🔍 FIX: Target 'remaining' instead of 'annual_remaining'
         target_balance = db.query(models.LeaveBalance).filter(
             models.LeaveBalance.employee_name == req.employee_name,
             models.LeaveBalance.year == int(target_year),
             models.LeaveBalance.leave_type == "Annual Leave"
         ).first()
-        
-        current_target_bal = target_balance.remaining if target_balance else 0
         
         result.append({
             "id": req.id,
@@ -1503,19 +1441,14 @@ def get_cf_processing_list(
             "target_year": target_year,
             "cf_days": cf_days,
             "is_merged": is_merged,
-            "current_balance_target_year": current_target_bal
+            "current_balance_target_year": target_balance.remaining if target_balance else 0
         })
         
-    result.sort(key=lambda x: x["id"], reverse=True)
-    return result
+    return sorted(result, key=lambda x: x["id"], reverse=True)
 
 
 @router.post("/cf-merge-bulk")
-def merge_cf_bulk(
-    payload: dict = Body(...), 
-    employee_name: str = None, 
-    db: Session = Depends(get_db)
-):
+def merge_cf_bulk(payload: dict = Body(...), db: Session = Depends(get_db)):
     import re
     leave_ids = payload.get("leave_ids", [])
     if not leave_ids:
@@ -1529,10 +1462,10 @@ def merge_cf_bulk(
             match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", req.reason)
             cf_days = float(match.group(1)) if match else 0.0
             
-            origin_year = req.start_date.strftime("%Y") if req.start_date else str(datetime.now().year)
-            target_year = int(origin_year) + 1
+            origin_year = int(req.start_date.strftime("%Y") if req.start_date else datetime.now().year)
+            target_year = origin_year + 1
             
-            # 🔍 FIX: Update 'remaining' instead of 'annual_remaining'
+            # 🚀 FIX: Corrected attribute name 'year'
             target_balance = db.query(models.LeaveBalance).filter(
                 models.LeaveBalance.employee_name == req.employee_name,
                 models.LeaveBalance.year == target_year,
@@ -1543,18 +1476,17 @@ def merge_cf_bulk(
                 target_balance.carry_forward_total = float(target_balance.carry_forward_total or 0) + cf_days
                 target_balance.remaining = float(target_balance.remaining or 0) + cf_days
             else:
-                new_bal = models.LeaveBalance(
+                db.add(models.LeaveBalance(
                     employee_name=req.employee_name,
                     leave_type="Annual Leave",
                     year=target_year,
                     entitlement=14.0, 
                     remaining=14.0 + cf_days,
                     carry_forward_total=cf_days
-                )
-                db.add(new_bal)
+                ))
             
             req.status = "Merged"
-            req.status_history = f"{req.status_history} > Merged to {target_year} Wallet"
+            req.status_history = (req.status_history or "") + f" > Merged to {target_year} Wallet"
             merged_count += 1
             
     db.commit()

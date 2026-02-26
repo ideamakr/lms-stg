@@ -1,57 +1,58 @@
+import io
 import os
+import uuid
+import pytz
 from pathlib import Path
+from datetime import datetime
+from typing import List
+
 from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles 
 from sqlalchemy.orm import Session
-import shutil
-import tempfile
-from datetime import datetime
-# 👇 IMPORT SYSTEM SETTINGS
-from app.routers import leave, user, overtime, system_settings 
-from app.schemas import BrandingConfig # 🚀 ADD THIS TO PREVENT THE CRASH
+from pydantic import BaseModel
+from PIL import Image
+from supabase import create_client, Client
+from dotenv import load_dotenv
 
+# 👇 LOAD ENVIRONMENT VARIABLES
+load_dotenv()
 
-# 👇 IMPORT get_db FROM DATABASE
-from .database import engine, Base, SessionLocal, get_db
+# 👇 IMPORT ROUTERS & DATABASE
+from .database import engine, Base, get_db
 from . import models
+from app.routers import leave, user, overtime, system_settings 
+
+# ============================================================
+# 🚀 1. INITIALIZE SUPABASE CLIENT
+# ============================================================
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("❌ CRITICAL ERROR: SUPABASE_URL or SUPABASE_KEY is missing from .env!")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# 🚀 2. SET GLOBAL TIMEZONE
+LOCAL_TZ = pytz.timezone('Asia/Kuala_Lumpur')
 
 # Create Database Tables
 Base.metadata.create_all(bind=engine)
 
+# ============================================================
+# 📦 SCHEMAS
+# ============================================================
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+# ============================================================
+# 🛠️ APP INITIALIZATION
+# ============================================================
 app = FastAPI(title="Leave System API")
 
-
-# ============================================================
-# 🧭 PATH CONFIGURATION (ALIGNED WITH SAFE ZONE)
-# ============================================================
-
-# 1. Get the folder where main.py lives (which is 'app/')
-BASE_APP_DIR = Path(__file__).resolve().parent 
-
-# 2. Define standard Static Folder (for CSS/JS)
-STATIC_DIR = BASE_APP_DIR / "static"
-if not STATIC_DIR.exists():
-    STATIC_DIR.mkdir(parents=True, exist_ok=True)
-
-# 3. 🚀 THE "SAFE ZONE" ALIGNMENT
-# We point to the System Temp folder so Uvicorn cannot see file changes
-UPLOADS_DIR = Path(tempfile.gettempdir()) / "leave_system_uploads"
-
-# 📂 Ensure the external folder exists
-if not UPLOADS_DIR.exists():
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-
-# 🚀 Mount standard static files
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-# 📂 Mount the EXTERNAL Safe Zone to the /uploads URL
-app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
-
-print(f"✅ Server mapping /uploads to Safe Zone: {UPLOADS_DIR}")
-print(f"✅ Uploads Path: {UPLOADS_DIR}")
-
-# 🔒 4. CORS Configuration
+# 🔒 CORS Configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:5500", "http://localhost:5500"], 
@@ -61,80 +62,57 @@ app.add_middleware(
 )
 
 # ============================================================
-# 🛡️ THE GUARD: PLACED AT THE TOP SO ALL ROUTES CAN SEE IT!
+# 📸 UTILITIES
 # ============================================================
-def get_current_superuser(
-    db: Session = Depends(get_db), 
-    x_username: str = Header(None) 
-): 
-    if not x_username:
-        raise HTTPException(status_code=401, detail="Missing user identity in headers.")
+def compress_and_upload(file: UploadFile, folder: str = "mcs") -> str:
+    """Shrinks images to < 500KB and uploads to Supabase."""
+    try:
+        # 1. Read file into memory
+        contents = file.file.read()
+        img = Image.open(io.BytesIO(contents))
+
+        # 2. Convert transparent/palette images to RGB (Required for JPEG)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
         
-    # Search by Username OR Full Name to catch "System Administrator"
-    user = db.query(models.User).filter(
-        (models.User.username == x_username) | 
-        (models.User.full_name == x_username)
-    ).first()
-    
-    if not user:
-        print(f"❌ GUARD BLOCKED: User '{x_username}' not found in database.")
-        raise HTTPException(status_code=403, detail="Access denied: User not found.")
+        # 3. Compress
+        output = io.BytesIO()
+        img.save(output, format="JPEG", quality=60, optimize=True)
+        compressed_data = output.getvalue()
+
+        # 🚀 FIX: Prevent double extension (.jpg.jpg)
+        # We extract just the name "photo" from "photo.jpg"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        clean_filename = Path(file.filename).stem 
         
-    # 🔍 DEBUG: Print exactly what role the database has for this user
-    print(f"🔍 GUARD CHECK: User '{user.full_name}' has the role '{user.role}'")
-    
-    # 🚀 THE FIX: Accept 'superuser', 'hr_admin', or 'admin'
-    if user.role not in ["superuser", "hr_admin", "admin"]:
-        print(f"❌ GUARD BLOCKED: Role '{user.role}' is not allowed to change system settings.")
-        raise HTTPException(status_code=403, detail="Access denied: Insufficient privileges.")
-    
-    return user
+        # Construct new name: 20260225_123000_photo.jpg
+        clean_name = f"{timestamp}_{clean_filename.replace(' ', '_')}.jpg"
+        storage_path = f"{folder}/{clean_name}"
 
-# ============================================================
-# 🚀 ROUTERS & ENDPOINTS
-# ============================================================
+        # 4. Upload to Cloud
+        supabase.storage.from_(SUPABASE_BUCKET).upload(
+            path=storage_path,
+            file=compressed_data,
+            file_options={"content-type": "image/jpeg"}
+        )
 
-# Login Route
-@app.post("/login")
-def login(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    # 1. Identify User
-    user_record = db.query(models.User).filter(models.User.username == username).first()
+        # 5. Return Public URL
+        return supabase.storage.from_(SUPABASE_BUCKET).get_public_url(storage_path)
+
+    except Exception as e:
+        print(f"❌ Cloud Upload Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload file to cloud storage")
     
-    # 2. Verify Credentials (Existing logic)
-    if not user_record or user_record.password != password:
-        raise HTTPException(status_code=400, detail="Access Denied: Invalid credentials.")
-
-    # 🚀 3. MAINTENANCE GATEKEEPER
-    # We check if system is locked. If yes, only 'superuser' role can pass.
-    if is_system_locked(db):
-        if user_record.role != "superuser":
-            # 503 is the standard HTTP code for "Service Unavailable/Maintenance"
-            raise HTTPException(
-                status_code=503, 
-                detail="System is currently under maintenance. Please try again later."
-            )
     
-    # 4. Success Path (Existing logic)
-    roles_list = [r.role_name for r in user_record.assigned_roles]
-    if not roles_list:
-        roles_list = [user_record.role] if user_record.role else ["employee"]
-    
-    return {"full_name": user_record.full_name, "roles": roles_list}
 
-
-# ============================================================
-# 🚀 SYSTEM LOCKED GATEKEEPER
-# ============================================================
 def is_system_locked(db: Session):
-    """Checks if maintenance is enabled and if the current time is within the window."""
+    """Checks if maintenance mode is active within the scheduled window."""
     m_enabled = db.query(models.SystemSetting).filter(models.SystemSetting.key == "broadcast_enabled").first()
     m_mode = db.query(models.SystemSetting).filter(models.SystemSetting.key == "maintenance_mode").first()
     
-    # If the master toggle is OFF or Maintenance Lock is OFF, system is NOT locked
     if not m_enabled or m_enabled.value != "true": return False
     if not m_mode or m_mode.value != "true": return False
 
-    # Get the window times
     start_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "broadcast_start").first()
     end_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "broadcast_end").first()
 
@@ -143,43 +121,90 @@ def is_system_locked(db: Session):
 
     try:
         now = datetime.now()
-        
-        # 🛡️ DEFENSIVE FIX: Slice the string to the first 16 characters (YYYY-MM-DDTHH:MM)
-        # This safely strips away any seconds or milliseconds a browser might append.
-        clean_start = start_setting.value[:16]
-        clean_end = end_setting.value[:16]
-        
-        start_dt = datetime.strptime(clean_start, "%Y-%m-%dT%H:%M")
-        end_dt = datetime.strptime(clean_end, "%Y-%m-%dT%H:%M")
-        
+        start_dt = datetime.strptime(start_setting.value[:16], "%Y-%m-%dT%H:%M")
+        end_dt = datetime.strptime(end_setting.value[:16], "%Y-%m-%dT%H:%M")
         return start_dt <= now <= end_dt
     except Exception as e:
         print(f"🕒 Time Check Error: {e}")
         return False
+
+# ============================================================
+# 🛡️ SECURITY DEPENDENCIES
+# ============================================================
+def get_current_superuser(db: Session = Depends(get_db), x_username: str = Header(None)): 
+    if not x_username:
+        raise HTTPException(status_code=401, detail="Missing user identity in headers.")
+        
+    user = db.query(models.User).filter(
+        (models.User.username == x_username) | (models.User.full_name == x_username)
+    ).first()
     
+    if not user:
+        raise HTTPException(status_code=403, detail="Access denied: User not found.")
+        
+    if user.role not in ["superuser", "hr_admin", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied: Insufficient privileges.")
+    
+    return user
+
+# ============================================================
+# 🚀 SYSTEM ROUTES
+# ============================================================
+@app.get("/system/today")
+def get_system_today():
+    now = datetime.now(LOCAL_TZ)
+    return {
+        "today": now.date().isoformat(),
+        "time": now.strftime("%H:%M:%S"),
+        "timezone": "Asia/Kuala_Lumpur"
+    }
+
+@app.post("/login")
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    # 1. Identify User
+    user_record = db.query(models.User).filter(models.User.username == data.username).first()
+    
+    # 2. Verify Credentials
+    if not user_record or user_record.password != data.password:
+        raise HTTPException(status_code=400, detail="Access Denied: Invalid credentials.")
+
+    # 3. Maintenance Gatekeeper
+    if is_system_locked(db):
+        if user_record.role != "superuser":
+            raise HTTPException(
+                status_code=503, 
+                detail="System is currently under maintenance. Please try again later."
+            )
+    
+    # 4. Generate and Save Session ID (Sync with models.py)
+    new_session_id = f"session-{uuid.uuid4()}" 
+    user_record.current_session_id = new_session_id 
+    db.commit()
+
+    # 5. Success Path
+    roles_list = [r.role_name for r in user_record.assigned_roles]
+    if not roles_list:
+        roles_list = [user_record.role] if user_record.role else ["employee"]
+    
+    return {
+        "full_name": user_record.full_name, 
+        "roles": roles_list,
+        "session_id": new_session_id,
+        "username": user_record.username
+    }
 
 @app.post("/settings/upload-logo")
 async def upload_logo(file: UploadFile = File(...)):
-    """
-    Saves the uploaded logo to the server's Safe Zone and returns the URL.
-    """
-    try:
-        extension = Path(file.filename).suffix
-        if extension.lower() not in [".png", ".jpg", ".jpeg", ".svg", ".webp"]:
-            raise HTTPException(status_code=400, detail="Invalid image format")
-        
-        filename = f"company_logo{extension}"
-        file_path = UPLOADS_DIR / filename
-        
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        return {"logo_url": f"/uploads/{filename}"}
-    except Exception as e:
-        print(f"❌ Upload Error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to upload logo")
+    extension = Path(file.filename).suffix.lower()
+    if extension not in [".png", ".jpg", ".jpeg", ".webp"]:
+        raise HTTPException(status_code=400, detail="Invalid image format")
     
-    # ✅ REGISTER ALL ROUTERS
+    public_url = compress_and_upload(file, folder="system")
+    return {"logo_url": public_url}
+
+# ============================================================
+# 🏁 REGISTER ROUTERS
+# ============================================================
 app.include_router(leave.router)
 app.include_router(user.router)
 app.include_router(overtime.router)

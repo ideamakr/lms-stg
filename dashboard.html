@@ -5686,13 +5686,13 @@ function initializeAccess() {
     }
 
     // 3. Inject Security Headers
-    options.headers = options.headers || {};
+  // 3. Inject Security Headers
+  options.headers = options.headers || {};
     options.headers["X-Session-ID"] = SESSION_ID;
     options.headers["X-Requester-Name"] = CURRENT_USER;
     
-    // 🚀 NEW: Add Superuser Handshake header for the Backend Guard
-    // This matches the 'x-username' header expected by your Python FastAPI Guard
-    options.headers["x-username"] = CURRENT_USER;
+    // 🚀 FIXED: Send the immutable 'username' (e.g., "admin") instead of Full Name
+    options.headers["x-username"] = localStorage.getItem("username"); // <--- ✅ CORRECT
 
     // 4. Handle URL Parameters safely
     const separator = url.includes("?") ? "&" : "?";
@@ -7141,11 +7141,22 @@ function viewLeaveDetails(leave) {
     if (leave.status === "Rejected") statusColor = "#ef4444"; // Red
     if (leave.status === "Cancelled" || leave.status === "Withdrawn") statusColor = "#64748b"; // Grey
 
-    // D. Attachment Link
-    let attachmentHtml = "";
+// D. Attachment Link
+let attachmentHtml = "";
     if (leave.attachment_path) {
-        const fileName = leave.attachment_path.split("/").pop();
-        const fileUrl = `${API_URL}/uploads/${fileName}`;
+        
+        // 🚀 FIX: Logic to handle Cloud URLs
+        const rawPath = leave.attachment_path;
+        let fileUrl = rawPath;
+
+        // If the backend sent a filename (not a URL), fall back to local (rare case)
+        if (!rawPath.startsWith("http")) {
+            fileUrl = `${API_URL}/uploads/${rawPath.split("/").pop()}`;
+        }
+        
+        // Just for display purposes, we grab the end of the name
+        const displayName = rawPath.split("/").pop();
+
         attachmentHtml = `
         <div style="margin-top: 10px; padding: 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-file-alt" style="color: #0ea5e9; font-size: 1.2rem;"></i>
@@ -7157,7 +7168,6 @@ function viewLeaveDetails(leave) {
             </div>
         </div>`;
     }
-
     // ---------------------------------------------------------
     // 📜 2. UNIVERSAL TIMELINE ENGINE
     // ---------------------------------------------------------
@@ -13050,33 +13060,36 @@ if (submitBtn) {
        * 🆔 System ID Generator
        * Fetches the next available Employee ID from the server and locks the field.
        */
-      async function generateNextEmpID() {
-        const idInput = document.getElementById("reg_emp_id");
-        if (!idInput) return;
+       async function generateNextEmpID() {
+    const idInput = document.getElementById("reg_emp_id");
+    if (!idInput) return;
 
-        // 1. Set a loading state
-        idInput.value = "Generating...";
-        idInput.disabled = true; // 🔒 Locked: Natasha cannot type here
-        idInput.style.background = "#f1f5f9"; // Visual grey "locked" background
+    // 1. Visual Loading State
+    idInput.value = "Generating...";
+    idInput.disabled = true;
+    idInput.style.background = "#f1f5f9";
 
-        try {
-          // 2. Fetch from your backend route
-          const res = await fetchWithAuth(`${API_URL}/users/next-id`);
-          if (res && res.ok) {
+    try {
+        // 🚀 THE CRITICAL FIX: Ensure we use 'fetchWithAuth' to send headers
+        // And use the full API_URL constant
+        const res = await fetchWithAuth(`${API_URL}/users/next-id`);
+        
+        if (res && res.ok) {
             const data = await res.json();
-            // Expected format: { "next_id": "EMP-2026-0014" }
+            // 🎯 Ensure we grab the exact key 'next_id' returned by your Python code
             idInput.value = data.next_id;
-          } else {
-            // 3. Fallback logic if server is unreachable
-            const year = new Date().getFullYear();
-            idInput.value = `EMP-${year}-TEMP`;
-          }
-        } catch (e) {
-          console.error("ID Generation Error:", e);
-          idInput.value = "Error Generating ID";
+            console.log("✅ Employee ID Generated:", data.next_id);
+        } else {
+            // Fallback for 401/403 or server errors
+            const status = res ? res.status : "No Response";
+            console.error(`❌ ID Generation Failed. Status: ${status}`);
+            idInput.value = `EMP-${new Date().getFullYear()}-TEMP`;
         }
-      }
-
+    } catch (e) {
+        console.error("❌ Network Error during ID generation:", e);
+        idInput.value = "OFFLINE";
+    }
+}
       // 3. Submit the New User to the Python Backend
       /**
        * 🚀 Automated User Registration & Onboarding
@@ -15315,11 +15328,23 @@ async function updateL2Policy(isEnabled) {
     let cleanReason = ot.reason || "No reason provided.";
     cleanReason = cleanReason.split("| Manager Note:")[0].trim();
 
-    // Attachment Logic
+    // ============================================================
+    // 🚀 ATTACHMENT FIX (SUPABASE COMPATIBLE)
+    // ============================================================
     let attachmentHtml = "";
     if (ot.attachment_path) {
-        const fileName = ot.attachment_path.split("/").pop();
-        const fileUrl = `${API_URL}/uploads/${fileName}`;
+        // 1. Get the raw path (Backend now sends full Supabase URL)
+        const rawPath = ot.attachment_path;
+        let fileUrl = rawPath;
+
+        // 2. Logic: If it doesn't start with http, it's a legacy local file
+        if (!rawPath.startsWith("http")) {
+            fileUrl = `${API_URL}/uploads/${rawPath.split("/").pop()}`;
+        }
+
+        // 3. Display Name (Just the filename part)
+        const fileName = rawPath.split("/").pop();
+
         attachmentHtml = `
         <div style="margin-top: 10px; padding: 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-file-alt" style="color: #0ea5e9; font-size: 1.2rem;"></i>
@@ -15331,6 +15356,7 @@ async function updateL2Policy(isEnabled) {
             </div>
         </div>`;
     }
+    // ============================================================
 
     // 🚀 HISTORY LOGIC
     let rawHistory = ot.status_history || "Pending";
@@ -15354,7 +15380,8 @@ async function updateL2Policy(isEnabled) {
                 console.error("Date parse error", e);
             }
         }
-        rawHistory += ` > Withdrawn (${actionTime})`;
+        // Use the actual status logic instead of hardcoding "Withdrawn"
+        rawHistory += ` > ${ot.status} (${actionTime})`;
     }
 
     const historySteps = rawHistory.split(" > ");

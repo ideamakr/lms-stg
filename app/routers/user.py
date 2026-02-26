@@ -204,7 +204,7 @@ async def update_user_roles_multiple( # 🚀 Changed to async
             )
             background_tasks.add_task(send_email, user.email, subject, body)
 
-        msg = f"Permissions and L2 Power updated for {user.full_name}."
+        msg = f"User account updated successfully for {user.full_name}."
         if reassigned_count > 0:
             msg += f"<br><br>⚠️ <b>{reassigned_count} pending request(s)</b> were automatically transferred to your queue."
 
@@ -683,24 +683,19 @@ async def forgot_password(
 
 @router.get("/next-id")
 def get_next_employee_id(db: Session = Depends(get_db)):
-    """
-    Calculates the next available Employee ID based on the current year
-    and the total count of users in the database.
-    """
-    # 1. Get the current year
+    # 1. Get current year
     current_year = datetime.now().year
     
-    # 2. Count existing users
-    # This ensures the number is always sequential (+1)
-    count = db.query(models.User).count()
-    next_num = count + 1
+    # 2. Find the highest existing ID to prevent duplicates
+    # We look for the user with the largest primary key ID
+    last_user = db.query(models.User).order_by(models.User.id.desc()).first()
     
-    # 3. Format with leading zeros (0001, 0002, etc.)
-    # :04d means a 4-digit number padded with zeros
-    formatted_num = f"{next_num:04d}"
+    next_num = 1
+    if last_user:
+        next_num = last_user.id + 1
     
-    # 4. Construct the final ID
-    next_id = f"EMP-{current_year}-{formatted_num}"
+    # 3. Format: EMP-2026-0001
+    next_id = f"EMP-{current_year}-{next_num:04d}"
     
     return {"next_id": next_id}
 

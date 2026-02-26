@@ -310,50 +310,70 @@ const API_URL = "http://127.0.0.1:8000";
       };
     
       async function handleLogin(event) {
-        event.preventDefault();
-        localStorage.clear();
+        event.preventDefault(); 
+        localStorage.clear(); 
     
         const usernameInput = document.getElementById("username").value.trim().toLowerCase();
-        const password = document.getElementById("password").value;
+        const passwordInput = document.getElementById("password").value;
     
         try {
-            const formData = new URLSearchParams();
-            formData.append("username", usernameInput);
-            formData.append("password", password);
+            const loginData = {
+                username: usernameInput,
+                password: passwordInput
+            };
     
-            const res = await fetch(`${API_URL}/users/login`, {
+            const res = await fetch(`${API_URL}/login`, {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: formData,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(loginData),
             });
     
             if (res.ok) {
                 const data = await res.json();
+                
+                // 1. Save Basic User Info
                 localStorage.setItem("currentUser", data.full_name); 
-                localStorage.setItem("username", data.username);       
+                localStorage.setItem("username", usernameInput);       
                 localStorage.setItem("userRoles", JSON.stringify(data.roles));
-                localStorage.setItem("sessionId", data.session_id);
-                localStorage.setItem("userMasterRole", data.role);
+                
+                // 2. 🛡️ FIX: Use the REAL Session ID from the server
+                // This matches what is now stored in your Supabase database.
+                if (data.session_id) {
+                    localStorage.setItem("sessionId", data.session_id);
+                } else {
+                    // Fallback just in case backend wasn't updated yet
+                    console.warn("Backend didn't return session_id. Using fallback.");
+                    localStorage.setItem("sessionId", "session-" + new Date().getTime());
+                }
+
+                // 3. Handle Roles
+                if (data.roles && data.roles.length > 0) {
+                     localStorage.setItem("userMasterRole", data.roles[0]); 
+                     localStorage.setItem("role", data.roles[0]); 
+                } else {
+                     localStorage.setItem("userMasterRole", "employee");
+                     localStorage.setItem("role", "employee");
+                }
+
+                // 4. Redirect
+                console.log("Login synced with DB. Redirecting...");
                 window.location.replace("dashboard.html");
             } else {
                 const errorData = await res.json();
-                
-                // 🚀 THE FIX: Catch the 503 Maintenance Lock specifically
                 if (res.status === 503) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'System Locked',
-                        text: errorData.detail || "The system is currently under maintenance. Please try again later.",
-                        confirmButtonColor: '#f59e0b',
-                        confirmButtonText: 'Understood'
+                        text: errorData.detail || "Maintenance Mode active.",
+                        confirmButtonColor: '#f59e0b'
                     });
                 } else {
-                    // Standard wrong password or username error
-                    showError(errorData.detail || "Invalid username or password");
+                    showError(errorData.detail || "Invalid credentials");
                 }
             }
         } catch (e) {
-            showError("System Error: Cannot connect to the server. Is the backend running?");
+            console.error(e);
+            showError("System Error: Cannot connect to server.");
         }
       }
     
