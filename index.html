@@ -318,16 +318,15 @@ const API_URL = "https://leave-system-testenv.onrender.com";
         const passwordInput = document.getElementById("password").value;
     
         try {
-            // 🚀 THE FIX: Use URLSearchParams (Form Data) instead of JSON
-            // This is required by FastAPI's OAuth2PasswordRequestForm
-            const formData = new URLSearchParams();
-            formData.append("username", usernameInput);
-            formData.append("password", passwordInput);
+            const loginData = {
+                username: usernameInput,
+                password: passwordInput
+            };
     
             const res = await fetch(`${API_URL}/login`, {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: formData,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(loginData),
             });
     
             if (res.ok) {
@@ -338,17 +337,28 @@ const API_URL = "https://leave-system-testenv.onrender.com";
                 localStorage.setItem("username", usernameInput);       
                 localStorage.setItem("userRoles", JSON.stringify(data.roles));
                 
+                // 2. 🛡️ FIX: Use the REAL Session ID from the server
+                // This matches what is now stored in your Supabase database.
                 if (data.session_id) {
                     localStorage.setItem("sessionId", data.session_id);
+                } else {
+                    // Fallback just in case backend wasn't updated yet
+                    console.warn("Backend didn't return session_id. Using fallback.");
+                    localStorage.setItem("sessionId", "session-" + new Date().getTime());
                 }
 
+                // 3. Handle Roles
                 if (data.roles && data.roles.length > 0) {
                      localStorage.setItem("userMasterRole", data.roles[0]); 
                      localStorage.setItem("role", data.roles[0]); 
+                } else {
+                     localStorage.setItem("userMasterRole", "employee");
+                     localStorage.setItem("role", "employee");
                 }
 
-                console.log("Login successful. Redirecting...");
-                window.location.replace("dashboard.html");
+                // 4. Redirect
+                console.log("Login synced with DB. Redirecting...");
+                window.location.replace("/lms-stg/dashboard.html");
             } else {
                 const errorData = await res.json();
                 if (res.status === 503) {
