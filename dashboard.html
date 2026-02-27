@@ -939,6 +939,23 @@ div.swal2-container {
     background: #94a3b8;
 }
 
+.loading-pulse {
+  display: inline-block;
+  /* 🚀 Width 60px makes it look like '14.5' instead of a square */
+  width: 60px; 
+  height: 28px; 
+  /* Using a slightly brighter white for better visibility on colored cards */
+  background-color: rgba(255, 255, 255, 0.4); 
+  border-radius: 4px;
+  animation: pulse-animation 1.5s infinite ease-in-out;
+  vertical-align: middle;
+}
+
+/* =========================================
+   🚀 LOADING ANIMATIONS & INPUT FIXES
+   ========================================= */
+
+/* 1. Rotating Spinner (Used in tables/buttons) */
 .spinner {
   width: 20px;
   height: 20px;
@@ -947,30 +964,46 @@ div.swal2-container {
   border-top-color: #fff;
   animation: spin 0.8s linear infinite;
   display: inline-block;
+  vertical-align: middle;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+/* 2. Skeleton Pulse (Used in Dashboard Cards) */
+/* This ensures a consistent rectangular bar shape */
 .loading-pulse {
-  display: inline-block;
-  width: 40px;
-  height: 24px;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  animation: pulse 1.5s infinite ease-in-out;
+  display: block; 
+  width: 80px !important;    
+  height: 40px !important;   
+  background-color: rgba(255, 255, 255, 0.4); 
+  border-radius: 6px; 
+  animation: pulse-animation 1.5s infinite ease-in-out;
+  margin: 5px 0;  
 }
 
-@keyframes pulse {
-  0% { opacity: 0.5; }
-  50% { opacity: 1; }
-  100% { opacity: 0.5; }
+@keyframes pulse-animation {
+  0% { opacity: 0.3; transform: scale(0.98); }
+  50% { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 0.3; transform: scale(0.98); }
 }
 
-
-
-
+/* 3. 🚀 PASSWORD EYE ICON CENTERING FIX */
+/* This ensures the eye icon is perfectly centered vertically */
+.saas-form-group div[style*="position: relative"] i.fa-eye,
+.saas-form-group div[style*="position: relative"] i.fa-eye-slash {
+    position: absolute;
+    right: 16px;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    cursor: pointer;
+    color: #94a3b8;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    height: 100%; /* Helps with the vertical alignment calculation */
+}
     </style>
   </head>
             <!-- ==========================================
@@ -4523,37 +4556,41 @@ box-sizing: border-box;
                     border-radius: 12px;
                     border: 1px solid #e2e8f0;
                   ">
-                  <div style="position: relative">
-                      <label style="
-                        font-size: 0.65rem;
-                        color: #94a3b8;
-                        position: absolute;
-                        top: -8px;
-                        left: 12px;
-                        background: white;
-                        padding: 0 5px;
-                        font-weight: 800;
-                        z-index: 1;
-                      ">NEW PASSWORD</label>
-                      <input type="password" id="admin_reset_pass_input" placeholder="Leave empty for 'password123'" style="
-                        width: 100%;
-                        height: 48px; 
-                        padding: 0 40px 0 15px;
-                        border: 2px solid #f1f5f9;
-                        border-radius: 8px;
-                        font-size: 0.9rem;
-                        background: #fdfdfd;
-                        transition: 0.2s;
-                        box-sizing: border-box;
-                      " onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff';" />
-                      <i class="fas fa-eye" onclick="togglePass('admin_reset_pass_input')" style="
-                        position: absolute;
-                        right: 15px;
-                        top: 16px; 
-                        cursor: pointer;
-                        color: #94a3b8;
-                      "></i>
-                  </div>
+<div style="position: relative; display: flex; align-items: center;">
+  <label style="
+      font-size: 0.65rem;
+      color: #94a3b8;
+      position: absolute;
+      top: -8px;
+      left: 12px;
+      background: white;
+      padding: 0 5px;
+      font-weight: 800;
+      z-index: 1;
+  ">NEW PASSWORD</label>
+  
+  <input type="password" id="admin_reset_pass_input" placeholder="Leave empty for 'password123'" style="
+      width: 100%;
+      height: 48px; 
+      padding: 0 45px 0 15px; /* 🚀 Room for icon on the right */
+      border: 2px solid #f1f5f9;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: #fdfdfd;
+      transition: 0.2s;
+      box-sizing: border-box;
+  " onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff'; this.style.outline='none';" />
+  
+  <i class="fas fa-eye" onclick="togglePass('admin_reset_pass_input')" style="
+      position: absolute;
+      right: 15px;
+      top: 50%;               /* 🚀 Move to vertical middle */
+      transform: translateY(-50%); /* 🚀 Perfect geometric center */
+      cursor: pointer;
+      color: #94a3b8;
+      z-index: 2;             /* 🚀 Ensure it stays above the input */
+  "></i>
+</div>
 
                   <button class="btn-secondary" style="
                       width: 100%;
@@ -5690,7 +5727,8 @@ function initializeAccess() {
         const response = await fetch(finalUrl, options);
 
         // 5. Handle Global Kick-out (401) - 🚀 UPGRADED TO SWEETALERT
-        if (response.status === 401) {
+// 5. Handle Global Kick-out (401) - 🚀 UPGRADED TO SWEETALERT
+if (response.status === 401) {
             if (!isKickedOut) {
                 isKickedOut = true;
                 
@@ -5709,7 +5747,7 @@ function initializeAccess() {
                             // Safely wipe memory and redirect after the timer finishes
                             localStorage.clear();
                             sessionStorage.clear();
-                            window.location.replace("login.html");
+                            window.location.replace("index.html"); // ✅ CHANGED
                         }
                     });
                 } else {
@@ -5717,7 +5755,7 @@ function initializeAccess() {
                     alert("Session Expired: You are being redirected to the login page.");
                     localStorage.clear();
                     sessionStorage.clear();
-                    window.location.replace("login.html");
+                    window.location.replace("index.html"); // ✅ CHANGED
                 }
             }
             return null;
@@ -6212,7 +6250,8 @@ modal.classList.add("show");
 
       async function initDashboard() {
         if (!SESSION_ID || !CURRENT_USER) {
-          window.location.href = "/lms-stg/";
+          // 🚀 Change this to index.html for better compatibility
+          window.location.href = "index.html"; 
           return;
         }
 
@@ -6229,7 +6268,7 @@ modal.classList.add("show");
         // ... rest of your init code ...
       }
 
-      async function prefetchBalances() {
+ async function prefetchBalances() {
         const types = [
           "Annual Leave",
           "Medical Leave",
@@ -6240,12 +6279,32 @@ modal.classList.add("show");
         const select = document.getElementById("dash_leave_type");
         if (select) select.disabled = true;
 
-        // 🚀 NEW: Determine if we are fetching for the Proxy User or the Logged-In User
+        // 🚀 Determine if we are fetching for the Proxy User or the Logged-In User
         const targetUser = window.proxyUser ? window.proxyUser : currentUser;
+
+// ====================================================================
+        // 🎨 1. TRIGGER LOADING PULSE ANIMATIONS (BEFORE FETCHING)
+        // ====================================================================
+        const cardIds = ["annual", "medical", "emergency", "compassionate", "unpaid"];
+        cardIds.forEach(id => {
+            const el = document.getElementById("card_" + id);
+            // Replace the current number with the animated pulse span
+            if (el) el.innerHTML = '<span class="loading-pulse"></span>';
+        });
+
+        // 🛡️ Safety Catch: If Annual Leave is currently displaying the "Split Tile"
+        // layout (Available & Banked), pulse those specific smaller numbers instead.
+        const splitValues = document.querySelectorAll('.split-value');
+        splitValues.forEach(el => {
+            el.innerHTML = '<span class="loading-pulse" style="width: 40px; height: 24px;"></span>';
+        });
+
+        // 👇 TEST DELAY GOES HERE (After ALL pulses are on the screen) 👇
+        await new Promise(resolve => setTimeout(resolve, 2500));
 
         try {
           for (let type of types) {
-            // 🚀 NEW: Appended &employee_name=... to the URL to fetch Steve's balances instead of Natasha's
+            // Appended &employee_name=... to the URL to fetch target balances
             const res = await fetchWithAuth(
               `${API_URL}/leaves/balance?year=${new Date().getFullYear()}&leave_type=${encodeURIComponent(type)}&employee_name=${encodeURIComponent(targetUser)}`
             );
@@ -6369,12 +6428,12 @@ modal.classList.add("show");
               const wrapper = document.getElementById("wrapper_" + shortName);
 
               if (cardEl) {
+                // 🎨 OVERWRITE THE PULSE WITH THE REAL DATA
                 const displayVal =
                   type === "Unpaid Leave" ? data.taken || 0 : data.remaining;
                 cardEl.innerText = displayVal;
 
                 if (type === "Unpaid Leave") {
-                  // 🚀 FIX: Change color to WHITE so it shows against the dark gray background
                   cardEl.style.color = "#1e3a8a";
                 } else {
                   cardEl.style.color =
@@ -6392,7 +6451,7 @@ modal.classList.add("show");
         } finally {
           if (select) select.disabled = false;
           
-          // 🚀 NEW: Instantly refresh UI summaries if the form is already active
+          // 🚀 Instantly refresh UI summaries if the form is already active
           if (typeof showEntitlementInfo === "function") showEntitlementInfo();
           if (typeof updateLiveSummary === "function") updateLiveSummary();
         }
@@ -8953,11 +9012,12 @@ const row = `
                             </button>
                             
                             <button class="icon-btn" 
-                                style="color:${u.is_active ? "#ef4444" : "#10b981"}; border-color:transparent; background: ${u.is_active ? "#fef2f2" : "#f0fdf4"}; opacity: ${isSelf ? "0.3" : "1"}; cursor: ${isSelf ? "not-allowed" : "pointer"};" 
-                                onclick="${isSelf ? "event.stopPropagation(); alert('🛡️ Security: You cannot deactivate your own account while logged in.')" : `event.stopPropagation(); toggleUserStatus(${u.id})`}"
-                                title="${isSelf ? "Self-protection active" : u.is_active ? "Deactivate User" : "Activate User"}">
-                                <i class="fas ${u.is_active ? "fa-user-slash" : "fa-user-check"}"></i>
-                            </button>
+    style="color:${u.is_active ? "#ef4444" : "#10b981"}; border-color:transparent; background: ${u.is_active ? "#fef2f2" : "#f0fdf4"}; opacity: ${isSelf ? "0.3" : "1"}; cursor: ${isSelf ? "not-allowed" : "pointer"};" 
+    /* 🚀 THE FIX: Added safeName as the second argument */
+    onclick="${isSelf ? "event.stopPropagation(); alert('🛡️ Security: You cannot deactivate your own account while logged in.')" : `event.stopPropagation(); toggleUserStatus(${u.id}, '${safeName}')`}"
+    title="${isSelf ? "Self-protection active" : u.is_active ? "Deactivate User" : "Activate User"}">
+    <i class="fas ${u.is_active ? "fa-user-slash" : "fa-user-check"}"></i>
+</button>
                         </div>
                     </td>
                 </tr>
@@ -9933,11 +9993,11 @@ function logout() {
     // 2. Clear authentication
     localStorage.removeItem("currentUser");
     localStorage.removeItem("userRoles");
-    localStorage.removeItem("session_id"); // Make sure to clear the session ID too!
+    localStorage.removeItem("sessionId"); // 🚀 Note: Ensure this matches your handleLogin key!
 
-    // 3. Redirect
-    window.location.href = "/lms-stg/";
-} // <--- Make sure this closing bracket is here!
+    // 3. 🚀 THE FIX: Use index.html for universal compatibility
+    window.location.href = "index.html"; 
+}
 
       // Team Leave Balance
       // FETCH TEAM BALANCES (ENTITLEMENTS)
@@ -10388,50 +10448,78 @@ async function showBalanceLogs(empName) {
       }
 
       async function resetUserPassword(userId) {
-        // 1. Grab the value from the new input field
-        const inputField = document.getElementById("admin_reset_pass_input");
-        const customPass = inputField.value.trim();
+    const inputField = document.getElementById("admin_reset_pass_input");
+    const customPass = inputField.value.trim();
+    const finalPass = customPass || "password123";
 
-        // 2. Logic: Use custom pass if typed, otherwise default to '123'
-        const finalPass = customPass || "password123";
+    // 1. 🚀 PROFESSIONAL CONFIRMATION
+    const result = await Swal.fire({
+        title: 'Reset Password?',
+        text: `The password will be updated to: "${finalPass}"`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb', // Your Royal Blue
+        cancelButtonColor: '#94a3b8',  // Your Slate Gray
+        confirmButtonText: 'Confirm Reset',
+        cancelButtonText: 'Wait, Cancel',
+        reverseButtons: true
+    });
 
-        if (
-          !confirm(
-            `Are you sure you want to reset this user's password to '${finalPass}'?`
-          )
-        ) {
-          return;
-        }
+    if (!result.isConfirmed) return;
 
-        try {
-          // 🚀 THE UPDATE: We now send a JSON body with the password
-          const res = await fetchWithAuth(
+    // Show a small "Processing" loader
+    Swal.fire({
+        title: 'Updating...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+        const res = await fetchWithAuth(
             `${API_URL}/users/${userId}/reset-password`,
             {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ new_password: finalPass }),
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ new_password: finalPass }),
             }
-          );
+        );
 
-          if (!res) return;
+        if (!res) return;
 
-          if (res.ok) {
+        if (res.ok) {
             const data = await res.json();
-            alert(`✅ Success: ${data.message}`);
 
-            // 3. Clear the field and reset eye toggle for next time
+            // 2. 🚀 SUCCESS NOTIFICATION
+            await Swal.fire({
+                icon: 'success',
+                title: 'Password Updated',
+                text: `Successfully reset to: ${finalPass}`,
+                confirmButtonColor: '#2563eb'
+            });
+
+            // Clear the field and reset eye toggle
             inputField.value = "";
             inputField.type = "password";
-          } else {
+            
+        } else {
             const err = await res.json();
-            alert("❌ Error: " + (err.detail || "Could not reset password."));
-          }
-        } catch (e) {
-          console.error("Password reset error:", e);
-          alert("❌ Network Error: Could not reach the server.");
+            Swal.fire({
+                icon: 'error',
+                title: 'Update Failed',
+                text: err.detail || "Could not reset password.",
+                confirmButtonColor: '#ef4444'
+            });
         }
-      }
+    } catch (e) {
+        console.error("Password reset error:", e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: "Could not reach the server. Check your connection.",
+            confirmButtonColor: '#ef4444'
+        });
+    }
+}
 
       async function submitRoleChange() {
         const userId = document.getElementById("edit_user_id").value;
@@ -13426,45 +13514,55 @@ function clearError(elementId) {
         }, 500);
       }
 
-// 1. TRIGGER: Opens the Orange Confirmation Modal with the Name
+// 1. TRIGGER: Opens the Professional SweetAlert Confirmation Modal
 function toggleUserStatus(userId, fullName) {
     // 🛡️ Fallback if name is missing for some reason
     const displayName = fullName || "this user"; 
 
-    openGenericConfirm(
-        "Change Account Status?",
-        `Are you sure you want to toggle access for <strong>${displayName}</strong>?<br>Inactive users cannot log in.`,
-        "Confirm Change",
-        "#f59e0b", // Orange Color for Warning
-        () => executeUserStatusToggle(userId) // Callback
-    );
+    Swal.fire({
+        title: 'Change Account Status?',
+        html: `Are you sure you want to toggle access for <strong>${displayName}</strong>?<br><br><small style="color:#64748b;">Inactive users cannot log in to the portal.</small>`,
+        icon: 'warning',
+        iconColor: '#f59e0b', // Orange Color for Warning
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b', 
+        cancelButtonColor: '#cbd5e1',
+        confirmButtonText: 'Yes, Confirm Change',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Callback: Proceeds to the API call
+            executeUserStatusToggle(userId); 
+        }
+    });
 }
 
- // 2. EXECUTION: The actual API Call
- async function executeUserStatusToggle(userId) {
-        try {
-          // Show a subtle loading state so Natasha knows the server is thinking
-          Swal.fire({
+// 2. EXECUTION: The actual API Call
+async function executeUserStatusToggle(userId) {
+    try {
+        // Show a subtle loading state so the admin knows the server is thinking
+        Swal.fire({
             title: 'Updating status...',
             allowOutsideClick: false,
             didOpen: () => { Swal.showLoading(); }
-          });
+        });
 
-          const res = await fetchWithAuth(
+        const res = await fetchWithAuth(
             `${API_URL}/users/${userId}/toggle-status`,
             { method: "PUT" }
-          );
+        );
 
-          if (!res) return;
+        if (!res) return;
 
-          if (res.ok) {
+        if (res.ok) {
             const data = await res.json();
-            
+        
             // 🚀 UPGRADE: Standardized Success Modal
             await Swal.fire({
                 icon: 'success',
                 title: 'Status Updated',
-                text: data.message,
+                text: data.message || "Account status changed successfully.",
                 confirmButtonColor: '#10b981',
                 confirmButtonText: 'OK'
             });
@@ -13475,28 +13573,28 @@ function toggleUserStatus(userId, fullName) {
             // 🛡️ Logic Preservation: Stay on the same section so the user sees the update
             const hrSection = document.getElementById("hr_users");
             if (hrSection && !hrSection.classList.contains("active")) {
-              showSection("hr_users");
+                showSection("hr_users");
             }
-          } else {
+        } else {
             const err = await res.json();
             // 🚀 UPGRADE: Standardized Error Modal
             Swal.fire({
-              icon: 'error',
-              title: 'Action Failed',
-              text: err.detail || "Could not update status.",
-              confirmButtonColor: '#ef4444'
+                icon: 'error',
+                title: 'Action Failed',
+                text: err.detail || "Could not update status.",
+                confirmButtonColor: '#ef4444'
             });
-          }
-        } catch (e) {
-          console.error("Status toggle error:", e);
-          Swal.fire({
+        }
+    } catch (e) {
+        console.error("Status toggle error:", e);
+        Swal.fire({
             icon: 'error',
             title: 'Network Error',
             text: "Error connecting to server. Please check your connection.",
             confirmButtonColor: '#ef4444'
-          });
-        }
-      }
+        });
+    }
+}
 
       function updateCurrentYearLabels() {
         const year = new Date().getFullYear();
