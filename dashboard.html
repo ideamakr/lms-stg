@@ -939,6 +939,37 @@ div.swal2-container {
     background: #94a3b8;
 }
 
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-pulse {
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+
+
 
     </style>
   </head>
@@ -1134,118 +1165,63 @@ div.swal2-container {
                     </div>
                 </div>
 
-                <div style="
-                      display: grid;
-                      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                      gap: 20px;
-                      margin-bottom: 35px;
-                    ">
-                    <div style="
-                        background: #5ea1d7;
-                        padding: 25px;
-                        border-radius: 10px;
-                        color: white;
-                        box-shadow: 0 4px 12px rgba(94, 161, 215, 0.3);
-                      ">
-                        <div style="
-                          display: flex;
-                          justify-content: space-between;
-                          align-items: center;
-                        ">
-                            <span style="font-weight: 700; font-size: 0.9rem">Annual Leave</span>
-                            <i class="fas fa-calendar-alt" style="opacity: 0.7"></i>
-                        </div>
-                        <div id="card_annual" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                            --
-                        </div>
-                        <small style="opacity: 0.9">Days Available</small>
-                    </div>
-
-                    <div style="
-                        background: #63b39d;
-                        padding: 25px;
-                        border-radius: 10px;
-                        color: white;
-                        box-shadow: 0 4px 12px rgba(99, 179, 157, 0.3);
-                      ">
-                        <div style="
-                          display: flex;
-                          justify-content: space-between;
-                          align-items: center;
-                        ">
-                            <span style="font-weight: 700; font-size: 0.9rem">Medical</span>
-                            <i class="fas fa-briefcase-medical" style="opacity: 0.7"></i>
-                        </div>
-                        <div id="card_medical" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                            --
-                        </div>
-                        <small style="opacity: 0.9">Days Available</small>
-                    </div>
-
-                    <div style="
-                        background: #e57d70;
-                        padding: 25px;
-                        border-radius: 10px;
-                        color: white;
-                        box-shadow: 0 4px 12px rgba(229, 125, 112, 0.3);
-                      ">
-                        <div style="
-                          display: flex;
-                          justify-content: space-between;
-                          align-items: center;
-                        ">
-                            <span style="font-weight: 700; font-size: 0.9rem">Emergency</span>
-                            <i class="fas fa-exclamation-triangle" style="opacity: 0.7"></i>
-                        </div>
-                        <div id="card_emergency" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                            --
-                        </div>
-                        <small style="opacity: 0.9">Days Available</small>
-                    </div>
-
-                    <div style="
-                        background: #f0b85b;
-                        padding: 25px;
-                        border-radius: 10px;
-                        color: white;
-                        box-shadow: 0 4px 12px rgba(240, 184, 91, 0.3);
-                      ">
-                        <div style="
-                          display: flex;
-                          justify-content: space-between;
-                          align-items: center;
-                        ">
-                            <span style="font-weight: 700; font-size: 0.9rem">Compassionate</span>
-                            <i class="fas fa-hand-holding-heart" style="opacity: 0.7"></i>
-                        </div>
-                        <div id="card_compassionate" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                            --
-                        </div>
-                        <small style="opacity: 0.9">Days Available</small>
-                    </div>
-
-                    <div id="wrapper_unpaid" style="
-                        display: none;
-                        background: #64748b;
-                        padding: 25px;
-                        border-radius: 10px;
-                        color: white;
-                        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
-                      ">
-                        <div style="
-                          display: flex;
-                          justify-content: space-between;
-                          align-items: center;
-                        ">
-                            <span style="font-weight: 700; font-size: 0.9rem">Unpaid Leave</span>
-                            <i class="fas fa-hand-holding-usd" style="opacity: 0.7"></i>
-                        </div>
-                        <div id="card_unpaid" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                            0
-                        </div>
-                        <small style="opacity: 0.9">Total Days Taken</small>
-                    </div>
-                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 35px;">
+    
+                  <div style="background: #5ea1d7; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(94, 161, 215, 0.3);">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <span style="font-weight: 700; font-size: 0.9rem">Annual Leave</span>
+                          <i class="fas fa-calendar-alt" style="opacity: 0.7"></i>
+                      </div>
+                      <div id="card_annual" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                          <span class="loading-pulse"></span>
+                      </div>
+                      <small style="opacity: 0.9">Days Available</small>
+                  </div>
+              
+                  <div style="background: #63b39d; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(99, 179, 157, 0.3);">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <span style="font-weight: 700; font-size: 0.9rem">Medical</span>
+                          <i class="fas fa-briefcase-medical" style="opacity: 0.7"></i>
+                      </div>
+                      <div id="card_medical" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                          <span class="loading-pulse"></span>
+                      </div>
+                      <small style="opacity: 0.9">Days Available</small>
+                  </div>
+              
+                  <div style="background: #e57d70; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(229, 125, 112, 0.3);">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <span style="font-weight: 700; font-size: 0.9rem">Emergency</span>
+                          <i class="fas fa-exclamation-triangle" style="opacity: 0.7"></i>
+                      </div>
+                      <div id="card_emergency" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                          <span class="loading-pulse"></span>
+                      </div>
+                      <small style="opacity: 0.9">Days Available</small>
+                  </div>
+              
+                  <div style="background: #f0b85b; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(240, 184, 91, 0.3);">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <span style="font-weight: 700; font-size: 0.9rem">Compassionate</span>
+                          <i class="fas fa-hand-holding-heart" style="opacity: 0.7"></i>
+                      </div>
+                      <div id="card_compassionate" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                          <span class="loading-pulse"></span>
+                      </div>
+                      <small style="opacity: 0.9">Days Available</small>
+                  </div>
+              
+                  <div id="wrapper_unpaid" style="display: none; background: #64748b; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <span style="font-weight: 700; font-size: 0.9rem">Unpaid Leave</span>
+                          <i class="fas fa-hand-holding-usd" style="opacity: 0.7"></i>
+                      </div>
+                      <div id="card_unpaid" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                          <span class="loading-pulse"></span>
+                      </div>
+                      <small style="opacity: 0.9">Total Days Taken</small>
+                  </div>
+              </div>
                 <div id="leadership_panel" style="display: none">
                     <div style="
                         background: white;
@@ -5455,6 +5431,7 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
           <script>
             const API_URL = "https://leave-system-testenv.onrender.com";
+            // const API_URL = "http://127.0.0.1:8000";
         
             // 🌍 1. GLOBAL IDENTITY (FORCE SYNC)
             // 🚀 Leave Manager Pagination
@@ -9984,8 +9961,23 @@ async function loadTeamEntitlements() {
         ? `${API_URL}/leaves/admin/entitlements` 
         : `${API_URL}/leaves/manager/entitlements`;
 
-    // Show Loader
-    tbody.innerHTML = `<tr><td colspan='10' class='text-center'><i class='fas fa-spinner fa-spin'></i> Syncing ${isHRView ? 'Company' : 'Team'} Balances...</td></tr>`;
+    // 🎨 PROFESSIONAL LOADING STATE
+    // We use 'Syncing' and 'Entitlements' for a more professional tone
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="10" class="text-center py-5">
+                <div class="d-flex flex-column align-items-center justify-content-center">
+                    <i class="fas fa-circle-notch fa-spin fa-2x mb-3" style="color: #3b82f6;"></i>
+                    <div style="font-weight: 600; color: #334155; font-size: 16px;">
+                        Syncing ${isHRView ? 'Company' : 'Team'} Entitlements...
+                    </div>
+                    <div style="font-size: 12px; color: #94a3b8; margin-top: 5px;">
+                        Retrieving latest balance records for ${year}
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+
     if (loader) loader.style.display = "block";
 
     try {
@@ -9998,7 +9990,10 @@ async function loadTeamEntitlements() {
         });
 
         const res = await fetchWithAuth(`${fetchUrl}?${params.toString()}`);
-        if (!res) return;
+        
+        if (!res || !res.ok) {
+            throw new Error("Failed to fetch data from server");
+        }
 
         const data = await res.json();
         
@@ -10013,7 +10008,17 @@ async function loadTeamEntitlements() {
 
     } catch (e) {
         console.error("Entitlement Load Error:", e);
-        if (tbody) tbody.innerHTML = `<tr><td colspan='10' class='text-center' style='color:red;'>Failed to load entitlement data.</td></tr>`;
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center py-4" style="color: #ef4444;">
+                        <i class="fas fa-exclamation-circle mb-2"></i><br>
+                        <strong>Failed to load entitlements.</strong><br>
+                        <small>Please check your connection or try refreshing the page.</small>
+                    </td>
+                </tr>`;
+        }
+        if (loader) loader.style.display = "none";
     }
 }
 

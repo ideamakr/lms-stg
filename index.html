@@ -358,7 +358,8 @@ const API_URL = "https://leave-system-testenv.onrender.com";
 
                 // 4. Redirect
                 console.log("Login synced with DB. Redirecting...");
-                window.location.replace("/lms-stg/dashboard.html");
+                window.location.replace("dashboard.html");
+                // window.location.replace("/lms-stg/dashboard.html");
             } else {
                 const errorData = await res.json();
                 if (res.status === 503) {
