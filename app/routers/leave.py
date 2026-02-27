@@ -247,15 +247,27 @@ async def create_leave(
     
     if file and file.filename:
         try:
-            # ✅ CORRECTED: Removed the # to make the import active
             from app.main import compress_and_upload
             
             # Now the function is loaded and ready to use
             attachment_url = compress_and_upload(file, folder="mcs")
             
         except Exception as e:
-            print(f"❌ Upload Failed: {e}")
-            raise HTTPException(status_code=500, detail="System Error: Failed to upload attachment to cloud.")
+            error_msg = str(e)
+            print(f"❌ Upload Failed: {error_msg}")
+            
+            # 1. Catch the specific "Idle/Timeout" empty stream error
+            if "cannot identify image file" in error_msg or "BytesIO" in error_msg:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Upload Timeout: Your file session expired because the page was idle. Please refresh the page, re-attach your file, and submit again."
+                )
+            
+            # 2. Fallback for actual server/cloud crashes
+            raise HTTPException(
+                status_code=500, 
+                detail="System Error: Failed to upload attachment to cloud."
+            )
 
     # --- 5. SAVE RECORD ---
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
