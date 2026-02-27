@@ -34,7 +34,7 @@ def send_email(to_email: str, subject: str, body: str):
     # Matches the Key exactly as seen in your Render Dashboard
     API_KEY = os.getenv("Render-API") 
     SENDER_EMAIL = "leavesystemnotif@gmail.com"
-    SYSTEM_URL = "https://lms-stg.onrender.com" 
+    SYSTEM_URL = "https://ideamakr.github.io/lms-stg/" 
 
     if USE_MOCK_EMAIL:
         print("\n" + "="*60)
