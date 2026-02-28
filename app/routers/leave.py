@@ -1104,13 +1104,13 @@ def get_approvers(db: Session = Depends(get_db)):
 def get_public_holidays(db: Session = Depends(get_db)):
     return db.query(models.PublicHoliday).order_by(models.PublicHoliday.holiday_date).all()
 
-# 1. REPLACE THE POST ROUTE (Add Holiday)
+# 1. 🚀 BUG-FREE ADD ROUTE
 @router.post("/public-holidays")
 def add_public_holiday(
     holiday_date: str = Form(...), 
     name: str = Form(...), 
-    states: str = Form("All States"), # 🚀 CATCH THE NEW FIELD
-    db: Session = Depends(validate_session) # or Depends(get_db) depending on your file
+    states: str = Form("All States"), # 🟢 Catches the state!
+    db: Session = Depends(get_db)     # 🟢 CORRECT DEPENDENCY: Connects to database!
 ):
     if len(name) > 50:
         raise HTTPException(status_code=400, detail="Holiday name cannot exceed 50 characters.")
@@ -1119,7 +1119,6 @@ def add_public_holiday(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
-    # 🚀 SAVE IT TO THE DATABASE MODEL
     new_holiday = models.PublicHoliday(
         holiday_date=date_obj, 
         name=name,
@@ -1183,31 +1182,27 @@ def get_global_audit_logs(db: Session = Depends(get_db)):
     
     return formatted
 
+# 2. 🚀 BUG-FREE EDIT ROUTE
 @router.put("/public-holidays/{holiday_id}")
 def update_public_holiday(
     holiday_id: int,
     name: str = Form(...),
     holiday_date: str = Form(...),
-    states: Optional[str] = Form(None), # 🚀 SAFELY CATCH EDITS
-    db: Session = Depends(get_db)
+    states: Optional[str] = Form(None), # 🟢 Catches edits safely!
+    db: Session = Depends(get_db)       # 🟢 CORRECT DEPENDENCY!
 ):
-    # 1. Find the holiday record
     holiday = db.query(models.PublicHoliday).filter(models.PublicHoliday.id == holiday_id).first()
     
     if not holiday:
         raise HTTPException(status_code=404, detail="Holiday record not found")
 
     try:
-        # 2. Apply changes
         holiday.name = name
-        # Convert the frontend string "YYYY-MM-DD" to a Python date object
         holiday.holiday_date = date.fromisoformat(holiday_date)
         
-        # 🚀 ONLY UPDATE STATES IF FRONTEND SENDS IT
         if states is not None:
             holiday.states = states 
         
-        # 3. Commit to DB
         db.commit()
         return {"message": "Holiday updated successfully"}
     except Exception as e:
