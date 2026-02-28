@@ -1104,11 +1104,13 @@ def get_approvers(db: Session = Depends(get_db)):
 def get_public_holidays(db: Session = Depends(get_db)):
     return db.query(models.PublicHoliday).order_by(models.PublicHoliday.holiday_date).all()
 
+# 1. REPLACE THE POST ROUTE (Add Holiday)
 @router.post("/public-holidays")
 def add_public_holiday(
     holiday_date: str = Form(...), 
     name: str = Form(...), 
-    db: Session = Depends(get_db)
+    states: str = Form("All States"), # 🚀 CATCH THE NEW FIELD
+    db: Session = Depends(validate_session) # or Depends(get_db) depending on your file
 ):
     if len(name) > 50:
         raise HTTPException(status_code=400, detail="Holiday name cannot exceed 50 characters.")
@@ -1117,7 +1119,12 @@ def add_public_holiday(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
-    new_holiday = models.PublicHoliday(holiday_date=date_obj, name=name)
+    # 🚀 SAVE IT TO THE DATABASE MODEL
+    new_holiday = models.PublicHoliday(
+        holiday_date=date_obj, 
+        name=name,
+        states=states 
+    )
     db.add(new_holiday)
     db.commit()
     return {"message": f"Holiday '{name}' added successfully."}
@@ -1181,6 +1188,7 @@ def update_public_holiday(
     holiday_id: int,
     name: str = Form(...),
     holiday_date: str = Form(...),
+    states: Optional[str] = Form(None), # 🚀 SAFELY CATCH EDITS
     db: Session = Depends(get_db)
 ):
     # 1. Find the holiday record
@@ -1194,6 +1202,10 @@ def update_public_holiday(
         holiday.name = name
         # Convert the frontend string "YYYY-MM-DD" to a Python date object
         holiday.holiday_date = date.fromisoformat(holiday_date)
+        
+        # 🚀 ONLY UPDATE STATES IF FRONTEND SENDS IT
+        if states is not None:
+            holiday.states = states 
         
         # 3. Commit to DB
         db.commit()

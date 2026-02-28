@@ -11570,9 +11570,14 @@ async function submitHolidayEdit() {
         const dateVal = document.getElementById("edit_holiday_date").value;
         const nameVal = document.getElementById("edit_holiday_name").value;
 
+        // 🚀 CAPTURE THE NEW STATES DATA
+        const statesInput = document.getElementById("edit_holiday_states");
+        const statesVal = statesInput ? statesInput.value : "All States";
+
         const formData = new FormData();
         formData.append("holiday_date", dateVal);
         formData.append("name", nameVal);
+        formData.append("states", statesVal); // 🚀 SEND IT TO THE BACKEND
 
         try {
           // Show Loading Spinner

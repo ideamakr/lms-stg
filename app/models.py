@@ -82,6 +82,9 @@ class PublicHoliday(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     holiday_date = Column(Date, unique=True, index=True)
+    
+    # 🚀 FIX: Tell SQLAlchemy about the new column
+    states = Column(String, default="All States")
 
 class UserRole(Base):
     __tablename__ = "user_roles"
