@@ -26,7 +26,7 @@ class BrandingConfig(BaseModel):
     maintenance_mode: bool = False
 
 # 👇 ADD YOUR VERSION VARIABLE HERE
-APP_VERSION = "v1.0.0"    
+# APP_VERSION = "v1.0.0"    
 
 # --- 🚀 HELPER: SMART USER LOOKUP ---
 def get_current_user(
@@ -164,8 +164,8 @@ def get_branding(db: Session = Depends(database.get_db)):
         return setting.value if setting else default
 
     return {
-        # 🚀 THE MAGIC: System Version dynamically sent to frontend!
-        "system_version": APP_VERSION, 
+        # 🚀 THE FIX: Now fetches dynamically from the database!
+        "system_version": get_val("system_version", "v1.0.0"), 
         
         "company_name": name_setting.value if name_setting else "IdeaMakr",
         "company_sub_info": sub_setting.value if sub_setting else "Software Studio", 
