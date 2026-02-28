@@ -10625,7 +10625,10 @@ async function loadAdminHolidays() {
         weekday: "short", day: "2-digit", month: "short", year: "numeric",
       });
 
-      // 🚀 THE FIX: Pass ONLY the ID instead of the full JSON object
+      // 🚀 THE FIX: Safely extract the states value from the database, fallback to "All States" if empty/null
+      const displayStates = (h.states && h.states.trim() !== "") ? h.states : "All States";
+
+      // 🚀 THE FIX: Inject displayStates into the HTML string
       tbody.innerHTML += `
         <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
             <td style="padding: 15px 30px;">
@@ -10633,7 +10636,7 @@ async function loadAdminHolidays() {
             </td>
             <td style="padding: 15px;">
                 <div style="font-weight: 700; color: #1e293b;">${h.name}</div>
-                <div style="font-size: 0.7rem; color: #64748b;">All States</div>
+                <div style="font-size: 0.7rem; color: #64748b;">${displayStates}</div>
             </td>
             <td style="padding: 15px; text-align: center;">
                 ${statusBadge}
@@ -10906,115 +10909,125 @@ async function executeDeleteHoliday(id) {
       // 2. Add New Holiday
 // 2. Add New Holiday (Upgraded to SweetAlert)
 async function addCompanyHoliday(event) {
-        // 1. 🛡️ Official browser refresh block
-        if (event) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
+    // 1. 🛡️ Official browser refresh block
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
 
-        const startDateEl = document.getElementById("new_holiday_date");
-        const endDateEl = document.getElementById("new_holiday_end_date");
-        const nameEl = document.getElementById("new_holiday_name");
+    const startDateEl = document.getElementById("new_holiday_date");
+    const endDateEl = document.getElementById("new_holiday_end_date");
+    const nameEl = document.getElementById("new_holiday_name");
+    
+    // 🚀 FIX #1: Capture the States element
+    const statesEl = document.getElementById("new_holiday_states");
 
-        // Basic validation
-        if (!startDateEl.value || !nameEl.value) {
-          Swal.fire("Missing Info", "Please provide at least a Start Date and a Holiday Name.", "warning");
-          return false;
-        }
+    // Basic validation
+    if (!startDateEl.value || !nameEl.value) {
+      Swal.fire("Missing Info", "Please provide at least a Start Date and a Holiday Name.", "warning");
+      return false;
+    }
 
-        // 2. Determine the range of dates to process
-        let datesToProcess = [];
-        const startStr = startDateEl.value;
-        const endStr = endDateEl.value;
+    // 🚀 FIX #2: Determine the value (use "All States" if they left it blank)
+    const statesValue = (statesEl && statesEl.value.trim() !== "") ? statesEl.value.trim() : "All States";
 
-        if (!endStr || endStr === startStr) {
-          // Only one day provided or Start/End are the same
-          datesToProcess.push(startStr);
-        } else {
-          // Multi-day holiday range
-          let current = new Date(startStr);
-          let end = new Date(endStr);
+    // 2. Determine the range of dates to process
+    let datesToProcess = [];
+    const startStr = startDateEl.value;
+    const endStr = endDateEl.value;
 
-          if (end < current) {
-            Swal.fire("Invalid Date", "End date cannot be earlier than the start date.", "error");
-            return false;
-          }
+    if (!endStr || endStr === startStr) {
+      // Only one day provided or Start/End are the same
+      datesToProcess.push(startStr);
+    } else {
+      // Multi-day holiday range
+      let current = new Date(startStr);
+      let end = new Date(endStr);
 
-          // Loop to generate all date strings between Start and End
-          while (current <= end) {
-            datesToProcess.push(current.toISOString().split("T")[0]);
-            current.setDate(current.getDate() + 1);
-          }
-        }
-
-        // 3. User Confirmation for bulk additions
-        if (datesToProcess.length > 1) {
-          const confirmRes = await Swal.fire({
-            title: 'Add Multiple Days?',
-            text: `This will add ${datesToProcess.length} individual days for "${nameEl.value}". Proceed?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#2563eb',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Yes, Add Days'
-          });
-          
-          if (!confirmRes.isConfirmed) return false;
-        }
-
-        try {
-          // Show Loading Spinner
-          Swal.fire({ 
-            title: 'Adding Holiday...', 
-            allowOutsideClick: false, 
-            didOpen: () => { Swal.showLoading(); } 
-          });
-
-          // 4. Send each date to the backend
-          // We use a loop here to ensure the backend receives each day as a separate holiday record
-          for (const hDate of datesToProcess) {
-            const formData = new FormData();
-            formData.append("holiday_date", hDate);
-            formData.append("name", nameEl.value);
-
-            const res = await fetchWithAuth(
-              `${API_URL}/leaves/public-holidays`,
-              {
-                method: "POST",
-                body: formData,
-              }
-            );
-
-            if (!res.ok) {
-              const errorDetail = await res.json();
-              console.error(`Failed to add ${hDate}:`, errorDetail.detail);
-            }
-          }
-
-          // 5. Success Pop-up!
-          Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            text: `Successfully added ${datesToProcess.length} day(s) to the calendar.`,
-            confirmButtonColor: '#10b981'
-          });
-
-          // Reset the fields
-          startDateEl.value = "";
-          endDateEl.value = "";
-          nameEl.value = "";
-
-          // 6. Refresh the table and stay on the section
-          await loadAdminHolidays();
-          showSection("hr_holidays");
-        } catch (e) {
-          console.error("System Error:", e);
-          Swal.fire("System Error", "Could not reach the server.", "error");
-        }
-
+      if (end < current) {
+        Swal.fire("Invalid Date", "End date cannot be earlier than the start date.", "error");
         return false;
       }
 
+      // Loop to generate all date strings between Start and End
+      while (current <= end) {
+        datesToProcess.push(current.toISOString().split("T")[0]);
+        current.setDate(current.getDate() + 1);
+      }
+    }
+
+    // 3. User Confirmation for bulk additions
+    if (datesToProcess.length > 1) {
+      const confirmRes = await Swal.fire({
+        title: 'Add Multiple Days?',
+        text: `This will add ${datesToProcess.length} individual days for "${nameEl.value}". Proceed?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, Add Days'
+      });
+      
+      if (!confirmRes.isConfirmed) return false;
+    }
+
+    try {
+      // Show Loading Spinner
+      Swal.fire({ 
+        title: 'Adding Holiday...', 
+        allowOutsideClick: false, 
+        didOpen: () => { Swal.showLoading(); } 
+      });
+
+      // 4. Send each date to the backend
+      for (const hDate of datesToProcess) {
+        const formData = new FormData();
+        formData.append("holiday_date", hDate);
+        formData.append("name", nameEl.value);
+        
+        // 🚀 FIX #3: Send the states value to the backend
+        formData.append("states", statesValue); 
+
+        const res = await fetchWithAuth(
+          `${API_URL}/leaves/public-holidays`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        if (!res.ok) {
+          const errorDetail = await res.json();
+          console.error(`Failed to add ${hDate}:`, errorDetail.detail);
+        }
+      }
+
+      // 5. Success Pop-up!
+      Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: `Successfully added ${datesToProcess.length} day(s) to the calendar.`,
+        confirmButtonColor: '#10b981'
+      });
+
+      // Reset the fields
+      startDateEl.value = "";
+      endDateEl.value = "";
+      nameEl.value = "";
+      
+      // 🚀 FIX #4: Clear the states field
+      if (statesEl) statesEl.value = ""; 
+
+      // 6. Refresh the table and stay on the section
+      await loadAdminHolidays();
+      showSection("hr_holidays");
+    } catch (e) {
+      console.error("System Error:", e);
+      Swal.fire("System Error", "Could not reach the server.", "error");
+    }
+
+    return false;
+}
  // 🚀 GENERIC CONFIRMATION MODAL HELPER
  function openGenericConfirm(title, message, btnText, btnColor, callback) {
         const modal = document.getElementById("universalModal");
