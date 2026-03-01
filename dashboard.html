@@ -14213,9 +14213,11 @@ async function loadHomeLeadershipInsights() {
                 const lDate = new Date(personalUpcoming.start_date);
                 const diffDays = Math.ceil((lDate - new Date(todayStr)) / (1000 * 60 * 60 * 24));
                 leaveEl.innerHTML = `
-                    <div style="font-size: 0.7rem; font-weight: 700; color: #ef4444; text-transform: uppercase; margin-bottom: 4px;">Starting Soon</div>
-                    <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.2;">${formatDateNice(personalUpcoming.start_date)}</div>
-                    <small style="color: #15803d; font-weight: 600; font-size: 0.75rem;">In ${diffDays} days • ${personalUpcoming.days_taken} Day(s)</small>`;
+                    <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">My Next Leave</div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.2;">${personalUpcoming.leave_type}</div>
+                    <small style="color: #15803d; font-weight: 600; font-size: 0.75rem;">
+                        <span style="color: #ef4444; font-weight: 800;">STARTING IN ${diffDays} DAYS</span> • ${formatDateNice(personalUpcoming.start_date)}
+                    </small>`;
             } else {
                 leaveEl.innerHTML = `<div style="font-weight: 500; color: #94a3b8; font-size: 0.85rem;">No approved leave soon.</div>`;
             }
