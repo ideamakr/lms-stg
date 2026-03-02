@@ -4840,11 +4840,12 @@ box-sizing: border-box;
                                         <small id="date_error" class="error-text"></small>
                                     </div>
                                     <div>
-                                        <label class="reg-label">Marital Status</label>
-                                        <select id="reg_marital" class="saas-form-control">
-                                            <option value="Single">Single</option>
-                                            <option value="Married">Married</option>
-                                            <option value="Divorced">Divorced</option>
+                                      <label class="reg-label">Marital Status</label>
+                                      <select id="reg_marital" class="saas-form-control">
+                                          <option value="" disabled selected hidden>-- Select Status --</option>
+                                          <option value="Single">Single</option>
+                                          <option value="Married">Married</option>
+                                          <option value="Divorced">Divorced</option>
                                         </select>
                                     </div>
                                 </div>
@@ -14891,9 +14892,9 @@ async function openFullProfileEditModal(userJsonRaw) {
             if (passContainer) passContainer.style.display = "none";
         }
 
-        // Fill dropdowns and text fields
-        document.getElementById("reg_gender").value = user.gender || "Male";
-        document.getElementById("reg_marital").value = user.marital_status || "Single";
+      // Fill dropdowns and text fields
+        document.getElementById("reg_gender").value = user.gender || "";
+        document.getElementById("reg_marital").value = user.marital_status || "";
         document.getElementById("reg_email").value = user.email || "";
         document.getElementById("reg_mobile").value = user.mobile || "";
         document.getElementById("reg_job_title").value = user.job_title || "";
