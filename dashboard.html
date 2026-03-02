@@ -6301,8 +6301,6 @@ modal.classList.add("show");
             el.innerHTML = '<span class="loading-pulse" style="width: 40px; height: 24px;"></span>';
         });
 
-        // 👇 TEST DELAY GOES HERE (After ALL pulses are on the screen) 👇
-        await new Promise(resolve => setTimeout(resolve, 2500));
 
         try {
           for (let type of types) {
