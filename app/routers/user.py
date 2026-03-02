@@ -6,6 +6,9 @@ from datetime import datetime
 import secrets
 from pydantic import BaseModel
 from typing import Optional 
+import re
+from sqlalchemy.exc import IntegrityError
+
 
 # 🚀 ADDED: Email Service Imports for Admin Actions
 try:
@@ -270,7 +273,6 @@ async def register_user(
     db: Session = Depends(get_db)
 ):
     # --- 1. STRICT DATA NORMALIZATION ---
-    # We clean these BEFORE any database checks to ensure 100% matching
     clean_username = username.strip().lower()
     clean_full_name = full_name.strip()
     clean_email = email.strip().lower()
@@ -278,7 +280,6 @@ async def register_user(
     clean_employee_id = employee_id.strip()
 
     # --- 2. DUPLICATION GUARD ---
-    # Check existence using the normalized data
     existing_user = db.query(models.User).filter(
         (models.User.username == clean_username) | 
         (models.User.email == clean_email)
@@ -287,84 +288,112 @@ async def register_user(
     if existing_user:
         raise HTTPException(status_code=400, detail="User with this username or email already exists.")
 
-    # --- 3. CREATE USER OBJECT (Clean Data Phase) ---
-    new_user = models.User(
-        username=clean_username, 
-        full_name=clean_full_name, 
-        password=password, 
-        role="employee",
-        employee_id=clean_employee_id,
-        gender=gender,
-        marital_status=marital_status,
-        email=clean_email,
-        mobile=mobile.strip(),
-        job_title=job_title.strip(),
-        business_unit=business_unit.strip(),
-        department=department.strip(),
-        line_manager=clean_line_manager, 
-        joined_date=joined_date,
-        is_active=True # Ensure new users are active by default
-    )
-    db.add(new_user)
-    db.flush() # Generate new_user.id for the role table
+    # --- 🚀 NEW LAYER 1: THE 3-RETRY AUTO-INCREMENT LOOP ---
+    max_attempts = 4  # 1 original attempt + 3 retries
+    current_emp_id = clean_employee_id
+    success = False
 
-    # --- 4. ADD DEFAULT ROLE ---
-    db.add(models.UserRole(user_id=new_user.id, role_name="employee"))
+    for attempt in range(max_attempts):
+        try:
+            # --- 3. CREATE USER OBJECT ---
+            new_user = models.User(
+                username=clean_username, 
+                full_name=clean_full_name, 
+                password=password, 
+                role="employee",
+                employee_id=current_emp_id, # 🚀 Uses the auto-incremented ID if looped
+                gender=gender,
+                marital_status=marital_status,
+                email=clean_email,
+                mobile=mobile.strip(),
+                job_title=job_title.strip(),
+                business_unit=business_unit.strip(),
+                department=department.strip(),
+                line_manager=clean_line_manager, 
+                joined_date=joined_date,
+                is_active=True 
+            )
+            db.add(new_user)
+            db.flush() # 🚀 Triggers IntegrityError instantly if ID is taken
 
-    # --- 5. FETCH GLOBAL POLICY ---
-    policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
-    annual = policy.annual_days if policy else 14
-    medical = policy.medical_days if policy else 14
-    emergency = policy.emergency_days if policy else 2
-    compassionate = policy.compassionate_days if policy else 3
+            # --- 4. ADD DEFAULT ROLE ---
+            db.add(models.UserRole(user_id=new_user.id, role_name="employee"))
 
-    # --- 6. INITIALIZE LEAVE BALANCES (Normalization Sync) ---
-    # 🚀 FIX: employee_name must match clean_full_name for dashboard mapping
-    current_year = datetime.now().year
-    leave_setups = [
-        (models.LeaveType.ANNUAL, annual),
-        (models.LeaveType.MEDICAL, medical),
-        (models.LeaveType.EMERGENCY, emergency),
-        (models.LeaveType.COMPASSIONATE, compassionate),
-        (models.LeaveType.UNPAID, 0.0) 
-    ]
+            # --- 5. FETCH GLOBAL POLICY ---
+            policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
+            annual = policy.annual_days if policy else 14
+            medical = policy.medical_days if policy else 14
+            emergency = policy.emergency_days if policy else 2
+            compassionate = policy.compassionate_days if policy else 3
 
-    for l_type, days in leave_setups:
-        db.add(models.LeaveBalance(
-            employee_name=clean_full_name, # 🚀 Linked to the clean name
-            leave_type=l_type,
-            year=current_year,
-            entitlement=float(days),
-            remaining=float(days), # Dashboard will show the full balance immediately
-            carry_forward_total=0.0
-        ))
+            # --- 6. INITIALIZE LEAVE BALANCES ---
+            current_year = datetime.now().year
+            leave_setups = [
+                (models.LeaveType.ANNUAL, annual),
+                (models.LeaveType.MEDICAL, medical),
+                (models.LeaveType.EMERGENCY, emergency),
+                (models.LeaveType.COMPASSIONATE, compassionate),
+                (models.LeaveType.UNPAID, 0.0) 
+            ]
 
-    try:
-        db.commit()
-        
-        # --- 7. 📧 EMAIL NOTIFICATION TRIGGER (Clean Data Phase) ---
-        if clean_email and "@" in clean_email:
-            try:
-                from app.utils.email_service import send_email, template_new_user
-                
-                subject = "🎉 Welcome to the Team"
-                body = template_new_user(
-                    name=clean_full_name, 
-                    username=clean_username, 
-                    password=password 
+            for l_type, days in leave_setups:
+                db.add(models.LeaveBalance(
+                    employee_name=clean_full_name, 
+                    leave_type=l_type,
+                    year=current_year,
+                    entitlement=float(days),
+                    remaining=float(days), 
+                    carry_forward_total=0.0
+                ))
+
+            # Commit the transaction if everything above succeeds
+            db.commit()
+            success = True
+            break # 🚀 SUCCESS! Exit the retry loop.
+
+        except IntegrityError:
+            db.rollback() # 🛡️ Cancel the crashed transaction
+            
+            if attempt < max_attempts - 1:
+                # ⚙️ Auto-Increment Logic (e.g., EMP-2026-0096 -> EMP-2026-0097)
+                match = re.search(r'(.*?)-(\d+)$', current_emp_id)
+                if match:
+                    prefix = match.group(1)
+                    num_str = match.group(2)
+                    next_num = int(num_str) + 1
+                    current_emp_id = f"{prefix}-{next_num:0{len(num_str)}d}"
+                else:
+                    raise HTTPException(status_code=400, detail="Employee ID format unrecognized for auto-increment.")
+            else:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="A duplicate ID conflict was detected. Please close and reopen the registration form before trying again."
                 )
-                
-                # Async hand-off to Brevo
-                background_tasks.add_task(send_email, clean_email, subject, body)
-            except Exception as mail_err:
-                print(f"⚠️ Email Queue Warning: {mail_err}")
-                
-        return {"message": f"User {clean_full_name} registered successfully."}
-    
-    except Exception as e:
-        db.rollback()
-        print(f"❌ Critical Registration Failure: {e}")
-        raise HTTPException(status_code=500, detail="Registration failed due to a database error.")
+        except Exception as e:
+            db.rollback()
+            print(f"❌ Critical Registration Failure: {e}")
+            raise HTTPException(status_code=500, detail="Registration failed due to a database error.")
+
+    # --- 7. 📧 EMAIL NOTIFICATION TRIGGER ---
+    if success and clean_email and "@" in clean_email:
+        try:
+            from app.utils.email_service import send_email, template_new_user
+            
+            subject = "🎉 Welcome to the Team"
+            body = template_new_user(
+                name=clean_full_name, 
+                username=clean_username, 
+                password=password 
+            )
+            
+            background_tasks.add_task(send_email, clean_email, subject, body)
+        except Exception as mail_err:
+            print(f"⚠️ Email Queue Warning: {mail_err}")
+            
+    return {
+        "message": f"User {clean_full_name} registered successfully.",
+        "assigned_emp_id": current_emp_id # 🚀 Return the final ID so frontend can alert the admin
+    }
 
 @router.put("/{user_id}/toggle-status")
 async def toggle_user_status( # 🚀 Async execution for background tasks
@@ -429,7 +458,7 @@ async def toggle_user_status( # 🚀 Async execution for background tasks
 def update_user_profile(
     user_id: int,
     full_name: str = Form(...),
-    employee_id: str = Form(...),
+    employee_id: str = Form(...), # 🛡️ Kept here so the API doesn't break if frontend sends it
     gender: str = Form(...),
     marital_status: str = Form(...),
     email: str = Form(...),
@@ -470,7 +499,7 @@ def update_user_profile(
 
     # 5. Update the Primary User Record
     user.full_name = new_name
-    user.employee_id = employee_id
+    # 🚀 REMOVED: user.employee_id = employee_id (This locks the ID in the database forever)
     user.gender = gender
     user.marital_status = marital_status
     user.email = email

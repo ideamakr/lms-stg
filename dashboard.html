@@ -5469,8 +5469,8 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
 
           <script>
-            const API_URL = "https://leave-system-testenv.onrender.com";
-            // const API_URL = "http://127.0.0.1:8000";
+           const API_URL = "https://leave-system-testenv.onrender.com";
+            //  const API_URL = "http://127.0.0.1:8000";
         
             // 🌍 1. GLOBAL IDENTITY (FORCE SYNC)
             // 🚀 Leave Manager Pagination
@@ -13310,6 +13310,10 @@ if (submitBtn) {
           if (!res) return;
 
           if (res.ok) {
+            // 🚀 NEW: Extract the JSON response to check the assigned ID
+            const data = await res.json();
+            const assignedId = data.assigned_emp_id || empId;
+
             console.log("Account Created. Starting entitlement initialization...");
             
             // 🚀 STEP 2: Sync Leave Balances
@@ -13318,11 +13322,21 @@ if (submitBtn) {
               { method: "POST" }
             );
 
+            // 🚀 NEW: Prepare the success messages dynamically based on ID collisions
+            let successHtml = `<strong>${fullName}</strong> has been registered.<br>Leave balances initialized.`;
+            let partialHtml = `Account created for <strong>${fullName}</strong>, but leave balances could not be auto-synced.`;
+            
+            if (assignedId !== empId) {
+                const idMsg = `<br><br><span style="color:#64748b; font-size:0.85rem;">Note: To resolve a conflict, the assigned ID is</span><br><span style="color:#2563eb; font-size:1.3rem; font-weight:800;">${assignedId}</span><br><br>`;
+                successHtml = `<strong>${fullName}</strong> has been registered.${idMsg}Leave balances initialized.`;
+                partialHtml = `Account created for <strong>${fullName}</strong>.${idMsg}However, leave balances could not be auto-synced.`;
+            }
+
             if (syncRes && syncRes.ok) {
               Swal.fire({
                 icon: 'success',
                 title: 'Registration Complete',
-                html: `<strong>${fullName}</strong> has been registered.<br>Leave balances initialized.`,
+                html: successHtml, // 🚀 Uses dynamic HTML
                 confirmButtonColor: '#10b981',
                 confirmButtonText: 'Done'
               });
@@ -13330,7 +13344,7 @@ if (submitBtn) {
               Swal.fire({
                 icon: 'warning',
                 title: 'Partial Success',
-                html: `Account created for <strong>${fullName}</strong>, but leave balances could not be auto-synced.`,
+                html: partialHtml, // 🚀 Uses dynamic HTML
                 confirmButtonColor: '#f59e0b',
                 confirmButtonText: 'Acknowledge'
               });
