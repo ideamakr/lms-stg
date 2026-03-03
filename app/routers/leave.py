@@ -933,8 +933,6 @@ def admin_table_query(table_name: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-# 🚀 ADDED ALIAS: Ensures Frontend '/admin/entitlements' calls don't 404
-# 🚀 ROUTER ALIAS: Ensures both /manager and /admin URLs work
 @router.get("/manager/entitlements")
 @router.get("/admin/entitlements")
 def get_team_entitlements(
@@ -953,124 +951,131 @@ def get_team_entitlements(
     requester = db.query(models.User).filter(models.User.full_name == approver_clean).first()
     
     if requester:
-        user_roles_list = [r.role_name for r in requester.assigned_roles]
+        user_roles_list = [r.role_name for r in requester.assigned_roles] if hasattr(requester, 'assigned_roles') else []
         if requester.role == "hr_admin" or "hr_admin" in user_roles_list:
             role_clean = "hr_admin"
 
     # 3. RBAC Check
-    allowed_roles = ["hr_admin", "manager", "payroll", "payroll_approver"] # Expanded for future safety
+    allowed_roles = ["hr_admin", "manager", "payroll", "payroll_approver"]
     if role_clean not in allowed_roles:
         return []
 
-    # 4. 🚀 IDENTIFY DATA SCOPE
-    if role_clean == "hr_admin":
-        query = db.query(models.LeaveBalance).filter(models.LeaveBalance.year == current_year)
+    # 4. 🚀 THE FIX: Remove '.filter(models.User.is_active == True)'
+    # We want ALL users so the frontend can calculate Active vs Inactive totals
+    users_query = db.query(models.User)
     
-    elif role_clean == "manager":
-        # A. Direct Reports
-        managed_by_profile = db.query(models.User.full_name).filter(
-            models.User.line_manager == approver_clean
-        ).all()
+    if role_clean != "hr_admin":
+        # Manager Logic (Team specific)
+        managed_by_profile = db.query(models.User.full_name).filter(models.User.line_manager == approver_clean).all()
         staff_list = [s[0] for s in managed_by_profile]
 
-        # B. Fallback (Manual Select)
-        submitted_to_mgr = db.query(models.Leave.employee_name).filter(
-            models.Leave.approver_name == approver_clean
-        ).distinct().all()
-        
+        submitted_to_mgr = db.query(models.Leave.employee_name).filter(models.Leave.approver_name == approver_clean).distinct().all()
         for s in submitted_to_mgr:
-            if s[0] not in staff_list:
-                staff_list.append(s[0])
+            if s[0] not in staff_list: staff_list.append(s[0])
         
-        if not staff_list:
-            return [] 
+        if not staff_list: return [] 
+        users_query = users_query.filter(models.User.full_name.in_(staff_list))
 
-        query = db.query(models.LeaveBalance).filter(
-            models.LeaveBalance.year == current_year,
-            models.LeaveBalance.employee_name.in_(staff_list)
-        )
-    else:
-        # Default safety
-        return []
-
-    # 5. Apply Search Filter
     if name:
-        query = query.filter(models.LeaveBalance.employee_name.ilike(f"%{name}%"))
+        users_query = users_query.filter(models.User.full_name.ilike(f"%{name}%"))
     
     try:
-        # Sort alphabetically
-        balances = query.order_by(models.LeaveBalance.employee_name).all()
+        users = users_query.all()
+        if not users:
+            return []
+            
+        user_names = [u.full_name for u in users]
+
+        # Fetch ALL Balances and Leaves at once
+        all_balances = db.query(models.LeaveBalance).filter(
+            models.LeaveBalance.employee_name.in_(user_names),
+            models.LeaveBalance.year == current_year
+        ).all()
+        
+        active_statuses = ["Approved", "Pending", "Pending Cancel", "Pending L2 Approval"]
+        all_leaves = db.query(models.Leave).filter(
+            models.Leave.employee_name.in_(user_names),
+            models.Leave.status.in_(active_statuses),
+            extract('year', models.Leave.start_date) == current_year
+        ).all()
+
+        policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
+        defaults = {
+            "Annual Leave": policy.annual_days if policy else 14.0,
+            "Medical Leave": policy.medical_days if policy else 14.0,
+            "Emergency Leave": policy.emergency_days if policy else 2.0,
+            "Compassionate Leave": policy.compassionate_days if policy else 3.0
+        }
+        
+        bal_map = {uname: [] for uname in user_names}
+        for b in all_balances: 
+            bal_map[b.employee_name].append(b)
+            
+        leave_map = {uname: [] for uname in user_names}
+        for l in all_leaves: 
+            leave_map[l.employee_name].append(l)
+
+        results = []
+
+        for u in users:
+            emp_name = u.full_name
+            u_bals = bal_map.get(emp_name, [])
+            u_leaves = leave_map.get(emp_name, [])
+
+            def get_bucket(l_type):
+                b = next((x for x in u_bals if str(getattr(x.leave_type, 'value', x.leave_type)) == l_type), None)
+                ent = float(b.entitlement or 0.0) if b else defaults.get(l_type, 0.0)
+                cf = float(b.carry_forward_total or 0.0) if b else 0.0
+                
+                types_to_count = ["Annual Leave", "Emergency Leave"] if l_type == "Annual Leave" else [l_type]
+                used = 0.0
+                
+                for l in u_leaves:
+                    l_type_str = str(getattr(l.leave_type, 'value', l.leave_type))
+                    if l_type_str in types_to_count:
+                        days_to_count = float(l.days_taken or 0.0)
+                        if l_type_str == "Annual Leave" and "[CARRY FORWARD" in (l.reason or ""):
+                            match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
+                            if match:
+                                days_to_count = float(match.group(1))
+                        used += days_to_count
+                return {"ent": ent, "cf": cf, "rem": (ent + cf) - used}
+
+            ann = get_bucket("Annual Leave")
+            med = get_bucket("Medical Leave")
+            
+            unpaid = 0.0
+            cf_approved = 0.0
+            
+            for l in u_leaves:
+                l_type_str = str(getattr(l.leave_type, 'value', l.leave_type))
+                status_str = str(getattr(l.status, 'value', l.status))
+                if l_type_str == "Unpaid Leave" and status_str == "Approved":
+                    unpaid += float(l.days_taken or 0.0)
+                if status_str == "Approved" and "[CARRY FORWARD" in (l.reason or ""):
+                    match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
+                    if match: 
+                        cf_approved += float(match.group(1))
+
+            # 🚀 RESULT: status is now accurately reported for ALL users
+            results.append({
+                "name": emp_name,
+                "status": "Active" if u.is_active else "Inactive",
+                "is_active": u.is_active, # Added for frontend safety
+                "annual_remaining": ann["rem"],
+                "annual_entitlement": ann["ent"],
+                "medical_remaining": med["rem"],
+                "medical_entitlement": med["ent"],
+                "unpaid_taken": unpaid,
+                "carry_forward_total": cf_approved,
+                "overtime_bank": float(getattr(u, 'overtime_bank', 0) or 0)
+            })
+            
+        return results
+
     except Exception as e:
         print(f"❌ Database Query Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch balances")
-
-    results = []
-    seen_employees = set()
-
-    # 6. Process results
-    for b in balances:
-        if b.employee_name in seen_employees:
-            continue
-        
-        # 🟢 AUTO-HEAL
-        ensure_leave_balance(db, b.employee_name, current_year)
-        
-        try:
-            # 🚀 NEW: Fetch User Status Logic
-            # We look up the user to see if they are Active or Inactive
-            user_record = db.query(models.User).filter(models.User.full_name == b.employee_name).first()
-            
-            # Default to "Active" if user not found (safe fallback), otherwise use real status
-            status_label = "Active"
-            if user_record:
-                status_label = "Active" if user_record.is_active else "Inactive"
-
-            # Helper function calls
-            annual = _calculate_shared_balance(db, b.employee_name, current_year, "Annual Leave")
-            medical = _calculate_shared_balance(db, b.employee_name, current_year, "Medical Leave")
-            emergency = _calculate_shared_balance(db, b.employee_name, current_year, "Emergency Leave")
-            compassionate = _calculate_shared_balance(db, b.employee_name, current_year, "Compassionate Leave")
-
-            unpaid_taken = db.query(func.sum(models.Leave.days_taken)).filter(
-                models.Leave.employee_name == b.employee_name,
-                models.Leave.leave_type == "Unpaid Leave",
-                models.Leave.status == "Approved"
-            ).scalar() or 0.0
-
-            # 🚀 Carry Forward Calculation
-            cf_total = 0.0
-            approved_cf_requests = db.query(models.Leave).filter(
-                models.Leave.employee_name == b.employee_name,
-                models.Leave.status == "Approved",
-                models.Leave.reason.contains("[CARRY FORWARD")
-            ).all()
-
-            for req in approved_cf_requests:
-                match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", req.reason or "")
-                if match:
-                    cf_total += float(match.group(1))
-
-            results.append({
-                "name": b.employee_name,
-                "status": status_label,  # 👈 Added this field!
-                "annual_remaining": annual["remaining"] if annual else 0,
-                "annual_entitlement": annual["entitlement"] if annual else 0,
-                "medical_remaining": medical["remaining"] if medical else 0,
-                "medical_entitlement": medical["entitlement"] if medical else 0,
-                "emergency_remaining": emergency["remaining"] if emergency else 0,
-                "emergency_entitlement": emergency["entitlement"] if emergency else 0,
-                "compassionate_remaining": compassionate["remaining"] if compassionate else 0,
-                "compassionate_entitlement": compassionate["entitlement"] if compassionate else 0,
-                "unpaid_taken": float(unpaid_taken),
-                "carry_forward_total": float(cf_total)
-            })
-            seen_employees.add(b.employee_name)
-            
-        except Exception as e:
-            print(f"⚠️ Error calculating balance for {b.employee_name}: {e}")
-            continue
-    
-    return results
 
 
 @router.get("/approvers")

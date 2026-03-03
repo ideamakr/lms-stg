@@ -2779,7 +2779,22 @@ div.swal2-container {
                   <h2>
                       <i class="fas fa-users"></i> Team Leave Balances (<span class="current-year-display"></span>)
                   </h2>
-          
+
+                <div id="entitlementStatsTiles" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px;">
+                    <div onclick="setEntitlementStatusFilter('All')" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Total Employees</div>
+                        <div id="statTotalEmps" style="font-size: 2rem; font-weight: 800; color: #1e293b; margin-top: 5px;">0</div>
+                    </div>
+                    <div onclick="setEntitlementStatusFilter('Active')" style="background: #f0fdf4; padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0; text-align: center; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 0.75rem; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">Active</div>
+                        <div id="statActiveEmps" style="font-size: 2rem; font-weight: 800; color: #166534; margin-top: 5px;">0</div>
+                    </div>
+                    <div onclick="setEntitlementStatusFilter('Inactive')" style="background: #fef2f2; padding: 20px; border-radius: 12px; border: 1px solid #fecaca; text-align: center; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 0.75rem; font-weight: 800; color: #991b1b; text-transform: uppercase; letter-spacing: 0.5px;">Inactive</div>
+                        <div id="statInactiveEmps" style="font-size: 2rem; font-weight: 800; color: #991b1b; margin-top: 5px;">0</div>
+                    </div>
+                </div>
+
                   <div class="filter-bar" style="
                         background: #f8fafc; 
                         border: 1px solid #e2e8f0; 
@@ -2793,169 +2808,67 @@ div.swal2-container {
                       ">
                       
                       <div style="flex: 1; min-width: 220px;">
-                          <label style="
-                              display: block; 
-                              font-size: 0.7rem; 
-                              color: #64748b; 
-                              font-weight: 800; 
-                              text-transform: uppercase; 
-                              margin-bottom: 6px; 
-                              letter-spacing: 0.5px;
-                          ">Employee Name</label>
+                          <label style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">Employee Name</label>
                           <input type="text" id="mgr_ent_search_name" placeholder="Search employee..." 
-                                 onkeyup="loadTeamEntitlements()" 
-                                 style="
-                              width: 100%; 
-                              height: 40px; 
-                              padding: 0 12px; 
-                              border: 1px solid #cbd5e1; 
-                              border-radius: 6px; 
-                              font-size: 0.9rem; 
-                              color: #334155; 
-                              box-sizing: border-box;
-                              transition: border-color 0.2s;
-                          " onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#cbd5e1'">
+                                 onkeyup="applyFiltersAndRender()" 
+                                 style="width: 100%; height: 40px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; color: #334155; box-sizing: border-box; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#cbd5e1'">
                       </div>
           
                       <div style="width: 180px;">
-                          <label style="
-                              display: block; 
-                              font-size: 0.7rem; 
-                              color: #64748b; 
-                              font-weight: 800; 
-                              text-transform: uppercase; 
-                              margin-bottom: 6px; 
-                              letter-spacing: 0.5px;
-                          ">Status</label>
- <select id="mgr_ent_status_filter" onchange="loadTeamEntitlements()" 
- style="
-width: 100%; 
-height: 40px; 
-padding: 0 12px; 
-border: 1px solid #cbd5e1; 
-border-radius: 6px; 
-font-size: 0.9rem; 
-color: #334155; 
-background-color: white; 
-cursor: pointer; 
-box-sizing: border-box;
-" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#cbd5e1'">
-<option value="All" selected>All Status</option>
-<option value="Active">Active Only</option>
-<option value="Inactive">Inactive</option>
-</select>
+                          <label style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">Status</label>
+                          <select id="mgr_ent_status_filter" onchange="applyFiltersAndRender()" style="width: 100%; height: 40px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; color: #334155; background-color: white; cursor: pointer; box-sizing: border-box;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#cbd5e1'">
+                            <option value="All" selected>All Status</option>
+                            <option value="Active">Active Only</option>
+                            <option value="Inactive">Inactive</option>
+                          </select>
                       </div>
           
                       <div style="display: flex; gap: 10px;">
-                          
-                          <button onclick="resetBalanceFilters()" title="Reset Filters" style="
-                              height: 40px; 
-                              width: 40px; 
-                              display: flex; 
-                              align-items: center; 
-                              justify-content: center; 
-                              background: white; 
-                              border: 1px solid #cbd5e1; 
-                              border-radius: 6px; 
-                              color: #64748b; 
-                              cursor: pointer; 
-                              transition: all 0.2s;
-                          " onmouseover="this.style.background='#f1f5f9'; this.style.color='#334155'" 
-                            onmouseout="this.style.background='white'; this.style.color='#64748b'">
+                          <button onclick="resetBalanceFilters()" title="Reset Filters" style="height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #cbd5e1; border-radius: 6px; color: #64748b; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#334155'" onmouseout="this.style.background='white'; this.style.color='#64748b'">
                               <i class="fas fa-undo-alt"></i>
                           </button>
           
-                          <button onclick="loadTeamEntitlements()" style="
-                              height: 40px; 
-                              padding: 0 20px; 
-                              background: #2563eb; 
-                              color: white; 
-                              border: none; 
-                              border-radius: 6px; 
-                              font-weight: 600; 
-                              font-size: 0.9rem; 
-                              display: flex; 
-                              align-items: center; 
-                              gap: 8px; 
-                              cursor: pointer; 
-                              transition: background 0.2s;
-                          " onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+                          <button onclick="loadTeamEntitlements()" style="height: 40px; padding: 0 20px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
                               <i class="fas fa-sync-alt"></i> Refresh
                           </button>
           
-                          <button onclick="exportEntitlementsCSV()" style="
-                              height: 40px; 
-                              padding: 0 20px; 
-                              background: white; 
-                              color: #10b981; 
-                              border: 1px solid #10b981; 
-                              border-radius: 6px; 
-                              font-weight: 600; 
-                              font-size: 0.9rem; 
-                              display: flex; 
-                              align-items: center; 
-                              gap: 8px; 
-                              cursor: pointer; 
-                              transition: all 0.2s;
-                          " onmouseover="this.style.background='#ecfdf5'" onmouseout="this.style.background='white'">
+                          <button onclick="exportEntitlementsCSV()" style="height: 40px; padding: 0 20px; background: white; color: #10b981; border: 1px solid #10b981; border-radius: 6px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#ecfdf5'" onmouseout="this.style.background='white'">
                               <i class="fas fa-file-csv"></i> Export
                           </button>
                       </div>
                   </div>
-          
                   <div class="table-container" style="max-height: 600px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                             <tr>
-                                <th onclick="sortTeamTable('name')" style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
+                                <th onclick="sortTeamTable('name')" style="width: 30%; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
                                     Employee <i id="sort-icon-name" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
                                 </th>
-                
-                                <th onclick="sortTeamTable('annual_remaining')" style="padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
-                                    Annual <i id="sort-icon-annual_remaining" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
+                                <th onclick="sortTeamTable('annual_remaining')" style="width: 20%; padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
+                                    Annual Leave <i id="sort-icon-annual_remaining" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
                                 </th>
-                
-                                <th onclick="sortTeamTable('medical_remaining')" style="padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
-                                    Medical <i id="sort-icon-medical_remaining" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
+                                <th onclick="sortTeamTable('medical_remaining')" style="width: 20%; padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
+                                    Medical Leave <i id="sort-icon-medical_remaining" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
                                 </th>
-                
-                                <th onclick="sortTeamTable('emergency_remaining')" style="padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
-                                    Emergency <i id="sort-icon-emergency_remaining" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
-                                </th>
-                
-                                <th onclick="sortTeamTable('compassionate_remaining')" style="padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
-                                    Compassionate <i id="sort-icon-compassionate_remaining" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
-                                </th>
-                
-                                <th onclick="sortTeamTable('overtime_bank')" style="padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
-                                    Overtime (Hrs) <i id="sort-icon-overtime_bank" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
-                                </th>
-                
-                                <th onclick="sortTeamTable('unpaid_taken')" style="padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
-                                    Unpaid <i id="sort-icon-unpaid_taken" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
-                                </th>
-                
-                                <th onclick="sortTeamTable('carry_forward_total')" style="padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
-                                    Carry Fwd <i id="sort-icon-carry_forward_total" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
-                                </th>
-                
-                                <th onclick="sortTeamTable('status')" style="padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
+                                <th onclick="sortTeamTable('status')" style="width: 15%; padding: 12px 15px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; cursor: pointer; user-select: none;">
                                     Status <i id="sort-icon-status" class="fas fa-sort" style="margin-left:5px; color:#cbd5e1;"></i>
                                 </th>
-                
-                                <th class="text-center" style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0; color: #475569;">
+                                <th class="text-center" style="width: 15%; padding: 12px 15px; border-bottom: 2px solid #e2e8f0; color: #475569;">
                                     Details
                                 </th>
                             </tr>
                         </thead>
                         <tbody id="mgrEntitlementTableBody">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
                   
-                  <div id="entitlementLoader" style="display: none; text-align: center; padding: 30px; color: #64748b;">
-                      <i class="fas fa-spinner fa-spin fa-2x"></i><br><span style="margin-top: 10px; display: block;">Loading team balances...</span>
-                  </div>
+                <div id="entitlementLoader" style="display: none; text-align: center; padding: 30px; color: #64748b;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i><br><span style="margin-top: 10px; display: block;">Loading team balances...</span>
+                </div>
+                
+                <div id="entitlementPagination"></div>
+
               </div>
           </div>
 
@@ -5469,8 +5382,8 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
 
           <script>
-           const API_URL = "https://leave-system-testenv.onrender.com";
-            //  const API_URL = "http://127.0.0.1:8000";
+          const API_URL = "https://leave-system-testenv.onrender.com";
+          // const API_URL = "http://127.0.0.1:8000";
         
             // 🌍 1. GLOBAL IDENTITY (FORCE SYNC)
             // 🚀 Leave Manager Pagination
@@ -5488,6 +5401,8 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
             const otPageSize = 10;
             let mgrHistCurrentPage = 1;
             const mgrHistPageSize = 10;
+            let entCurrentPage = 1;
+            const entPageSize = 50;
         
             // 🚀 GLOBAL CONFIG
             let ENABLE_CARRY_FORWARD = false;
@@ -9999,11 +9914,13 @@ function logout() {
     window.location.href = "index.html"; 
 }
 
-      // Team Leave Balance
-      // FETCH TEAM BALANCES (ENTITLEMENTS)
-   // 🌎 Global Store for Filtering (Optional, but good for performance)
+// ==========================================
+// 🌍 TEAM BALANCES ENGINE (Client-Side Pagination)
+// ==========================================
 
-// 🚀 MERGED FUNCTION: Load Team Balances + Filters + Overtime
+// 1. GLOBAL VARIABLES (CRITICAL FOR PAGINATION MATH)
+
+
 async function loadTeamEntitlements() {
     const tbody = document.getElementById("mgrEntitlementTableBody");
     const loader = document.getElementById("entitlementLoader");
@@ -10011,8 +9928,6 @@ async function loadTeamEntitlements() {
     if (!tbody) return;
 
     // Get Inputs
-    const searchInput = document.getElementById("mgr_ent_search_name");
-    const searchTerm = searchInput ? searchInput.value.trim() : "";
     const isHRView = document.getElementById("viewModeToggle")?.checked;
     const year = new Date().getFullYear();
 
@@ -10022,10 +9937,9 @@ async function loadTeamEntitlements() {
         : `${API_URL}/leaves/manager/entitlements`;
 
     // 🎨 PROFESSIONAL LOADING STATE
-    // We use 'Syncing' and 'Entitlements' for a more professional tone
     tbody.innerHTML = `
         <tr>
-            <td colspan="10" class="text-center py-5">
+            <td colspan="5" class="text-center py-5">
                 <div class="d-flex flex-column align-items-center justify-content-center">
                     <i class="fas fa-circle-notch fa-spin fa-2x mb-3" style="color: #3b82f6;"></i>
                     <div style="font-weight: 600; color: #334155; font-size: 16px;">
@@ -10046,7 +9960,7 @@ async function loadTeamEntitlements() {
             year: year,
             user_role: isHRView ? "hr_admin" : "manager",
             include_pending: isHRView ? "true" : "false", 
-            name: searchTerm 
+            name: "" 
         });
 
         const res = await fetchWithAuth(`${fetchUrl}?${params.toString()}`);
@@ -10055,15 +9969,34 @@ async function loadTeamEntitlements() {
             throw new Error("Failed to fetch data from server");
         }
 
-        const data = await res.json();
+        const rawData = await res.json();
         
-        // SAVE TO GLOBAL CACHE
-        teamEntitlementCache = data; 
+        // ------------------------------------------------------------------------
+        // 🛡️ THE FIX: DATA NORMALIZATION (Catches boolean and string mismatches)
+        // ------------------------------------------------------------------------
+        teamEntitlementCache = rawData.map(emp => {
+            let actualStatus = "Active"; // Default assumption
+            
+            // If backend sends the boolean is_active
+            if (emp.is_active === false) {
+                actualStatus = "Inactive";
+            } 
+            // If backend sends a text string (just in case)
+            else if (typeof emp.status === 'string' && emp.status.toLowerCase() === 'inactive') {
+                actualStatus = "Inactive";
+            }
+
+            return {
+                ...emp,
+                status: actualStatus // Hard-locks the status to "Active" or "Inactive"
+            };
+        });
+        
+        // Reset pagination back to page 1 on every fresh load
+        entCurrentPage = 1;
 
         // Hide Loader & Render
         if (loader) loader.style.display = "none";
-        
-        // Initial Render
         applyFiltersAndRender();
 
     } catch (e) {
@@ -10071,7 +10004,7 @@ async function loadTeamEntitlements() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-4" style="color: #ef4444;">
+                    <td colspan="5" class="text-center py-4" style="color: #ef4444;">
                         <i class="fas fa-exclamation-circle mb-2"></i><br>
                         <strong>Failed to load entitlements.</strong><br>
                         <small>Please check your connection or try refreshing the page.</small>
@@ -10125,268 +10058,309 @@ function sortTeamTable(key) {
     applyFiltersAndRender();
 }
 
-// 🚀 3. RENDER ENGINE (Draws the HTML)
+// Function to filter by clicking the Tiles
+function setEntitlementStatusFilter(status) {
+    const statusSelect = document.getElementById("mgr_ent_status_filter");
+    if (statusSelect) {
+        statusSelect.value = status;
+        entCurrentPage = 1; // Always reset to page 1
+        applyFiltersAndRender();
+    }
+}
+// 🚀 3. RENDER ENGINE (Draws the HTML & Updates Stats)
+// 🚀 3. RENDER ENGINE (Draws the HTML & Updates Stats)
 function applyFiltersAndRender() {
     const tbody = document.getElementById("mgrEntitlementTableBody");
+    const nav = document.getElementById("entitlementPagination");
     const statusSelect = document.getElementById("mgr_ent_status_filter");
+    const searchInput = document.getElementById("mgr_ent_search_name");
+    
     const statusFilter = statusSelect ? statusSelect.value : "All";
+    const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : "";
     const year = new Date().getFullYear();
 
     if (!tbody) return;
 
-    // Client-Side Status Filter
-    const filteredData = teamEntitlementCache.filter(emp => {
-        if (statusFilter === "All") return true;
-        const empStatus = emp.status || "Active"; 
-        return empStatus === statusFilter;
+    // ------------------------------------------------------------------------
+    // 📊 NORMALISED STAT TILES
+    // ------------------------------------------------------------------------
+    if (teamEntitlementCache && teamEntitlementCache.length > 0) {
+        const totalCount = teamEntitlementCache.length;
+        // Because of our fix in loadTeamEntitlements, this math is now 100% bulletproof
+        const inactiveCount = teamEntitlementCache.filter(e => e.status === 'Inactive').length;
+        const activeCount = totalCount - inactiveCount; 
+
+        const elTotal = document.getElementById("statTotalEmps");
+        const elActive = document.getElementById("statActiveEmps");
+        const elInactive = document.getElementById("statInactiveEmps");
+
+        if (elTotal) elTotal.innerText = totalCount;
+        if (elActive) elActive.innerText = activeCount;
+        if (elInactive) elInactive.innerText = inactiveCount;
+    }
+
+    // 1. Client-Side Filtering
+    let filteredData = teamEntitlementCache.filter(emp => {
+        const matchStatus = statusFilter === "All" || emp.status === statusFilter;
+        const matchName = (emp.name || "").toLowerCase().includes(searchVal);
+        return matchStatus && matchName;
     });
 
-    if (filteredData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan='10' class='text-center' style='padding:30px; color:#64748b;'>No records found matching status '${statusFilter}'.</td></tr>`;
-        return;
+    // 2. Sorting
+    if (typeof currentSort !== 'undefined' && currentSort.key) {
+        filteredData.sort((a, b) => {
+            let valA = a[currentSort.key] ?? 0;
+            let valB = b[currentSort.key] ?? 0;
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+            if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
     }
+
+    // 3. Pagination Math
+    const totalRecords = filteredData.length;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / entPageSize)); 
+    
+    if (entCurrentPage > totalPages) {
+        entCurrentPage = 1;
+    }
+
+    const startIdx = (entCurrentPage - 1) * entPageSize;
+    const slice = filteredData.slice(startIdx, startIdx + entPageSize);
 
     tbody.innerHTML = "";
 
-    // Generate Rows
-    filteredData.forEach(emp => {
-        // A. Helper: Beautiful Pills
+    // Empty State Check
+    if (slice.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:40px; color:#64748b;">No records found matching your filters.</td></tr>`;
+        if (nav) nav.innerHTML = "";
+        return;
+    }
+
+// 4. 🎨 DRAW ROWS (Refined for Demo: Removed redundant Cycle text)
+slice.forEach(emp => {
         const createPill = (rem, total, color) => {
             const pct = total > 0 ? (rem / total) * 100 : 0;
             return `
-            <div style="min-width: 100px; margin-bottom: 5px;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 700; color: #475569;">
-                    <span>${rem}/${total}</span>
-                    <span>${Math.round(pct)}%</span>
+            <div style="min-width: 100px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; color: #475569;">
+                    <span>${rem}/${total}</span><span>${Math.round(pct)}%</span>
                 </div>
                 <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin-top: 2px;">
-                    <div style="width: ${pct}%; height: 100%; background: ${color}; transition: width 0.5s ease-in-out;"></div>
+                    <div style="width: ${pct}%; height: 100%; background: ${color}; transition: width 0.5s;"></div>
                 </div>
             </div>`;
         };
 
-        // B. Helper: Status Badge
         const isInactive = emp.status === "Inactive";
         const statusBadge = isInactive 
-            ? `<span style="background: #fef2f2; color: #b91c1c; padding: 4px 12px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; border: 1px solid #fecaca; display: inline-flex; align-items: center; gap: 6px;">
-                <i class="fas fa-times-circle"></i> Inactive</span>`
-            : `<span style="background: #f0fdf4; color: #15803d; padding: 4px 12px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 6px;">
-                <i class="fas fa-check-circle"></i> Active</span>`;
+            ? `<span style="background: #fef2f2; color: #b91c1c; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; border: 1px solid #fecaca;"><i class="fas fa-times-circle"></i> Inactive</span>`
+            : `<span style="background: #f0fdf4; color: #15803d; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; border: 1px solid #bbf7d0;"><i class="fas fa-check-circle"></i> Active</span>`;
 
-        const rowStyle = isInactive ? "opacity: 0.6; background: #fafafa;" : "";
+        const empName = emp.name || "Unknown";
+        const initials = empName.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
+        const safeName = empName.replace(/'/g, "\\'"); 
 
-        // C. Helper: Values
-        const unpaidDisplay = (emp.unpaid_taken > 0)
-             ? `<div style="background: #fef2f2; color: #ef4444; padding: 6px 12px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; border: 1px solid #fecaca; display: inline-block; min-width: 50px; text-align: center;">${emp.unpaid_taken}d</div>`
-             : `<span style="color:#cbd5e1;">-</span>`;
-
-        const cfDisplay = (emp.carry_forward_total > 0)
-            ? `<div style="background: #f0f9ff; color: #0ea5e9; padding: 6px 12px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; border: 1px solid #bae6fd; display: inline-block; min-width: 50px; text-align: center;">${emp.carry_forward_total}d</div>`
-            : `<span style="color:#cbd5e1;">-</span>`;
-
-        const otDisplay = (emp.overtime_bank > 0)
-            ? `<div style="background: #fff7ed; color: #c2410c; padding: 6px 12px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; border: 1px solid #fed7aa; display: inline-block; min-width: 50px; text-align: center;">${emp.overtime_bank}h</div>`
-            : `<span style="color:#cbd5e1;">-</span>`;
-
-        // D. Build HTML
         tbody.innerHTML += `
-        <tr style="${rowStyle} border-bottom: 1px solid #f1f5f9;">
-            <td class="col-emp" style="padding: 12px 15px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 32px; height: 32px; background: #eff6ff; color: #1d4ed8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; border: 1px solid #dbeafe;">
-                        ${emp.name.charAt(0)}
-                    </div>
-                    <div>
-                        <strong>${emp.name}</strong><br>
-                        <small style="color: #64748b;">CYCLE: ${year}</small>
+        <tr style="${isInactive ? 'opacity: 0.6; background: #fafafa;' : ''} border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 12px 15px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 32px; height: 32px; background: #eff6ff; color: #1d4ed8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; border: 1px solid #dbeafe;">${initials}</div>
+                    <div style="display: flex; flex-direction: column; justify-content: center;">
+                        <strong style="color: #1e293b; font-size: 0.95rem; line-height: 1.2;">${empName}</strong>
                     </div>
                 </div>
             </td>
-            
-            <td>${createPill(emp.annual_remaining, emp.annual_entitlement, "#2563eb")}</td>
-            <td>${createPill(emp.medical_remaining, emp.medical_entitlement, "#10b981")}</td>
-            <td>${createPill(emp.emergency_remaining, emp.emergency_entitlement, "#6366f1")}</td>
-            <td>${createPill(emp.compassionate_remaining, emp.compassionate_entitlement, "#8b5cf6")}</td>
-            
-            <td class="text-center">${otDisplay}</td>
-            <td class="text-center">${unpaidDisplay}</td>
-            <td class="text-center">${cfDisplay}</td>
-            <td class="text-center">${statusBadge}</td>
-            
-            <td class="text-center">
-                <button class="icon-btn" onclick="showBalanceLogs('${emp.name}')" title="View Logs" style="border: 1px solid #e2e8f0;">
-                    <i class="fas fa-history" style="color: #64748b;"></i>
+            <td style="padding: 12px 15px; text-align: center;">${createPill(emp.annual_remaining || 0, emp.annual_entitlement || 0, "#2563eb")}</td>
+            <td style="padding: 12px 15px; text-align: center;">${createPill(emp.medical_remaining || 0, emp.medical_entitlement || 0, "#10b981")}</td>
+            <td class="text-center" style="padding: 12px 15px;">${statusBadge}</td>
+            <td class="text-center" style="padding: 12px 15px;">
+                <button class="icon-btn" onclick="showBalanceLogs('${safeName}')" title="View Full Dossier" style="border: 1px solid #cbd5e1; background: white; padding: 4px 10px; border-radius: 6px;">
+                    <i class="fas fa-eye" style="color: #2563eb;"></i>
                 </button>
             </td>
         </tr>`;
     });
+    // 5. 🕹️ DRAW PAGINATION CONTROLS (Centered Layout)
+    if (nav) {
+        nav.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 15px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; border-radius: 0 0 8px 8px; margin-top: 15px;">
+            <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">
+                Records Found: <span style="color: #2563eb; font-weight: 800;">${totalRecords}</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content: center; gap:15px;">
+                <button class="btn-secondary" style="padding: 6px 15px; font-size: 0.8rem; font-weight: 700; border-radius: 6px; cursor: ${entCurrentPage === 1 ? 'not-allowed' : 'pointer'}; opacity: ${entCurrentPage === 1 ? '0.5' : '1'};" ${entCurrentPage === 1 ? 'disabled' : ''} onclick="changeEntPage(-1)">
+                    <i class="fas fa-chevron-left" style="margin-right: 5px;"></i> Previous
+                </button>
+                <span style="font-weight:700; font-size:0.85rem; color:#1e293b;">Page ${entCurrentPage} of ${totalPages}</span>
+                <button class="btn-secondary" style="padding: 6px 15px; font-size: 0.8rem; font-weight: 700; border-radius: 6px; cursor: ${entCurrentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer'}; opacity: ${entCurrentPage === totalPages || totalPages === 0 ? '0.5' : '1'};" ${entCurrentPage === totalPages || totalPages === 0 ? 'disabled' : ''} onclick="changeEntPage(1)">
+                    Next <i class="fas fa-chevron-right" style="margin-left: 5px;"></i>
+                </button>
+            </div>
+            <div></div>
+        </div>`;
+    }
 }
 
-// 🚀 4. RESET FUNCTION (Uses new render system)
+// Navigation Helper
+function changeEntPage(dir) {
+    entCurrentPage += dir;
+    applyFiltersAndRender();
+    // Scroll table container back to top smoothly
+    const tableContainer = document.querySelector('#manager_entitlements .table-container');
+    if (tableContainer) tableContainer.scrollTop = 0;
+}
+
+// 🚀 4. RESET FUNCTION (Optimized for Instant Client-Side Refresh)
 function resetBalanceFilters() {
     const searchInput = document.getElementById("mgr_ent_search_name");
     const statusSelect = document.getElementById("mgr_ent_status_filter");
 
+    // Clear inputs
     if (searchInput) searchInput.value = "";
     if (statusSelect) statusSelect.value = "All"; 
 
-    // Reset sort state
+    // Reset sort state and icons
     currentSort = { key: null, direction: 'asc' };
-    document.querySelectorAll('thead i').forEach(i => {
+    document.querySelectorAll('#manager_entitlements thead i').forEach(i => {
         i.className = 'fas fa-sort';
         i.style.color = '#cbd5e1';
     });
 
-    loadTeamEntitlements(); 
+    // 🚀 Instantly jump back to Page 1 and redraw from memory
+    entCurrentPage = 1;
+    applyFiltersAndRender(); 
 }
 
+
+// ==========================================
+// 🚀 TIERED DOSSIER MODAL (The Eye Icon)
+// ==========================================
 async function showBalanceLogs(empName) {
-        document.getElementById("logEmployeeName").innerText = empName;
-        const modal = document.getElementById("balanceLogsModal");
-        const content = document.getElementById("logsModalContent");
+    document.getElementById("logEmployeeName").innerText = empName;
+    const modal = document.getElementById("balanceLogsModal");
+    const content = document.getElementById("logsModalContent");
 
-        modal.style.display = "flex";
-        content.innerHTML =
-          "<p class='text-center'><i class='fas fa-spinner fa-spin'></i> Loading audit trail...</p>";
+    modal.style.display = "flex";
+    content.innerHTML = "<p class='text-center' style='padding: 30px; color:#64748b;'><i class='fas fa-spinner fa-spin fa-2x text-primary'></i><br><br>Loading Dossier...</p>";
 
-        try {
-          // 1. Fetch History Logs (Existing Logic)
-          const res = await fetchWithAuth(
-            `${API_URL}/leaves/manager/balance-history?name=${encodeURIComponent(
-              empName
-            )}`
-          );
+    try {
+        // 1. Fetch Employee from High-Speed RAM Cache
+        const emp = teamEntitlementCache.find(e => e.name === empName) || {};
+        
+        // 2. Fetch History Logs from Server
+        const res = await fetchWithAuth(`${API_URL}/leaves/manager/balance-history?name=${encodeURIComponent(empName)}`);
+        if (!res) return;
+        const data = await res.json();
+        
+        // Pill generator helper
+        const createPill = (rem, total, color) => {
+            const pct = total > 0 ? (rem / total) * 100 : 0;
+            return `
+            <div style="margin-top: 5px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 800; color: #334155; margin-bottom: 4px;">
+                    <span>${rem} / ${total} Days</span><span>${Math.round(pct)}%</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
+                    <div style="width: ${pct}%; height: 100%; background: ${color};"></div>
+                </div>
+            </div>`;
+        };
 
-          if (!res) return;
+        // 🚀 TIER 1 & 2: THE NEW VISUAL SUMMARY
+        let summaryHtml = `
+        <div style="background:#f8fafc; padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:20px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <label style="font-size:0.7rem; font-weight:800; color:#2563eb; text-transform:uppercase;"><i class="fas fa-umbrella-beach"></i> Annual Leave</label>
+                    ${createPill(emp.annual_remaining || 0, emp.annual_entitlement || 0, "#2563eb")}
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <label style="font-size:0.7rem; font-weight:800; color:#10b981; text-transform:uppercase;"><i class="fas fa-clinic-medical"></i> Medical Leave</label>
+                    ${createPill(emp.medical_remaining || 0, emp.medical_entitlement || 0, "#10b981")}
+                </div>
+            </div>
 
-          const data = await res.json();
-          const currentYear = new Date().getFullYear();
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <div style="background:white; padding:12px; border-radius:8px; border:1px solid #e2e8f0; text-align:center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="font-size:0.65rem; font-weight:800; color:#64748b;">EMERGENCY</div>
+                    <div style="font-weight:800; font-size:1.1rem; color:#1e293b; margin-top:4px;">${emp.emergency_remaining || 0}d</div>
+                </div>
+                <div style="background:white; padding:12px; border-radius:8px; border:1px solid #e2e8f0; text-align:center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="font-size:0.65rem; font-weight:800; color:#64748b;">COMPASSIONATE</div>
+                    <div style="font-weight:800; font-size:1.1rem; color:#1e293b; margin-top:4px;">${emp.compassionate_remaining || 0}d</div>
+                </div>
+                <div style="background:#f0f9ff; padding:12px; border-radius:8px; border:1px solid #bae6fd; text-align:center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="font-size:0.65rem; font-weight:800; color:#0369a1;">CARRY FORWARD</div>
+                    <div style="font-weight:800; font-size:1.1rem; color:#0ea5e9; margin-top:4px;">${emp.carry_forward_total || 0}d</div>
+                </div>
+            </div>
 
-          const unpaidDisplay = data.unpaid_total || 0;
-          const cfDisplay = data.cf_total || 0;
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <span style="background:#fff7ed; color:#c2410c; padding:8px 12px; border-radius:6px; font-size:0.8rem; font-weight:700; border:1px solid #fed7aa; flex: 1; text-align: center;">
+                    <i class="fas fa-clock"></i> OT Bank: ${emp.overtime_bank || 0} Hrs
+                </span>
+                <span style="background:#fef2f2; color:#ef4444; padding:8px 12px; border-radius:6px; font-size:0.8rem; font-weight:700; border:1px solid #fca5a5; flex: 1; text-align: center;">
+                    <i class="fas fa-hand-holding-usd"></i> Unpaid Taken: ${emp.unpaid_taken || 0} Days
+                </span>
+            </div>
+        </div>`;
 
-          // 🚀 NEW: Get Overtime from Global Cache (Since balance-history endpoint might not have it yet)
-          // We look up the employee in the list we just loaded in the main table
-          const cachedEmp = teamEntitlementCache.find(e => e.name === empName);
-          const otDisplay = cachedEmp ? (cachedEmp.overtime_bank || 0) : 0;
+        // 3. TIER 4: Audit History Table (Preserved exactly as you had it)
+        let tableHtml = `
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                    <tr style="text-align: left; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding:12px;">Date</th>
+                        <th style="padding:12px;">Action</th>
+                        <th style="padding:12px; text-align:center;">Status</th>
+                        <th style="padding:12px; text-align:center;">Days</th>
+                    </tr>
+                </thead>
+                <tbody>`;
 
-          // 🚀 GRID LAYOUT: Ensures all boxes are exactly the same size
-          let summaryHtml = `
-      <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;">
-          <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight: bold; margin-bottom: 12px; letter-spacing: 0.5px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px;">
-              <i class="fas fa-calendar-check"></i> ${currentYear} Entitlements
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">`;
-
-          // 1. Standard Entitlements
-          data.entitlements
-            .filter((ent) => !ent.type.toLowerCase().includes("unpaid"))
-            .forEach((ent) => {
-              const label = ent.type.replace(" Leave", "");
-              summaryHtml += `
-          <div style="background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-              <span style="color: #64748b; font-weight: 500;">${label}:</span> 
-              <strong style="color: #1e293b;">${ent.days}d</strong>
-          </div>`;
-            });
-
-          // 🚀 2. NEW: Overtime Box (Orange Style)
-          summaryHtml += `
-          <div style="background: #fff7ed; padding: 10px 15px; border-radius: 6px; border: 1px solid #fed7aa; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-              <span style="color: #c2410c; font-weight: 500;">Overtime:</span> 
-              <strong style="color: #9a3412;">${otDisplay}h</strong>
-          </div>`;
-
-          // 3. Unpaid Box (Red Style)
-          summaryHtml += `
-          <div style="background: #fef2f2; padding: 10px 15px; border-radius: 6px; border: 1px solid #fca5a5; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-              <span style="color: #b91c1c; font-weight: 500;">Unpaid:</span> 
-              <strong style="color: #ef4444;">${unpaidDisplay}d</strong>
-          </div>`;
-
-          // 4. CF Banked Box (Blue Style)
-          summaryHtml += `
-          <div style="background: #eff6ff; padding: 10px 15px; border-radius: 6px; border: 1px solid #93c5fd; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-              <span style="color: #1d4ed8; font-weight: 500;">Carry Forward:</span> 
-              <strong style="color: #0ea5e9;">${cfDisplay}d</strong>
-          </div>`;
-
-          summaryHtml += `</div></div>`;
-
-          // 5. Table Section (Preserved as is)
-          let tableHtml = `
-                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
-                        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
-                            <tr style="text-align: left; border-bottom: 2px solid #e2e8f0;">
-                                <th style="padding:12px;">Date</th>
-                                <th style="padding:12px;">Action</th>
-                                <th style="padding:12px; text-align:center;">Status</th>
-                                <th style="padding:12px; text-align:center;">Days</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-
-          // ... (Your Existing Table Logic Below) ...
-          if (data.logs.length === 0) {
+        if (data.logs.length === 0) {
             tableHtml += `<tr><td colspan="4" class="text-center" style="padding: 20px; color: #94a3b8;">No records found.</td></tr>`;
-          } else {
+        } else {
             data.logs.forEach((log) => {
-              const statusClass = `status-${log.status
-                .toLowerCase()
-                .replace(" ", "-")}`;
-              let dayDisplay = "0";
-              let dayStyle = "color: #64748b;";
-              let actionDisplay = `<strong>${log.action}</strong><br><small style="color:#64748b">${log.leave_type}</small>`;
+                const statusClass = `status-${log.status.toLowerCase().replace(" ", "-")}`;
+                let dayDisplay = "0"; let dayStyle = "color: #64748b;";
+                let actionDisplay = `<strong>${log.action}</strong><br><small style="color:#64748b">${log.leave_type}</small>`;
 
-              // 🚀 CARRY FORWARD ROW LOGIC
-              if (log.is_cf) {
-                actionDisplay = `<strong style="color: #0ea5e9;"><i class="fas fa-piggy-bank"></i> Carry Forward</strong><br><small style="color:#64748b">Annual Leave</small>`;
-                if (log.status === "Approved") {
-                  dayDisplay = log.days; // Preserved your fix (no + sign)
-                  dayStyle = "color: #0ea5e9; font-weight: bold;";
+                // 🚀 CARRY FORWARD ROW LOGIC
+                if (log.is_cf) {
+                    actionDisplay = `<strong style="color: #0ea5e9;"><i class="fas fa-piggy-bank"></i> Carry Forward</strong><br><small style="color:#64748b">Annual Leave</small>`;
+                    if (log.status === "Approved") { dayDisplay = log.days; dayStyle = "color: #0ea5e9; font-weight: bold;"; }
+                } 
+                // 🚀 CANCELLATION ROW LOGIC (Money Back)
+                else if (log.action === "Cancellation Request" && log.status === "Cancelled") {
+                    dayDisplay = "+" + log.days; dayStyle = "color: #166534; font-weight: bold;";
+                } 
+                // 🚀 SPENDING ROW LOGIC (Deduction)
+                else if (log.status === "Approved" || (log.action === "Cancellation Request" && log.status === "Cancel Rejected")) {
+                    dayDisplay = "-" + log.days; dayStyle = "color: #991b1b; font-weight: bold;";
                 }
-              }
-              // 🚀 CANCELLATION ROW LOGIC (Money Back)
-              else if (
-                log.action === "Cancellation Request" &&
-                log.status === "Cancelled"
-              ) {
-                dayDisplay = "+" + log.days;
-                dayStyle = "color: #166534; font-weight: bold;";
-              }
-              // 🚀 SPENDING ROW LOGIC (Deduction)
-              else if (
-                log.status === "Approved" ||
-                (log.action === "Cancellation Request" &&
-                  log.status === "Cancel Rejected")
-              ) {
-                dayDisplay = "-" + log.days;
-                dayStyle = "color: #991b1b; font-weight: bold;";
-              }
 
-              tableHtml += `
-                      <tr style="border-bottom: 1px solid #f1f5f9;">
-                          <td style="padding:12px 10px; color:#64748b;">${log.date}</td>
-                          <td style="padding:12px 10px;">${actionDisplay}</td>
-                          <td style="padding:12px 10px; text-align:center;">
-                              <span class="status-badge ${statusClass}" style="font-size: 0.7rem; padding: 3px 8px;">${log.status}</span>
-                          </td>
-                          <td style="padding:12px 10px; text-align:center; ${dayStyle} font-size: 1rem;">
-                              ${dayDisplay}
-                          </td>
-                      </tr>`;
+                tableHtml += `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding:12px 10px; color:#64748b;">${log.date}</td>
+                    <td style="padding:12px 10px;">${actionDisplay}</td>
+                    <td style="padding:12px 10px; text-align:center;"><span class="status-badge ${statusClass}" style="font-size: 0.7rem; padding: 3px 8px;">${log.status}</span></td>
+                    <td style="padding:12px 10px; text-align:center; ${dayStyle} font-size: 1rem;">${dayDisplay}</td>
+                </tr>`;
             });
-          }
-
-          tableHtml += "</tbody></table></div>";
-          content.innerHTML = summaryHtml + tableHtml;
-        } catch (e) {
-          console.error("Audit Trail Load Error:", e);
-          content.innerHTML =
-            "<p style='color:red; text-align:center;'>Error loading audit trail. Please try again.</p>";
         }
-      }
+        tableHtml += "</tbody></table></div>";
+        content.innerHTML = summaryHtml + tableHtml;
+
+    } catch (e) {
+        console.error("Dossier Load Error:", e);
+        content.innerHTML = "<p style='color:#ef4444; text-align:center; padding: 20px;'><i class='fas fa-exclamation-triangle'></i> Error loading dossier.</p>";
+    }
+}
 
       /* =========================================
          1. LOAD APPROVERS (Populates all 4 lists)
@@ -13930,89 +13904,98 @@ async function executeUserStatusToggle(userId) {
         document.body.removeChild(link);
       }
 
-      // 📊 Export Balances to CSV
-      async function exportEntitlementsCSV() {
-    const name = document.getElementById("mgr_ent_search_name")?.value || "";
-    const year = new Date().getFullYear();
-    const primaryRole = userRoles.includes("hr_admin") ? "hr_admin" : "manager";
-
-    // Feedback to user (Visual Loading State)
-    const btn = document.querySelector("button[onclick='exportEntitlementsCSV()']");
-    const originalText = btn ? btn.innerHTML : "Export CSV";
-    if (btn) {
-        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Downloading...`;
-        btn.disabled = true;
+ // ==========================================
+// 🚀 DOUBLE EXPORT ENGINE (Instant Client-Side CSV)
+// ==========================================
+async function exportEntitlementsCSV() {
+    // 1. Guard check
+    if (!teamEntitlementCache || teamEntitlementCache.length === 0) {
+        Swal.fire("No Data", "There are no records to export.", "warning");
+        return;
     }
 
-    try {
-        // 1. Fetch Data (Reusing existing endpoint for consistency)
-        const params = new URLSearchParams({
-            user_role: primaryRole,
-            approver_name: currentUser,
-            name: name,
-            year: year,
-        });
+    // 2. Re-apply current UI filters to ensure the export matches what is on screen
+    const statusSelect = document.getElementById("mgr_ent_status_filter");
+    const searchInput = document.getElementById("mgr_ent_search_name");
+    
+    const statusFilter = statusSelect ? statusSelect.value : "All";
+    const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : "";
 
-        const res = await fetchWithAuth(`${API_URL}/leaves/manager/entitlements?${params.toString()}`);
+    let filteredData = teamEntitlementCache.filter(emp => {
+        const matchStatus = statusFilter === "All" || (emp.status || "Active") === statusFilter;
+        const matchName = (emp.name || "").toLowerCase().includes(searchVal);
+        return matchStatus && matchName;
+    });
 
-        if (!res || !res.ok) {
-            alert("❌ Failed to fetch data for export.");
-            return;
-        }
-
-        const data = await res.json();
-
-        if (!data || data.length === 0) {
-            alert("⚠️ No records found to export.");
-            return;
-        }
-
-        // 2. Define CSV Headers (Aligned with your requested order)
-        let csvContent = "Employee,Annual Rem,Annual Total,Medical Rem,Medical Total,Emergency Rem,Emergency Total,Compassionate Rem,Compassionate Total,Overtime (Hrs),Unpaid Taken,Carry Forward,Status\n";
-
-        // 3. Map Data to Rows
-        data.forEach((emp) => {
-            const row = [
-                `"${emp.name}"`,                          // Employee
-                emp.annual_remaining,                    // Annual Rem
-                emp.annual_entitlement,                  // Annual Total
-                emp.medical_remaining,                   // Medical Rem
-                emp.medical_entitlement,                 // Medical Total
-                emp.emergency_remaining,                 // Emergency Rem
-                emp.emergency_entitlement,               // Emergency Total
-                emp.compassionate_remaining,             // Compassionate Rem
-                emp.compassionate_entitlement,           // Compassionate Total
-                emp.overtime_bank || 0,                  // Overtime (Hrs)
-                emp.unpaid_taken || 0,                   // Unpaid
-                emp.carry_forward_total || 0,            // Carry Fwd
-                `"${emp.status || 'Active'}"`            // Status
-            ].join(",");
-            csvContent += row + "\n";
-        });
-
-        // 4. Trigger File Download
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        const dateStamp = new Date().toISOString().split("T")[0];
-
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Team_Balances_Report_${year}_${dateStamp}.csv`);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-    } catch (e) {
-        console.error("Export Error:", e);
-        alert("❌ An error occurred during export.");
-    } finally {
-        // Restore button state
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
+    if (filteredData.length === 0) {
+        Swal.fire("No Data", "No records match your current filters.", "warning");
+        return;
     }
+
+    // 3. The Double Export Choice (Premium SweetAlert2 UI)
+    const result = await Swal.fire({
+        title: 'Export Balances',
+        text: `You have ${filteredData.length} total record(s) matching your filters. What would you like to download?`,
+        icon: 'question',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonColor: '#2563eb', // Blue for "All"
+        denyButtonColor: '#10b981',    // Green for "Current Page"
+        cancelButtonColor: '#cbd5e1',
+        confirmButtonText: 'Export All Records',
+        denyButtonText: 'Export Current Page',
+        cancelButtonText: 'Cancel'
+    });
+
+    // If user clicked outside, cancelled, or closed the modal
+    if (!result.isConfirmed && !result.isDenied) return;
+
+    // 4. Determine data slice based on the user's choice
+    let dataToExport = [];
+    if (result.isConfirmed) {
+        // User clicked "Export All Records" (Blue Button)
+        dataToExport = filteredData; 
+    } else if (result.isDenied) {
+        // User clicked "Export Current Page" (Green Button)
+        const startIdx = (entCurrentPage - 1) * entPageSize;
+        dataToExport = filteredData.slice(startIdx, startIdx + entPageSize);
+    }
+
+    // 5. Process CSV Generation (Strictly aligned with your previous column order)
+    let csvContent = "Employee,Annual Rem,Annual Total,Medical Rem,Medical Total,Emergency Rem,Emergency Total,Compassionate Rem,Compassionate Total,Overtime (Hrs),Unpaid Taken,Carry Forward,Status\n";
+
+    dataToExport.forEach((emp) => {
+        const row = [
+            `"${emp.name || 'Unknown'}"`,
+            emp.annual_remaining || 0, 
+            emp.annual_entitlement || 0,
+            emp.medical_remaining || 0, 
+            emp.medical_entitlement || 0,
+            emp.emergency_remaining || 0, 
+            emp.emergency_entitlement || 0,
+            emp.compassionate_remaining || 0, 
+            emp.compassionate_entitlement || 0,
+            emp.overtime_bank || 0,
+            emp.unpaid_taken || 0,
+            emp.carry_forward_total || 0,
+            `"${emp.status || 'Active'}"`
+        ].join(",");
+        csvContent += row + "\n";
+    });
+
+    // 6. Trigger Instant Download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const dateStamp = new Date().toISOString().split("T")[0];
+    const scopeStr = result.isConfirmed ? "All" : `Page_${entCurrentPage}`;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Team_Balances_${scopeStr}_${dateStamp}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
       // 1. New function to handle real-time suggestions
