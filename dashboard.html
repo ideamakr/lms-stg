@@ -5520,8 +5520,8 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
 
           <script>
-          const API_URL = "https://leave-system-testenv.onrender.com";
-          // const API_URL = "http://127.0.0.1:8000";
+          //const API_URL = "https://leave-system-testenv.onrender.com";
+           const API_URL = "http://127.0.0.1:8000";
         
             // 🌍 1. GLOBAL IDENTITY (FORCE SYNC)
             // 🚀 Leave Manager Pagination
@@ -5573,7 +5573,7 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
             let isKickedOut = false;
             let isRefreshing = false;
             let initialPermissionState = {};
-        
+            let isEditingUser = false;
             // ============================================================
             // 🚀 NEW INSERTION: GLOBAL INITIALIZERS (Must be here!)
             // ============================================================
@@ -8984,7 +8984,7 @@ const row = `
 // ==========================================
 let hrUserCache = [];
 let hrUserCurrentPage = 1;
-const hrUserPageSize = 50; // Rendering 50 at a time
+const hrUserPageSize = 20;
 let hrUserSortState = { key: 'id', direction: 'asc' }; // Default sort by Oldest First (ID Ascending)
 
 async function loadAllUsers() {
@@ -10711,65 +10711,66 @@ async function showBalanceLogs(empName) {
 }
 
 /* =========================================
-         1. LOAD APPROVERS (Populates all 4 lists)
-         ========================================= */
-         async function loadApproverList() {
-        // IDs for: Standard Leave, Overtime, Carry Forward, Registration
-        const ids = [
-          "dash_approver",
-          "dash_approver_ot",
-          "dash_approver_cf",
-          "reg_manager",
-        ];
-        const selects = ids
-          .map((id) => document.getElementById(id))
-          .filter((el) => el);
+   1. LOAD APPROVERS (Non-Destructive Version)
+   ========================================= */
+   async function loadApproverList() {
+    const ids = ["dash_approver", "dash_approver_ot", "dash_approver_cf", "reg_manager"];
+    const selects = ids.map((id) => document.getElementById(id)).filter((el) => el);
 
-        if (selects.length === 0) return;
+    if (selects.length === 0) return;
 
-        const placeholderHTML =
-          '<option value="" disabled selected hidden>-- Select Manager --</option>';
-        const loadingHTML =
-          '<option value="" disabled selected>Loading...</option>';
+    // 🚀 STEP 1: CACHE CHECK (Fastest path)
+    // If we have the team cache, use it ONLY for elements that are currently empty.
+    if (teamEntitlementCache && teamEntitlementCache.length > 0) {
+        selects.forEach((sel) => {
+            // 🛡️ THE GUARD: If the dropdown already has a name (from Edit Mode), DO NOT TOUCH IT.
+            if (sel.value && sel.value !== "") return;
 
-        // Set visual loading state
-        selects.forEach((sel) => (sel.innerHTML = loadingHTML));
-
-        try {
-          const res = await fetchWithAuth(`${API_URL}/users/all`);
-          if (!res || !res.ok) throw new Error("Failed to fetch approvers");
-
-          // 🚀 THE FIX: Parse the dictionary and extract the users array safely
-          const responseData = await res.json();
-          const allUsers = responseData.users || [];
-
-          // Filter: Active Managers, NOT HR Admins
-          const validApprovers = allUsers.filter((u) => {
-            if (!u.is_active) return false;
-            const isManager =
-              u.role === "manager" ||
-              (u.roles_list && u.roles_list.includes("manager"));
-            const isAdmin =
-              u.role === "hr_admin" ||
-              (u.roles_list && u.roles_list.includes("hr_admin"));
-            return isManager && !isAdmin;
-          });
-
-          // Reset and Populate
-          selects.forEach((sel) => {
+            const placeholderHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
             sel.innerHTML = placeholderHTML;
-            validApprovers.forEach((mgr) => {
-              sel.add(new Option(mgr.full_name, mgr.full_name));
+            
+            teamEntitlementCache.forEach((u) => {
+                const roles = u.roles_list || [];
+                const isMgr = roles.includes("manager") || u.role === "manager";
+                const isHR = roles.includes("hr_admin") || u.role === "hr_admin";
+                
+                if (isMgr && !isHR && (u.is_active !== false)) {
+                    sel.add(new Option(u.name, u.name));
+                }
             });
-            // Force value to empty string so 'required' works correctly
-            sel.value = "";
-          });
+        });
+        return; 
+    }
 
-          console.log("✅ Approvers loaded into all dropdowns.");
-        } catch (e) {
-          console.error("Approver Load Error:", e);
-        }
-      }
+    // 🚀 STEP 2: NETWORK FALLBACK (Only if RAM cache is empty)
+    try {
+        const res = await fetchWithAuth(`${API_URL}/users/all`);
+        if (!res || !res.ok) return;
+
+        const responseData = await res.json();
+        const allUsers = responseData.users || [];
+
+        const validApprovers = allUsers.filter((u) => {
+            if (!u.is_active) return false;
+            const isManager = u.role === "manager" || (u.roles_list && u.roles_list.includes("manager"));
+            const isAdmin = u.role === "hr_admin" || (u.roles_list && u.roles_list.includes("hr_admin"));
+            return isManager && !isAdmin;
+        });
+
+        selects.forEach((sel) => {
+            // 🛡️ RE-CHECK GUARD: Don't overwrite if the user already picked someone 
+            // or if the Edit Modal just filled this box.
+            if (sel.value && sel.value !== "") return;
+
+            sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
+            validApprovers.forEach((mgr) => {
+                sel.add(new Option(mgr.full_name, mgr.full_name));
+            });
+        });
+    } catch (e) {
+        console.error("Approver Load Error:", e);
+    }
+}
 
       async function resetUserPassword(userId) {
     const inputField = document.getElementById("admin_reset_pass_input");
@@ -13190,20 +13191,17 @@ function sortAuditTable(key) {
         document.getElementById("balanceLogsModal").style.display = "none";
       }
 
- /**
- * 🚀 Updated Registration Modal Opener
- * Ensures managers, IDs, and the "Proceed" button are fully loaded and formatted.
- */
- async function openRegisterModal() {
+      async function openRegisterModal() {
+    // 🚀 THE GUARD: Tell the system we are NOT editing
+    window.isEditingUser = false; 
+
     const modal = document.getElementById("registerUserModal");
     if (!modal) return;
 
-    // 🚀 STEP 1: POP THE MODAL IMMEDIATELY
-    // This removes the "frozen button" effect. Natasha sees the form now.
+    // 🚀 STEP 1: POP THE MODAL IMMEDIATELY (0s Load)
     modal.style.display = "flex";
 
-    // 🚀 STEP 2: TRIGGER BACKGROUND LOADS (No 'await' here!)
-    // We start these two processes but let the rest of the code run.
+    // 🚀 STEP 2: TRIGGER BACKGROUND LOADS (Parallel)
     loadApproverList(); 
     generateNextEmpID();
 
@@ -13211,17 +13209,14 @@ function sortAuditTable(key) {
     const suggestionBox = document.getElementById("reg_manager_suggestions");
     if (suggestionBox) suggestionBox.style.display = "none";
 
-    // 3. Reset Modal Header & Button to "Registration Mode"
+    // 3. Reset Modal Header & Button
     modal.querySelector("h3").innerHTML = `<i class="fas fa-user-plus"></i> Register New Employee`;
     
     const submitBtn = document.getElementById("reg_main_submit_btn");
     if (submitBtn) {
         submitBtn.innerHTML = '<i class="fas fa-check"></i> Proceed';
         submitBtn.onclick = (e) => submitNewUser(e);
-        
         submitBtn.style.background = "#10b981";
-        submitBtn.onmouseover = () => submitBtn.style.background = '#059669';
-        submitBtn.onmouseout = () => submitBtn.style.background = '#10b981';
     }
 
     // 5. Restore Credential Fields 
@@ -13232,13 +13227,12 @@ function sortAuditTable(key) {
         usernameField.value = "";
     }
 
-    // Restore the ENTIRE password block 
+    // Restore Password block 
     const passField = document.getElementById("reg_password");
     if (passField && passField.parentElement) {
         const passContainer = passField.parentElement.parentElement;
         if (passContainer) passContainer.style.display = "block";
         passField.value = "password123";
-        
         const eyeIcon = document.getElementById("eye_reg_password");
         if (eyeIcon) {
             eyeIcon.className = "fas fa-eye";
@@ -13246,11 +13240,10 @@ function sortAuditTable(key) {
         }
     }
 
-    // Ensure Reset Button is visible
     const resetBtn = document.getElementById("reg_reset_btn");
     if (resetBtn) resetBtn.style.display = "flex";
 
-    // 6. Clear ALL inputs AND selects (excluding Auto-ID and Username)
+    // 6. Clear ALL inputs (excluding protected fields)
     document.querySelectorAll("#registerUserModal input, #registerUserModal select").forEach((element) => {
         if (element.id !== "reg_password" && element.id !== "reg_emp_id" && element.id !== "reg_username") {
             element.value = "";
@@ -13263,38 +13256,37 @@ function sortAuditTable(key) {
        * Fetches the next available Employee ID from the server and locks the field.
        */
        async function generateNextEmpID() {
+    // 🛑 THE GUARD: If we are editing, STOP immediately.
+    if (window.isEditingUser === true) return; 
+
     const idInput = document.getElementById("reg_emp_id");
     if (!idInput) return;
 
-    // 1. Visual Loading State (Instant Feedback)
     idInput.value = "Generating...";
     idInput.disabled = true;
-    idInput.style.background = "#f8fafc"; // Light slate background
-    idInput.style.color = "#94a3b8";      // Muted text color
+    idInput.style.background = "#f8fafc"; 
+    idInput.style.color = "#94a3b8";      
     idInput.style.fontStyle = "italic";
 
     try {
-        // 🚀 THE BACKGROUND FETCH
         const res = await fetchWithAuth(`${API_URL}/users/next-id`);
         
+        // 🛡️ RE-CHECK GUARD: In case user switched to 'Edit' while fetching
+        if (window.isEditingUser === true) return; 
+
         if (res && res.ok) {
             const data = await res.json();
-            // 🎯 SUCCESS: Apply the real ID and restore styling
             idInput.value = data.next_id;
-            idInput.style.color = "#1e293b";   // Dark slate
+            idInput.style.color = "#1e293b";   
             idInput.style.fontStyle = "normal";
-            idInput.style.fontWeight = "800";  // Make the ID pop
-            console.log("✅ Employee ID Generated:", data.next_id);
+            idInput.style.fontWeight = "800";  
         } else {
-            const status = res ? res.status : "No Response";
-            console.error(`❌ ID Generation Failed. Status: ${status}`);
             idInput.value = `EMP-${new Date().getFullYear()}-TEMP`;
-            idInput.style.color = "#f59e0b"; // Amber for "Temp" warning
+            idInput.style.color = "#f59e0b"; 
         }
     } catch (e) {
-        console.error("❌ Network Error during ID generation:", e);
         idInput.value = "OFFLINE";
-        idInput.style.color = "#ef4444"; // Red for Error
+        idInput.style.color = "#ef4444"; 
     }
 }
 
@@ -13532,40 +13524,7 @@ if (submitBtn) {
     // 4. Hide modal
     modal.style.display = "none";
 }
-      /**
-       * 🆔 System ID Generator
-       * Fetches the next available Employee ID from the server and locks the field.
-       */
-       async function generateNextEmpID() {
-    const idInput = document.getElementById("reg_emp_id");
-    if (!idInput) return;
 
-    // 1. Visual Loading State
-    idInput.value = "Generating...";
-    idInput.disabled = true;
-    idInput.style.background = "#f1f5f9";
-
-    try {
-        // 🚀 THE CRITICAL FIX: Ensure we use 'fetchWithAuth' to send headers
-        // And use the full API_URL constant
-        const res = await fetchWithAuth(`${API_URL}/users/next-id`);
-        
-        if (res && res.ok) {
-            const data = await res.json();
-            // 🎯 Ensure we grab the exact key 'next_id' returned by your Python code
-            idInput.value = data.next_id;
-            console.log("✅ Employee ID Generated:", data.next_id);
-        } else {
-            // Fallback for 401/403 or server errors
-            const status = res ? res.status : "No Response";
-            console.error(`❌ ID Generation Failed. Status: ${status}`);
-            idInput.value = `EMP-${new Date().getFullYear()}-TEMP`;
-        }
-    } catch (e) {
-        console.error("❌ Network Error during ID generation:", e);
-        idInput.value = "OFFLINE";
-    }
-}
       // 3. Submit the New User to the Python Backend
       /**
        * 🚀 Automated User Registration & Onboarding
@@ -15281,19 +15240,26 @@ async function renderCalendar() {
         }
       }
   
-  // ==========================================
+// ==========================================
 // 📝 FULL PROFILE EDIT MODAL
 // ==========================================
 async function openFullProfileEditModal(userJsonRaw) {
+    // 🚀 THE GUARD: Signal that we are in Edit Mode 
+    // This stops the background generateNextEmpID from overwriting this user's ID
+    window.isEditingUser = true; 
+
     try {
         const user = typeof userJsonRaw === 'string' ? JSON.parse(userJsonRaw) : userJsonRaw;
         const modal = document.getElementById("registerUserModal");
         if (!modal) return;
 
-        // Ensure managers are loaded before setting the value
-        await loadApproverList();
+        // 🚀 SPEED FIX: Show the modal immediately (0s wait)
+        modal.style.display = "flex";
 
-        // 1. Switch UI to "Edit Mode"
+        // 🚀 BACKGROUND LOAD: Populate managers without blocking the UI
+        loadApproverList();
+
+        // 1. Switch UI to "Edit Mode" header
         modal.querySelector("h3").innerHTML = `<i class="fas fa-user-edit"></i> Edit Profile: ${user.full_name}`;
 
         // 2. 🚀 THE UPGRADE: Target the new standardized Submit Button
@@ -15308,11 +15274,11 @@ async function openFullProfileEditModal(userJsonRaw) {
             submitBtn.onmouseout = () => submitBtn.style.background = '#2563eb';
         }
 
-        // 3. Hide Reset Button (Prevents accidental data wiping)
+        // 3. Hide Reset Button (Prevents accidental data wiping during edit)
         const resetBtn = document.getElementById("reg_reset_btn");
         if (resetBtn) resetBtn.style.display = "none";
 
-        // 4. Pre-fill all modal inputs
+        // 4. Pre-fill all modal inputs (ID is filled with existing data, NOT generated)
         document.getElementById("reg_full_name").value = user.full_name || "";
         document.getElementById("reg_emp_id").value = user.employee_id || "";
         
@@ -15332,7 +15298,7 @@ async function openFullProfileEditModal(userJsonRaw) {
             if (passContainer) passContainer.style.display = "none";
         }
 
-      // Fill dropdowns and text fields
+        // Fill dropdowns and text fields
         document.getElementById("reg_gender").value = user.gender || "";
         document.getElementById("reg_marital").value = user.marital_status || "";
         document.getElementById("reg_email").value = user.email || "";
@@ -15345,8 +15311,6 @@ async function openFullProfileEditModal(userJsonRaw) {
         document.getElementById("reg_manager").value = user.line_manager || "";
         document.getElementById("reg_joined").value = user.joined_date || "";
 
-        // Show the Modal
-        modal.style.display = "flex";
     } catch (err) {
         console.error("Edit load error:", err);
         Swal.fire({
@@ -15361,13 +15325,14 @@ async function openFullProfileEditModal(userJsonRaw) {
 /**
  * 🔍 Helper: Finds a user by their DB ID and opens the edit modal
  */
-function openFullProfileEditModalById(userId) {
+ function openFullProfileEditModalById(userId) {
+    // Search the list we loaded during loadAllUsers()
     const user = window.allUsersList.find((u) => u.id === userId);
 
     if (user) {
-        openFullProfileEditModal(JSON.stringify(user));
+        // Pass the user data to the actual display function
+        openFullProfileEditModal(user);
     } else {
-        // 🚀 UPGRADE: Removed generic alert(), implemented SweetAlert
         Swal.fire({
             icon: 'error',
             title: 'Data Not Found',
