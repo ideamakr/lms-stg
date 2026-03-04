@@ -1593,15 +1593,20 @@ div.swal2-container {
                     
                     <input type="text" id="proxy_user_search" placeholder="Search employee name..."
                         oninput="handleProxySearch(this.value)" autocomplete="off"
-                        style="width: 100%; height: 40px; padding-left: 45px !important; border: 1px solid #fcd34d; border-radius: 8px; font-size: 0.9rem; background: white; color: #b45309; box-sizing: border-box;" />
+                        style="width: 100%; height: 40px; padding-left: 45px !important; padding-right: 40px !important; border: 1px solid #fcd34d; border-radius: 8px; font-size: 0.9rem; background: white; color: #b45309; box-sizing: border-box;" />
+                
+                    <i id="proxy_clear_btn" class="fas fa-times-circle" 
+                       onclick="clearProxySearch()" 
+                       style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; display: none; font-size: 1.1rem; z-index: 15; transition: color 0.2s;">
+                    </i>
                 
                     <div id="proxy_suggestions_box" style="display: none; position: absolute; top: 45px; left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 100; max-height: 200px; overflow-y: auto;">
                     </div>
                 </div>
-            
-                  <div id="proxy_active_status" style="display: none; margin-top: 12px; font-size: 0.85rem; color: #b45309; font-weight: 600; align-items: center; gap: 8px;">
-                      <i class="fas fa-user-check" style="color: #d97706;"></i> Currently applying for: <strong id="proxy_target_name" style="color: #92400e; font-size: 1rem; border-bottom: 1px dashed #b45309;">---</strong>
-                  </div>
+                
+                <div id="proxy_active_status" style="display: none; margin-top: 12px; font-size: 0.85rem; color: #b45309; font-weight: 600; align-items: center; gap: 8px;">
+                    <i class="fas fa-user-check" style="color: #d97706;"></i> Currently applying for: <strong id="proxy_target_name" style="color: #92400e; font-size: 1rem; border-bottom: 1px dashed #b45309;">---</strong>
+                </div>
               </div>
               <div class="saas-card-body">
                   <div id="form_leave_container">
@@ -7637,39 +7642,64 @@ balanceEstimate.innerHTML = `
     localStorage.removeItem("leave_draft_cf");
 }
 
-    // ==========================================
-      // 🚀 HR PROXY LOGIC (Admin Override)
-      // ==========================================
-      window.proxyUser = null;
+// 🚀 GLOBAL CONTROLLERS: Track active timers and network signals
+let proxySearchAbortController = null;
+let proxySearchTimer = null;
 
-      async function handleProxySearch(query) {
-        const box = document.getElementById("proxy_suggestions_box");
-        if (query.trim().length < 2) {
-            box.style.display = "none";
-            return;
+async function handleProxySearch(query) {
+    const box = document.getElementById("proxy_suggestions_box");
+    const clearBtn = document.getElementById("proxy_clear_btn"); 
+
+    // 👁️ 1. ICON VISIBILITY TRIGGER
+    // If there is text, show the X. If empty, hide it.
+    if (clearBtn) {
+        clearBtn.style.display = query.length > 0 ? "block" : "none";
+
+        // 🎨 HOVER EFFECTS
+        clearBtn.onmouseover = () => clearBtn.style.color = "#b45309"; // Dark Amber
+        clearBtn.onmouseout = () => clearBtn.style.color = "#cbd5e1";  // Back to Grey
+    }
+
+    // 🛑 PHASE 1: THE INSTANT KILL SWITCH
+    if (query.trim().length < 2) {
+        if (proxySearchAbortController) {
+            proxySearchAbortController.abort();
+            proxySearchAbortController = null;
         }
+        clearTimeout(proxySearchTimer);
+        box.style.display = "none";
+        box.innerHTML = "";
+        return;
+    }
+
+    // ⏳ PHASE 2: DEBOUNCE
+    clearTimeout(proxySearchTimer);
+    proxySearchTimer = setTimeout(async () => {
+
+        // 🗡️ PHASE 3: ABORT PREVIOUS FETCH
+        if (proxySearchAbortController) proxySearchAbortController.abort();
+        
+        proxySearchAbortController = new AbortController();
+        const signal = proxySearchAbortController.signal;
 
         try {
-            // 1. Fetch data from the optimized backend
-            const res = await fetchWithAuth(`${API_URL}/users/all`);
+            box.innerHTML = `<div style="padding: 15px; color: #94a3b8; font-size: 0.85rem;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>`;
+            box.style.display = "block";
+
+            const res = await fetchWithAuth(`${API_URL}/users/all`, { signal });
             if (!res) return;
 
-            // 🚀 THE FIX: "Unbox" the package
-            // Instead of 'users', we get the whole 'responseData' package
             const responseData = await res.json();
-            
-            // Extract the list from the 'users' key. Default to empty list [] if something goes wrong.
             const allUsersList = responseData.users || [];
 
-            // 2. Filter logic (Now runs on the 'allUsersList' array)
-            // Existing logic preserved: checks is_active and name/username matches
+            if (signal.aborted) return;
+
             const filtered = allUsersList.filter(u => 
                 u.is_active && 
                 ((u.full_name || "").toLowerCase().includes(query.toLowerCase()) || 
                  (u.username || "").toLowerCase().includes(query.toLowerCase()))
             ).slice(0, 6); 
 
-            // 3. UI Rendering (Remains UNTOUCHED to ensure visual consistency)
             if (filtered.length > 0) {
                 box.innerHTML = filtered.map(u => {
                     const initials = (u.full_name || "??").split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
@@ -7686,15 +7716,42 @@ balanceEstimate.innerHTML = `
                         </div>
                     </div>`;
                 }).join("");
-                box.style.display = "block";
             } else {
-                box.innerHTML = `<div style="padding: 15px; color: #94a3b8; font-size: 0.85rem;"><i class="fas fa-search"></i> No matching active users found.</div>`;
-                box.style.display = "block";
+                box.innerHTML = `<div style="padding: 15px; color: #94a3b8; font-size: 0.85rem;"><i class="fas fa-search"></i> No matching users found.</div>`;
             }
+            box.style.display = "block";
         } catch (e) {
+            if (e.name === 'AbortError') return;
             console.error("Proxy search error:", e);
         }
-      }
+    }, 300);
+}
+
+function clearProxySearch() {
+    const input = document.getElementById("proxy_user_search");
+    const clearBtn = document.getElementById("proxy_clear_btn");
+    const box = document.getElementById("proxy_suggestions_box");
+
+    if (input) {
+        input.value = "";
+        input.focus();
+    }
+
+    if (clearBtn) clearBtn.style.display = "none";
+
+    // 🗡️ INSTANT ABORT: Kill the network request immediately
+    if (proxySearchAbortController) {
+        proxySearchAbortController.abort();
+        proxySearchAbortController = null;
+    }
+
+    clearTimeout(proxySearchTimer);
+
+    if (box) {
+        box.style.display = "none";
+        box.innerHTML = "";
+    }
+}
 
       async function selectProxyUser(fullName) {
     // 1. Set the global memory
@@ -12093,20 +12150,31 @@ const currentYear = new Date().getFullYear();
 
                 <div id="policy_individual_view" style="display: none;">
                     
-                    <div style="display: flex; gap: 15px; margin-bottom: 30px; align-items: center; max-width: 700px;">
-                        <div style="flex: 1; position: relative;">
-                            <i class="fas fa-search" style="position: absolute; left: 15px; top: 15px; color: #94a3b8;"></i>
-                            <input type="text" id="policy_user_search" placeholder="Type employee name..." 
-                                   oninput="handleLiveSearch(this.value)" 
-                                   onkeypress="if(event.key === 'Enter') searchEmployeeForAdjustment()"
-                                   style="width: 100%; height: 48px; padding-left: 40px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; box-sizing: border-box;"
-                                   autocomplete="off">
-                            
-                            <div id="employee_suggestions_box" class="suggestion-box" style="display: none; top: 55px;"></div>
-                        </div>
-                        <button class="btn" onclick="searchEmployeeForAdjustment()" style="height: 48px; padding: 0 25px; background: #334155;">Search</button>
-                    </div>
+                  <div style="display: flex; gap: 15px; margin-bottom: 30px; align-items: center; max-width: 700px; position: relative;">
+    <div style="flex: 1; position: relative; display: flex; align-items: center;">
+        <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; z-index: 5;"></i>
+        
+        <input type="text" id="policy_user_search" placeholder="Search employee name..." 
+               oninput="handleLiveSearch(this.value)" 
+               onkeypress="if(event.key === 'Enter') searchEmployeeForAdjustment()"
+               style="width: 100%; height: 48px; padding-left: 45px !important; padding-right: 45px !important; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; box-sizing: border-box; background: white;"
+               autocomplete="off">
+        
+        <i id="policy_clear_btn" class="fas fa-times-circle" 
+           onclick="clearPolicySearch()" 
+           style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #cbd5e1; cursor: pointer; display: none; font-size: 1.2rem; transition: color 0.2s; z-index: 5;">
+        </i>
+        
+        <div id="employee_suggestions_box" class="suggestion-box" 
+             style="display: none; position: absolute; top: 52px; left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 1000; max-height: 250px; overflow-y: auto;">
+        </div>
+    </div>
 
+    <button class="btn" onclick="searchEmployeeForAdjustment()" 
+            style="height: 48px; padding: 0 25px; background: #334155; color: white; border: none; border-radius: 10px; flex-shrink: 0; font-weight: 600; cursor: pointer;">
+        Search
+    </button>
+</div>
                     <div id="adjustment_form_container" style="display: none; background: #fff; padding: 30px; border-radius: 16px; border: 1px solid #e2e8f0; max-width: 800px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9;">
                              <h4 id="adj_emp_name" style="margin: 0; color: #1e293b; font-size: 1.2rem; display:flex; align-items:center; gap:10px;">
@@ -14371,83 +14439,154 @@ async function exportEntitlementsCSV() {
     document.body.removeChild(link);
 }
 
-// 1. Live Search: Fetches suggestions as HR types
-async function handleLiveSearch(query) {
-        const suggestionBox = document.getElementById(
-          "employee_suggestions_box"
-        );
+// ==========================================
+// 🚀 HR POLICY: SEARCH & ADJUSTMENT LOGIC
+// ==========================================
 
-        // Requirement: Only search if 2 or more characters typed
-        if (query.trim().length < 2) {
-          suggestionBox.innerHTML = "";
-          suggestionBox.style.display = "none";
-          return;
+// 1. UNIQUE CONTROLLERS for Policy Search 
+let policySearchAbortController = null;
+let policySearchTimer = null;
+
+/**
+ * 🔍 Main Search Handler for Policy Adjustments
+ */
+async function handleLiveSearch(query) {
+    const suggestionBox = document.getElementById("employee_suggestions_box");
+    const clearBtn = document.getElementById("policy_clear_btn");
+    if (!suggestionBox) return;
+
+    // 👁️ ICON VISIBILITY TRIGGER
+    // Shows the grey X when there is text, hides it when empty
+    if (clearBtn) {
+        clearBtn.style.display = query.length > 0 ? "block" : "none";
+
+        // 🎨 HOVER EFFECTS
+        clearBtn.onmouseover = () => clearBtn.style.color = "#b45309"; // Dark Amber
+        clearBtn.onmouseout = () => clearBtn.style.color = "#cbd5e1";  // Back to Grey
+    }
+
+    // 🛑 PHASE 1: THE INSTANT KILL SWITCH
+    // If input is deleted or too short, abort any active fetches immediately
+    if (query.trim().length < 2) {
+        if (policySearchAbortController) {
+            policySearchAbortController.abort();
+            policySearchAbortController = null;
         }
+        clearTimeout(policySearchTimer);
+        suggestionBox.innerHTML = "";
+        suggestionBox.style.display = "none";
+        return;
+    }
+
+    // ⏳ PHASE 2: DEBOUNCE (Wait 300ms for user to stop typing)
+    clearTimeout(policySearchTimer);
+    policySearchTimer = setTimeout(async () => {
+
+        // 🗡️ PHASE 3: ABORT PREVIOUS FETCH
+        if (policySearchAbortController) policySearchAbortController.abort();
+        
+        policySearchAbortController = new AbortController();
+        const signal = policySearchAbortController.signal;
 
         try {
-          // Fetch all users to ensure we have the full list
-          const res = await fetchWithAuth(`${API_URL}/users/all`);
-          if (!res) return;
+            // Visual Loading Feedback
+            suggestionBox.innerHTML = `<div style="padding:15px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>`;
+            suggestionBox.style.display = "block";
 
-          // 🚀 THE FIX: Unbox the dictionary to get the actual users array
-          const responseData = await res.json();
-          const allUsers = responseData.users || [];
+            // 🚀 THE FETCH: Pass the 'signal' to allow cancellation
+            const res = await fetchWithAuth(`${API_URL}/users/all`, { signal });
+            if (!res) return;
 
-          // 🚀 DATA GUARD: Ensure we have a valid array before filtering
-          // This prevents the system from breaking if the backend response is unexpected
-          const filtered = allUsers
-            .filter(
-              (u) =>
+            const responseData = await res.json();
+            const allUsers = responseData.users || [];
+
+            // 🛡️ RE-CHECK GUARD: Ensure user hasn't cleared field while we waited for server
+            if (signal.aborted) return;
+
+            const filtered = allUsers.filter((u) =>
                 (u.full_name || "").toLowerCase().includes(query.toLowerCase()) ||
                 (u.username || "").toLowerCase().includes(query.toLowerCase())
-            )
-            .slice(0, 8); // Top 8 results for a clean UI
+            ).slice(0, 8); 
 
-          if (filtered.length > 0) {
-            suggestionBox.innerHTML = filtered
-              .map(
-                (u) => `
-                <div class="suggestion-item" 
-                     style="padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px;"
-                     onclick="selectUserForAdjustment('${u.full_name.replace(
-                       /'/g,
-                       "\\'"
-                     )}')">
-                    <i class="fas fa-user" style="color: #94a3b8;"></i>
-                    <div>
-                        <div style="font-weight: 600; color: #1e293b; font-size: 0.9rem;">${
-                          u.full_name
-                        }</div>
-                        <small style="color: #94a3b8; font-family: monospace;">@${
-                          u.username
-                        }</small>
+            if (filtered.length > 0) {
+                suggestionBox.innerHTML = filtered.map((u) => `
+                    <div class="suggestion-item" 
+                         style="padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px;"
+                         onclick="selectUserForAdjustment('${u.full_name.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-user" style="color: #94a3b8;"></i>
+                        <div>
+                            <div style="font-weight: 600; color: #1e293b; font-size: 0.9rem;">${u.full_name}</div>
+                            <small style="color: #94a3b8; font-family: monospace;">@${u.username}</small>
+                        </div>
                     </div>
-                </div>
-              `
-              )
-              .join("");
-            suggestionBox.style.display = "block";
-          } else {
-            // No results found
-            suggestionBox.innerHTML = `<div style="padding: 15px; color: #94a3b8; font-size: 0.85rem;">No matches found for "${query}"</div>`;
-            suggestionBox.style.display = "block";
-          }
+                `).join("");
+                suggestionBox.style.display = "block";
+            } else {
+                suggestionBox.innerHTML = `<div style="padding: 15px; color: #94a3b8; font-size: 0.85rem;">No matches found for "${query}"</div>`;
+                suggestionBox.style.display = "block";
+            }
 
-          // Exact Match handling (Case insensitive)
-          const exactMatch = filtered.find(
-            (u) => (u.full_name || "").toLowerCase() === query.trim().toLowerCase()
-          );
+            // 🎯 Phase 4: Exact Match Handling
+            const exactMatch = filtered.find(
+                (u) => (u.full_name || "").toLowerCase() === query.trim().toLowerCase()
+            );
 
-          if (exactMatch) {
-            suggestionBox.style.display = "none";
-            document.getElementById("policy_user_search").value =
-              exactMatch.full_name;
-            searchEmployeeForAdjustment();
-          }
+            if (exactMatch) {
+                suggestionBox.style.display = "none";
+                document.getElementById("policy_user_search").value = exactMatch.full_name;
+                searchEmployeeForAdjustment();
+            }
+
         } catch (e) {
-          console.error("Live search error:", e);
+            if (e.name === 'AbortError') {
+                console.log("⏩ HR Policy Search aborted safely.");
+                return;
+            }
+            console.error("Policy live search error:", e);
         }
-      }
+    }, 300);
+}
+
+/**
+ * 🧹 Hard Reset for Policy Search Field
+ * Triggered by the Grey X icon
+ */
+function clearPolicySearch() {
+    const input = document.getElementById("policy_user_search");
+    const clearBtn = document.getElementById("policy_clear_btn");
+    const box = document.getElementById("employee_suggestions_box");
+    const adjPlaceholder = document.getElementById("adj_placeholder");
+    const adjForm = document.getElementById("adjustment_form_container");
+
+    // 1. Reset Text & Focus
+    if (input) {
+        input.value = "";
+        input.focus();
+    }
+    
+    // 2. Hide X icon
+    if (clearBtn) clearBtn.style.display = "none";
+
+    // 3. 🗡️ KILL ACTIVE NETWORK REQUESTS
+    if (policySearchAbortController) {
+        policySearchAbortController.abort();
+        policySearchAbortController = null;
+    }
+    clearTimeout(policySearchTimer);
+
+    // 4. Wipe Suggestions
+    if (box) {
+        box.style.display = "none";
+        box.innerHTML = "";
+    }
+
+    // 5. Reset Form Visibility (Back to placeholder)
+    if (adjForm) adjForm.style.display = "none";
+    if (adjPlaceholder) adjPlaceholder.style.display = "block";
+    
+    console.log("🧹 Policy Search Cleared and Aborted.");
+}
+
       /**
        * 🎯 Selection Helper
        * This function "catches" the name when Natasha clicks a suggestion.
