@@ -118,6 +118,10 @@ class User(Base):
     line_manager = Column(String)
     joined_date = Column(String) 
     
+    # 🚀 THE MISSING WALLETS
+    overtime_bank = Column(Float, default=0.0)
+    unpaid_taken = Column(Float, default=0.0)
+    
     assigned_roles = relationship("UserRole", backref="user", cascade="all, delete-orphan")
 
 class GlobalPolicy(Base):

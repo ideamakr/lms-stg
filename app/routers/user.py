@@ -46,10 +46,14 @@ def get_db():
         db.close()
 
 @router.get("/all")
-def get_all_users(search: str = "", role: str = "", db: Session = Depends(get_db)):
-    # 🚀 THE GHOST FILTER:
-    # We start the query by excluding the 'superuser' role.
-    # This ensures 'usersuper' never appears in employee lists or counts.
+def get_all_users(
+    search: str = "", 
+    role: str = "", 
+    page: int = 1,          # 🚀 1. New: Added page parameter
+    page_size: int = 50,    # 🚀 1. New: Added limit parameter
+    db: Session = Depends(get_db)
+):
+    # THE GHOST FILTER:
     query = db.query(models.User).filter(models.User.role != "superuser")
     
     # Existing Search Logic
@@ -60,19 +64,21 @@ def get_all_users(search: str = "", role: str = "", db: Session = Depends(get_db
     if role:
         query = query.filter(models.User.role == role)
 
-    users = query.all()
+    # 🚀 2. THE PERFORMANCE ENGINE: Count and Slice
+    total_count = query.count()                  # Count total matches first
+    offset = (page - 1) * page_size              # Calculate how many to skip
+    users = query.offset(offset).limit(page_size).all()  # Fetch ONLY 50 rows
+    
     result = []
     
+    # Existing Mapping Logic (Unchanged!)
     for u in users:
-        # Initial roles list
         roles_list = ["employee"]
         
-        # Check assigned_roles relationship
         for r in u.assigned_roles:
             if r.role_name.lower() != "employee" and r.role_name not in roles_list:
                 roles_list.append(r.role_name)
         
-        # Check master role column
         if u.role and u.role not in roles_list:
             roles_list.append(u.role)
             
@@ -96,7 +102,14 @@ def get_all_users(search: str = "", role: str = "", db: Session = Depends(get_db
             "joined_date": str(u.joined_date) if u.joined_date else ""
         })
         
-    return result
+    # 🚀 3. PAGINATED RESPONSE WRAPPER
+    # Instead of returning a plain list, we return a dictionary with metadata
+    return {
+        "users": result,
+        "total": total_count,
+        "page": page,
+        "page_size": page_size
+    }
 
 @router.put("/{user_id}/roles-update")
 async def update_user_roles_multiple( # 🚀 Changed to async

@@ -40,39 +40,104 @@
         overflow: hidden; /* Prevent body scroll, handle inside .content */
       }
     
-      /* --- SIDEBAR --- */
-      .sidebar {
-        width: 260px;
-        background: var(--sidebar-bg);
-        color: white;
-        display: flex;
-        flex-direction: column;
-      }
-      .sidebar h3 {
-        padding: 25px;
-        margin: 0;
-        background: #0f172a;
-        text-align: center;
-        border-bottom: 1px solid #334155;
-      }
-      .menu {
-        flex: 1;
-        padding-top: 20px;
-      }
-      .menu-item {
-        padding: 15px 25px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        transition: 0.2s;
-        color: #cbd5e1;
-      }
-      .menu-item:hover,
-      .menu-item.active {
-        background: var(--primary);
-        color: white;
-      }
+/* =========================================
+   🚀 SIDEBAR REFINED (Seamless SaaS Look)
+   ========================================= */
+   .sidebar {
+    width: 240px; /* 🚀 Found the sweet spot: 240px gives text enough room while staying slim */
+    background: #0f172a; /* Deep Slate */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #1e293b;
+    box-sizing: border-box;
+}
+
+/* 1. TOP HEADER (Logo & System Name) */
+.sidebar h3 {
+    padding: 20px 15px;
+    margin: 0;
+    background: transparent; /* Blends seamlessly */
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Very subtle line */
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* 2. MENU CONTAINER */
+.menu {
+    flex: 1;
+    padding: 15px 10px;
+    overflow-y: auto;
+}
+
+/* 3. MENU ITEMS */
+.menu-item {
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+    color: #94a3b8; /* Muted slate */
+    font-size: 0.85rem;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.menu-item i {
+    width: 20px;
+    text-align: center;
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+/* 4. ACTIVE STATE (Soft Highlight) */
+.menu-item.active {
+    background: rgba(59, 130, 246, 0.15); /* Soft transparent blue */
+    color: #60a5fa; /* Bright blue text */
+    font-weight: 600;
+}
+.menu-item.active i {
+    opacity: 1;
+    color: #60a5fa;
+}
+
+/* 5. SUBMENU LOGIC (Fixes the weird background color) */
+.submenu {
+    background: transparent !important; /* Forces it to blend with the sidebar */
+    margin: 4px 0 8px 30px; /* Indents the submenu under the parent icon */
+    padding-left: 10px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1); /* Subtle tree line */
+    display: none; /* Handled by JS */
+}
+
+.submenu .menu-item {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+}
+
+/* 6. BOTTOM FOOTER (Version & Built By) */
+.sidebar-footer, 
+.sidebar > div:last-child { /* Targets the div at the bottom */
+    padding: 15px;
+    background: transparent;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+    font-size: 0.7rem;
+    color: #64748b;
+}
     
       /* --- MAIN LAYOUT --- */
       .main {
@@ -1059,66 +1124,81 @@ div.swal2-container {
              MANAGER DASHBOARD - id="managerMenu"
             ========================================== -->
 
-            <div id="managerMenu" style="display: none; border-top: 1px solid #334155; margin-top: 10px">
-              <div class="menu-item" onclick="toggleManagerMenu()" style="justify-content: space-between">
-                <span><i class="fas fa-user-shield"></i> Manager Dashboard</span>
-                <i id="managerChevron" class="fas fa-chevron-down" style="font-size: 0.8rem; transition: 0.3s"></i>
+            <div id="managerMenu" style="display: none; border-top: 1px solid rgba(255, 255, 255, 0.05); margin-top: 10px; padding-top: 10px;">
+    
+              <div class="menu-item" onclick="toggleManagerMenu()" style="justify-content: space-between; color: #38bdf8; font-weight: 600;">
+                <span style="display: flex; align-items: center; gap: 12px;">
+                  <i class="fas fa-user-shield"></i> Manager Dashboard
+                </span>
+                <i id="managerChevron" class="fas fa-chevron-down" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
               </div>
-              <div id="managerSubMenu" style="display: none; background: #0f172a; padding-left: 15px">
-                <div class="menu-item" onclick="showSection('manager_requests')" style="font-size: 0.9rem; justify-content: space-between">
-                  <span><i class="fas fa-tasks"></i> Leave Requests</span>
-                  <span id="badge_mgr_leave" class="status-badge status-pending" style="display: none; padding: 2px 6px; font-size: 0.7rem">0</span>
+          
+              <div id="managerSubMenu" class="submenu">
+                
+                <div class="menu-item" onclick="showSection('manager_requests')" style="justify-content: space-between;">
+                  <span style="display: flex; align-items: center; gap: 12px;">
+                      <i class="fas fa-tasks"></i> Leave Requests
+                  </span>
+                  <span id="badge_mgr_leave" class="status-badge status-pending" style="display: none; padding: 2px 6px; font-size: 0.7rem; border-radius: 10px;">0</span>
                 </div>
-                <div class="menu-item" onclick="showSection('manager_ot_requests')" style="font-size: 0.9rem; justify-content: space-between">
-                  <span><i class="fas fa-stopwatch"></i> Overtime Requests</span>
-                  <span id="badge_mgr_ot" class="status-badge status-rejected" style="display: none; padding: 2px 6px; font-size: 0.7rem">0</span>
+                
+                <div class="menu-item" onclick="showSection('manager_ot_requests')" style="justify-content: space-between;">
+                  <span style="display: flex; align-items: center; gap: 12px;">
+                      <i class="fas fa-stopwatch"></i> Overtime Requests
+                  </span>
+                  <span id="badge_mgr_ot" class="status-badge status-rejected" style="display: none; padding: 2px 6px; font-size: 0.7rem; border-radius: 10px;">0</span>
                 </div>
-                <div class="menu-item" onclick="showSection('manager_history')" style="font-size: 0.9rem">
+                
+                <div class="menu-item" onclick="showSection('manager_history')">
                   <i class="fas fa-archive"></i> Leave History
                 </div>
-                <div class="menu-item" onclick="showSection('manager_entitlements')" style="font-size: 0.9rem">
+                
+                <div class="menu-item" onclick="showSection('manager_entitlements')">
                   <i class="fas fa-users"></i> Leave Entitlements
                 </div>
+                
               </div>
-            </div>
+          </div>
 
 
             <!-- ==========================================
              HR ADMIN DASHBOARD - id="hrAdminMenu"
             ========================================== -->
 
-            <div id="hrAdminMenu" style="display: none; border-top: 1px solid #334155; margin-top: 10px">
-              <div class="menu-item" onclick="toggleAdminMenu()" style="justify-content: space-between; color: #818cf8">
-                <span><i class="fas fa-shield-alt"></i> Admin Dashboard</span>
-                <i id="adminChevron" class="fas fa-chevron-down" style="font-size: 0.8rem; transition: 0.3s"></i>
+            <div id="hrAdminMenu" style="display: none; border-top: 1px solid rgba(255, 255, 255, 0.05); margin-top: 10px; padding-top: 10px;">
+              <div class="menu-item" onclick="toggleAdminMenu()" style="justify-content: space-between; color: #818cf8; font-weight: 600;">
+                <span style="display: flex; align-items: center; gap: 12px;">
+                  <i class="fas fa-shield-alt"></i> Admin Dashboard
+                </span>
+                <i id="adminChevron" class="fas fa-chevron-down" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
               </div>
-              <div id="adminSubMenu" style="display: none; background: #0f172a; padding-left: 15px">
-                <div class="menu-item" onclick="showSection('hr_users')" style="font-size: 0.9rem">
+          
+              <div id="adminSubMenu" class="submenu">
+                <div class="menu-item" onclick="showSection('hr_users')">
                   <i class="fas fa-users-cog"></i> User Management
                 </div>
-                <div class="menu-item" onclick="showSection('manager_entitlements')" style="font-size: 0.9rem">
+                <div class="menu-item" onclick="showSection('manager_entitlements')">
                   <i class="fas fa-chart-pie"></i> Employee Leave Overview
                 </div>
-                <div class="menu-item" onclick="showSection('hr_policy')" style="font-size: 0.9rem">
+                <div class="menu-item" onclick="showSection('hr_policy')">
                   <i class="fas fa-file-contract"></i> Global Leave Policy
                 </div>
-                <div class="menu-item" onclick="showSection('hr_holidays')" style="font-size: 0.9rem">
+                <div class="menu-item" onclick="showSection('hr_holidays')">
                   <i class="fas fa-calendar-plus"></i> Company Calendar
                 </div>
-                <div class="menu-item" onclick="showSection('hr_reporting')" style="font-size: 0.9rem">
+                <div class="menu-item" onclick="showSection('hr_reporting')">
                   <i class="fas fa-chart-line"></i> System Reporting
                 </div>
-                <div class="menu-item" onclick="showSection('hr_audit')" style="font-size: 0.9rem">
+                <div class="menu-item" onclick="showSection('hr_audit')">
                   <i class="fas fa-clipboard-list"></i> System Audit Log
                 </div>
                 <div id="nav_hr_settings" class="menu-item" onclick="showSection('hr_settings')" style="display: none;">
                   <i class="fas fa-cog"></i> System Settings
-              </div>
+                </div>
               </div>
             </div>
 
-
-            <div class="menu-item" onclick="showSection('password')" style="margin-top: 20px; border-top: 1px solid #334155; padding-top: 15px;">
+            <div class="menu-item" onclick="showSection('password')" style="margin-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px;">
               <i class="fas fa-lock"></i> Change Password
             </div>
   
@@ -1136,17 +1216,26 @@ div.swal2-container {
           </div>
   
       </div> <div class="main">
-          
           <div id="mobile-overlay" onclick="toggleMobileMenu()"></div>
 
-          <div class="topbar">
-            <div style="display: flex; align-items: center;">
-              <button class="mobile-toggle-btn" onclick="toggleMobileMenu()">
+          <div class="topbar" style="display: flex; justify-content: space-between; align-items: center; padding: 0 24px; background: #ffffff; border-bottom: 1px solid #e2e8f0; height: 60px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <button class="mobile-toggle-btn" onclick="toggleMobileMenu()" style="background: none; border: none; color: #64748b; font-size: 1.1rem; cursor: pointer;">
                 <i class="fas fa-bars"></i>
               </button>
-              <div class="user-info">Logged in as: <span id="topbarName">...</span></div>
+
+              <div id="nav_avatar_init" style="width: 32px; height: 32px; background: #3b82f6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; border: 2px solid #fff; box-shadow: 0 0 0 1px #e2e8f0;">
+                ??
+              </div>
+
+              <div style="font-size: 0.85rem; color: #64748b;">
+                Logged in: <span id="topbarName" style="color: #1e293b; font-weight: 700;">...</span>
+              </div>
             </div>
-            <button class="logout-btn" onclick="logout()">Logout <i class="fas fa-sign-out-alt"></i></button>
+            
+            <button class="logout-btn" onclick="logout()" style="background: none; border: none; color: #ef4444; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+               Logout <i class="fas fa-sign-out-alt"></i>
+            </button>
           </div>
 
 
@@ -2989,164 +3078,213 @@ div.swal2-container {
                       gap: 12px;
                       align-items: end;
                     ">
-                    <div class="filter-group">
-                        <label style="
-                          color: #64748b;
-                          font-size: 0.75rem;
-                          font-weight: bold;
-                          display: block;
-                          margin-bottom: 4px;
-                        ">Search User</label>
-                        <input type="text" id="hr_user_search" placeholder="Name or Username..." oninput="loadAllUsers()" />
-                    </div>
-                    <div class="filter-group">
-                        <label style="
-                          color: #64748b;
-                          font-size: 0.75rem;
-                          font-weight: bold;
-                          display: block;
-                          margin-bottom: 4px;
-                        ">Role Filter</label>
-                        <select id="hr_role_filter" onchange="loadAllUsers()">
-                            <option value="">All Staff</option>
-                            <option value="employee">Employee</option>
-                            <option value="manager">Manager</option>
-                            <option value="hr_admin">HR Admin</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label style="
-                          color: #64748b;
-                          font-size: 0.75rem;
-                          font-weight: bold;
-                          display: block;
-                          margin-bottom: 4px;
-                        ">Status Filter</label>
-                        <select id="hr_status_filter" onchange="loadAllUsers()">
-                            <option value="">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <button type="button" class="btn-secondary" onclick="resetUserFilters()" style="
-                          height: 38px;
-                          width: 100%;
-                          background: #64748b;
-                          color: white;
-                          border-radius: 6px;
-                          border: none;
-                          cursor: pointer;
-                          font-weight: 600;
-                          display: flex;
-                          align-items: center;
-                          justify-content: center;
-                          gap: 8px;
-                        ">
-                            <i class="fas fa-undo"></i> Clear
-                        </button>
-                    </div>
-                </div>
+<div class="filter-group">
+  <label style="color: #64748b; font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 4px;">Search User</label>
+  <input type="text" id="hr_user_search" placeholder="Name or Username..." oninput="hrUserCurrentPage = 1; renderHrUsers()" />
+</div>
 
-                <div style="
-                      overflow-x: auto;
-                      overflow-y: auto;
-                      max-height: 500px;
-                      border: 1px solid #e2e8f0;
-                      border-radius: 8px;
-                      background: #ffffff;
-                    ">
-                    <table style="width: 100%; border-collapse: separate; border-spacing: 0">
-                        <thead>
-                            <tr>
-                                <th style="
-                              width: 25%;
-                              padding: 12px 15px;
-                              text-align: left;
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 20;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              border-bottom: 2px solid #e2e8f0;
-                              border-right: 1px solid #f1f5f9;
-                            ">
-                                    Full Name
-                                </th>
+<div class="filter-group">
+  <label style="color: #64748b; font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 4px;">Role Filter</label>
+  <select id="hr_role_filter" onchange="hrUserCurrentPage = 1; renderHrUsers()">
+      <option value="">All Staff</option>
+      <option value="employee">Employee</option>
+      <option value="manager">Manager</option>
+      <option value="hr_admin">HR Admin</option>
+  </select>
+</div>
 
-                                <th style="
-                              width: 20%;
-                              padding: 12px 15px;
-                              text-align: left;
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 20;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              border-bottom: 2px solid #e2e8f0;
-                              border-right: 1px solid #f1f5f9;
-                            ">
-                                    Username
-                                </th>
+<div class="filter-group">
+  <label style="color: #64748b; font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 4px;">Status Filter</label>
+  <select id="hr_status_filter" onchange="hrUserCurrentPage = 1; renderHrUsers()">
+      <option value="">All Status</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+  </select>
+</div>
 
-                                <th style="
-                              width: 15%;
-                              padding: 12px 15px;
-                              text-align: center;
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 20;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              border-bottom: 2px solid #e2e8f0;
-                              border-right: 1px solid #f1f5f9;
-                            ">
-                                    Status
-                                </th>
+<div class="filter-group" style="display: flex; gap: 8px; align-items: flex-end;">
+  
+  <button type="button" onclick="resetUserFilters()" style="
+    height: 38px;
+    width: 38px;
+    background: white;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  " title="Clear Filters" 
+    onmouseover="this.style.background='#f8fafc'" 
+    onmouseout="this.style.background='white'">
+      <i class="fas fa-undo"></i>
+  </button>
 
-                                <th style="
-                              width: 25%;
-                              padding: 12px 15px;
-                              text-align: center;
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 20;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              border-bottom: 2px solid #e2e8f0;
-                              border-right: 1px solid #f1f5f9;
-                            ">
-                                    System Role
-                                </th>
+  <button type="button" onclick="loadAllUsers()" style="
+    height: 38px;
+    padding: 0 16px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    transition: all 0.2s;
+  " onmouseover="this.style.background='#1e40af'" 
+    onmouseout="this.style.background='#2563eb'">
+      <i class="fas fa-sync-alt"></i> Refresh
+  </button>
+</div>
 
-                                <th style="
-                              width: 15%;
-                              padding: 12px 15px;
-                              text-align: center;
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 20;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              border-bottom: 2px solid #e2e8f0;
-                            ">
-                                    Action
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="hrUserTableBody"></tbody>
-                    </table>
-                </div>
+</div> <div class="table-container" style="
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 950px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #ffffff;
+    ">
+<table style="width: 100%; border-collapse: separate; border-spacing: 0" id="hrUserTable">
+  <thead>
+      <tr>
+          <th onclick="sortHrUsers('full_name')" style="
+              width: 25%;
+              padding: 12px 15px;
+              text-align: left;
+              position: sticky;
+              top: 0; 
+              background: #f8fafc;
+              z-index: 30; 
+              color: #64748b;
+              font-size: 0.75rem;
+              text-transform: uppercase;
+              font-weight: 700;
+              border-bottom: 2px solid #e2e8f0;
+              border-right: 1px solid #f1f5f9;
+              cursor: pointer;
+              user-select: none;
+              box-shadow: inset 0 -2px 0 #e2e8f0; /* 🚀 Ensures border stays visible while sticky */
+          ">
+              Full Name <i id="hr-sort-full_name" class="fas fa-sort" style="margin-left: 5px; color: #cbd5e1;"></i>
+          </th>
+
+          <th onclick="sortHrUsers('username')" style="
+              width: 20%;
+              padding: 12px 15px;
+              text-align: left;
+              position: sticky;
+              top: 0;
+              background: #f8fafc;
+              z-index: 30;
+              color: #64748b;
+              font-size: 0.75rem;
+              text-transform: uppercase;
+              font-weight: 700;
+              border-bottom: 2px solid #e2e8f0;
+              border-right: 1px solid #f1f5f9;
+              cursor: pointer;
+              user-select: none;
+              box-shadow: inset 0 -2px 0 #e2e8f0;
+          ">
+              Username <i id="hr-sort-username" class="fas fa-sort" style="margin-left: 5px; color: #cbd5e1;"></i>
+          </th>
+
+          <th onclick="sortHrUsers('is_active')" style="
+              width: 15%;
+              padding: 12px 15px;
+              text-align: center;
+              position: sticky;
+              top: 0;
+              background: #f8fafc;
+              z-index: 30;
+              color: #64748b;
+              font-size: 0.75rem;
+              text-transform: uppercase;
+              font-weight: 700;
+              border-bottom: 2px solid #e2e8f0;
+              border-right: 1px solid #f1f5f9;
+              cursor: pointer;
+              user-select: none;
+              box-shadow: inset 0 -2px 0 #e2e8f0;
+          ">
+              Status <i id="hr-sort-is_active" class="fas fa-sort" style="margin-left: 5px; color: #cbd5e1;"></i>
+          </th>
+
+          <th style="
+              width: 25%; 
+              padding: 12px 15px; 
+              text-align: center; 
+              position: sticky; 
+              top: 0; 
+              background: #f8fafc; 
+              z-index: 30; 
+              color: #64748b; 
+              font-size: 0.75rem; 
+              text-transform: uppercase; 
+              font-weight: 700;
+              border-bottom: 2px solid #e2e8f0; 
+              border-right: 1px solid #f1f5f9;
+              box-shadow: inset 0 -2px 0 #e2e8f0;
+          ">
+              System Role
+          </th>
+
+          <th style="
+              width: 15%; 
+              padding: 12px 15px; 
+              text-align: center; 
+              position: sticky; 
+              top: 0; 
+              background: #f8fafc; 
+              z-index: 30; 
+              color: #64748b; 
+              font-size: 0.75rem; 
+              text-transform: uppercase; 
+              font-weight: 700;
+              border-bottom: 2px solid #e2e8f0;
+              box-shadow: inset 0 -2px 0 #e2e8f0;
+          ">
+              Action
+          </th>
+      </tr>
+  </thead>
+  <tbody id="hrUserTableBody"></tbody>
+</table>
+<button id="scrollToTopBtn" onclick="scrollToTopUsers()" title="Go to top" style="
+        display: none; 
+        position: absolute; 
+        bottom: 20px; 
+        right: 25px; 
+        z-index: 99; 
+        border: none; 
+        outline: none; 
+        background-color: #2563eb; 
+        color: white; 
+        cursor: pointer; 
+        width: 40px;
+        height: 40px;
+        border-radius: 50%; 
+        font-size: 0.9rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    ">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+</div>
+
+<div id="hrUserPagination"></div>
+
             </div>
         </div>
 
@@ -5698,37 +5836,41 @@ function initializeAccess() {
 }
 
  // 🏁 THE 401 KILLER: Orchestrated Dashboard Startup
+ // 🏁 THE 401 KILLER: Orchestrated Dashboard Startup
  async function initializeDashboard() {
     console.log("🚀 Initializing Secure Dashboard for:", currentUser);
+
+    const versionEl = document.getElementById("app_version_display");
+
+    // 🚀 STEP A: PRE-EMPTIVE LOAD
+    // Check localStorage IMMEDIATELY before doing any server fetches
+    const cachedVersion = localStorage.getItem("system_version_from_db");
+    if (versionEl) {
+        // Fallback to V1.2.0 if cache is empty, otherwise use the last known version
+        versionEl.innerText = cachedVersion || "V1.3.0"; 
+    }
 
     // 1. Setup UI
     initializeAccess();
     document.getElementById("topbarName").innerText = currentUser;
     document.getElementById("welcomeName").innerText = currentUser;
 
-    // 🚀 STEP A: Set the "Hardcoded" safety version immediately
-    const versionEl = document.getElementById("app_version_display");
-    if (versionEl) {
-        versionEl.innerText = "V1.2.0 (Stable)"; 
-    }
-
     // 2. Critical Identity Sync
     await loadUserProfile();
 
-    // 3. 🟢 LOAD GLOBAL SETTINGS (This is where the DB version comes from)
+    // 3. 🟢 LOAD GLOBAL SETTINGS (Fetches the NEWEST version from DB)
     await loadCFSetting();
     await loadBroadcastSettings(); 
 
-    // 🚀 STEP B: The DB Overwrite
-    // If your loadBroadcastSettings function saves a version to localStorage, apply it here
-    const dbVersion = localStorage.getItem("system_version_from_db");
-    if (dbVersion && versionEl) {
-        versionEl.innerText = dbVersion;
+    // 🚀 STEP B: FINAL SYNC
+    // After loadBroadcastSettings finishes, it has likely updated localStorage.
+    // We apply it again just in case the version changed on the server.
+    const finalVersion = localStorage.getItem("system_version_from_db");
+    if (finalVersion && versionEl) {
+        versionEl.innerText = finalVersion;
     }
 
-    // 4. Fast UI Polish
     updateCurrentYearLabels();
-
     console.log("✅ Dashboard Core Synchronized.");
 }
 
@@ -7495,7 +7637,7 @@ balanceEstimate.innerHTML = `
     localStorage.removeItem("leave_draft_cf");
 }
 
-      // ==========================================
+    // ==========================================
       // 🚀 HR PROXY LOGIC (Admin Override)
       // ==========================================
       window.proxyUser = null;
@@ -7508,18 +7650,26 @@ balanceEstimate.innerHTML = `
         }
 
         try {
-            // Fetch all users
+            // 1. Fetch data from the optimized backend
             const res = await fetchWithAuth(`${API_URL}/users/all`);
             if (!res) return;
-            const users = await res.json();
 
-            // Filter for active employees matching the name/username
-            const filtered = users.filter(u => 
+            // 🚀 THE FIX: "Unbox" the package
+            // Instead of 'users', we get the whole 'responseData' package
+            const responseData = await res.json();
+            
+            // Extract the list from the 'users' key. Default to empty list [] if something goes wrong.
+            const allUsersList = responseData.users || [];
+
+            // 2. Filter logic (Now runs on the 'allUsersList' array)
+            // Existing logic preserved: checks is_active and name/username matches
+            const filtered = allUsersList.filter(u => 
                 u.is_active && 
-                (u.full_name.toLowerCase().includes(query.toLowerCase()) || 
-                 u.username.toLowerCase().includes(query.toLowerCase()))
-            ).slice(0, 6); // Limit to top 6 results
+                ((u.full_name || "").toLowerCase().includes(query.toLowerCase()) || 
+                 (u.username || "").toLowerCase().includes(query.toLowerCase()))
+            ).slice(0, 6); 
 
+            // 3. UI Rendering (Remains UNTOUCHED to ensure visual consistency)
             if (filtered.length > 0) {
                 box.innerHTML = filtered.map(u => {
                     const initials = (u.full_name || "??").split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
@@ -8829,144 +8979,275 @@ const row = `
         }
       }
 
-      // 🚀 HR ADMIN: High-Fidelity User List (Fixed Client-Side Filtering)
-      async function loadAllUsers() {
-        const tbody = document.getElementById("hrUserTableBody");
-        if (!tbody) return;
+// ==========================================
+// 🚀 HR ADMIN: HIGH-PERFORMANCE USER ENGINE
+// ==========================================
+let hrUserCache = [];
+let hrUserCurrentPage = 1;
+const hrUserPageSize = 50; // Rendering 50 at a time
+let hrUserSortState = { key: 'id', direction: 'asc' }; // Default sort by Oldest First (ID Ascending)
 
-        // Visual Loading State (Spans 5 columns)
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:40px; color:#94a3b8;">
-            <i class="fas fa-circle-notch fa-spin" style="font-size:1.5rem; margin-bottom:10px;"></i><br>Loading user directory...
-        </td></tr>`;
+async function loadAllUsers() {
+    const tbody = document.getElementById("hrUserTableBody");
+    if (!tbody) return;
 
-        try {
-          // 1. Fetch ALL users
-          const res = await fetchWithAuth(`${API_URL}/users/all`);
-          if (!res) return;
+    // Visual Loading State (Spans 5 columns)
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:40px; color:#94a3b8;">
+        <i class="fas fa-circle-notch fa-spin" style="font-size:1.5rem; margin-bottom:10px;"></i><br>Loading user directory...
+    </td></tr>`;
 
-          const allUsers = await res.json();
-          window.allUsersList = allUsers; // Store global copy for edit modals
+    try {
+        // 1. Fetch data (We grab a large chunk so the Summary Tiles at the top remain accurate)
+        // Note: The backend is paginated to 50 by default, but for the HR screen we pull up to 1000 
+        // to handle the client-side sorting and filter logic seamlessly without hitting the DB repeatedly.
+        const res = await fetchWithAuth(`${API_URL}/users/all?page=1&page_size=1000`);
+        if (!res) return;
 
-          // 2. Get Filter Inputs
-          const searchVal = document.getElementById("hr_user_search")?.value.toLowerCase().trim() || "";
-          const roleVal = document.getElementById("hr_role_filter")?.value || "";
-          const statusVal = document.getElementById("hr_status_filter")?.value || "";
+        const responseData = await res.json();
+        
+        // 2. 🚀 THE DICTIONARY FIX: Extract 'users' from the new API response structure
+        hrUserCache = responseData.users || [];
+        window.allUsersList = hrUserCache; // Crucial: Keeps Edit Modals working
 
-          // 3. Apply Filtering Logic
-          const filteredUsers = allUsers.filter((u) => {
-            const nameMatch = (u.full_name || "").toLowerCase().includes(searchVal) || (u.username || "").toLowerCase().includes(searchVal);
-            
-            let roleMatch = true;
-            if (roleVal) {
-              const userRoles = (u.roles_list || []).map((r) => r.toLowerCase());
-              if (u.role) userRoles.push(u.role.toLowerCase());
-              roleMatch = userRoles.includes(roleVal.toLowerCase());
-            }
+        // 3. Hand off to the rapid UI renderer
+        hrUserCurrentPage = 1;
+        renderHrUsers();
 
-            let statusMatch = true;
-            if (statusVal === "active") statusMatch = u.is_active === true;
-            if (statusVal === "inactive") statusMatch = u.is_active === false;
+    } catch (e) {
+        console.error("User Load Error:", e);
+        tbody.innerHTML = `<tr><td colspan='5' class='text-center' style='color:red;'>Failed to load users.</td></tr>`;
+    }
+}
 
-            return nameMatch && roleMatch && statusMatch;
-          });
+// 🚀 THE RENDER ENGINE: Filters, Sorts, and Slices to 50 rows for instant load
+function renderHrUsers() {
+    const tbody = document.getElementById("hrUserTableBody");
+    const nav = document.getElementById("hrUserPagination"); 
+    if (!tbody) return;
 
-          // 4. Update Summary Tiles
-          if (document.getElementById("summary_total_users"))
-            document.getElementById("summary_total_users").innerText = allUsers.length;
-          if (document.getElementById("summary_active_users"))
-            document.getElementById("summary_active_users").innerText = allUsers.filter((u) => u.is_active).length;
-          if (document.getElementById("summary_inactive_users"))
-            document.getElementById("summary_inactive_users").innerText = allUsers.filter((u) => !u.is_active).length;
+    // A. Capture Filters
+    const searchVal = document.getElementById("hr_user_search")?.value.toLowerCase().trim() || "";
+    const roleVal = document.getElementById("hr_role_filter")?.value || "";
+    const statusVal = document.getElementById("hr_status_filter")?.value || "";
 
-          // 5. Handle Empty Results
-          if (filteredUsers.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:40px; color:#64748b;">
-                <i class="fas fa-search" style="font-size:1.5rem; margin-bottom:10px; opacity:0.5;"></i><br>No matching users found.
-            </td></tr>`;
-            return;
-          }
-
-          // 6. Render Rows
- // 6. Render Rows
- tbody.innerHTML = filteredUsers.map((u) => {
-              const rolesJson = JSON.stringify(u.roles_list || []);
-              const isSelf = u.username === (currentUser ? currentUser.toLowerCase() : "");
-              const safeName = (u.full_name || "").replace(/'/g, "\\'");
-              const initials = (u.full_name || "??").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
-
-              // Status Badge Logic
-              const statusBadge = u.is_active
-                ? `<span style="background: #f0fdf4; color: #15803d; padding: 4px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: bold; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> Active</span>`
-                : `<span style="background: #fef2f2; color: #b91c1c; padding: 4px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: bold; border: 1px solid #fecaca; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-times-circle" style="font-size:0.6rem;"></i> Inactive</span>`;
-
-              // Role Badge Logic
-              let roleBadges = "";
-              const roleColors = { hr_admin: { bg: "#faf5ff", text: "#7e22ce", icon: "fa-user-shield" }, manager: { bg: "#fff7ed", text: "#c2410c", icon: "fa-user-tie" }, employee: { bg: "#f1f5f9", text: "#475569", icon: "fa-user" } };
-              
-              if (u.roles_list && u.roles_list.length > 0) {
-                roleBadges = u.roles_list.map((r) => {
-                    const cfg = roleColors[r.toLowerCase()] || roleColors["employee"];
-                    return `<span style="background:${cfg.bg}; color:${cfg.text}; padding:2px 8px; border-radius:4px; margin:2px; font-size:0.65rem; font-weight:bold; display:inline-flex; align-items:center; gap:3px; border:1px solid rgba(0,0,0,0.05);"><i class="fas ${cfg.icon}" style="font-size:0.6rem;"></i> ${r.toUpperCase()}</span>`;
-                  }).join("");
-              }
-              if (u.is_senior_manager) {
-                roleBadges += `<span style="font-size:0.65rem; padding:2px 8px; border-radius:4px; margin-left:4px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:bold; display:inline-flex; align-items:center; gap:3px;"><i class="fas fa-award"></i> L2 POWER</span>`;
-              }
-
-              return `
-                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                    
-                    <td style="padding: 12px 15px;">
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="width:32px; height:32px; background:#e0f2fe; color:#0369a1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                                ${initials}
-                            </div>
-                            <div>
-                                <div style="font-weight:700; color:#1e293b; font-size:0.9rem;">${u.full_name}</div>
-                                <div style="font-size:0.7rem; color:#64748b;">${u.job_title || "No Title"}</div>
-                            </div>
-                        </div>
-                    </td>
-
-                    <td style="padding: 12px 15px; vertical-align:middle;">
-                         <span style="font-family:monospace; color:#475569; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${u.username}</span>
-                    </td>
-
-                    <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">${statusBadge}</td>
-
-                    <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">
-                        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:4px;">${roleBadges}</div>
-                    </td>
-
-                    <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">
-                        <div style="display: flex; gap: 8px; justify-content: center;">
-                            <button class="icon-btn" onclick="event.stopPropagation(); openFullProfileEditModalById(${u.id})" title="Edit Profile" style="color: #3b82f6;">
-                                <i class="fas fa-user-edit"></i>
-                            </button>
-                            
-                            <button class="icon-btn" onclick='event.stopPropagation(); openUserEditModal(${u.id}, "${safeName}", ${rolesJson}, ${u.is_senior_manager})' 
-                                    title="Permissions" style="color: #6366f1;">
-                                <i class="fas fa-shield-alt"></i>
-                            </button>
-                            
-                            <button class="icon-btn" 
-    style="color:${u.is_active ? "#ef4444" : "#10b981"}; border-color:transparent; background: ${u.is_active ? "#fef2f2" : "#f0fdf4"}; opacity: ${isSelf ? "0.3" : "1"}; cursor: ${isSelf ? "not-allowed" : "pointer"};" 
-    /* 🚀 THE FIX: Added safeName as the second argument */
-    onclick="${isSelf ? "event.stopPropagation(); alert('🛡️ Security: You cannot deactivate your own account while logged in.')" : `event.stopPropagation(); toggleUserStatus(${u.id}, '${safeName}')`}"
-    title="${isSelf ? "Self-protection active" : u.is_active ? "Deactivate User" : "Activate User"}">
-    <i class="fas ${u.is_active ? "fa-user-slash" : "fa-user-check"}"></i>
-</button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            }).join("");
-            
-        } catch (e) {
-          console.error("User Load Error:", e);
-          tbody.innerHTML = `<tr><td colspan='5' class='text-center' style='color:red;'>Failed to load users.</td></tr>`;
+    // B. Apply Client-Side Filters (Your original logic preserved)
+    let filteredUsers = hrUserCache.filter((u) => {
+        const nameMatch = (u.full_name || "").toLowerCase().includes(searchVal) || (u.username || "").toLowerCase().includes(searchVal);
+        let roleMatch = true;
+        if (roleVal) {
+            const userRoles = (u.roles_list || []).map((r) => r.toLowerCase());
+            if (u.role) userRoles.push(u.role.toLowerCase());
+            roleMatch = userRoles.includes(roleVal.toLowerCase());
         }
-      }
+        let statusMatch = true;
+        if (statusVal === "active") statusMatch = u.is_active === true;
+        if (statusVal === "inactive") statusMatch = u.is_active === false;
+
+        return nameMatch && roleMatch && statusMatch;
+    });
+
+    // C. Update Summary Tiles
+    if (document.getElementById("summary_total_users"))
+        document.getElementById("summary_total_users").innerText = hrUserCache.length;
+    if (document.getElementById("summary_active_users"))
+        document.getElementById("summary_active_users").innerText = hrUserCache.filter((u) => u.is_active).length;
+    if (document.getElementById("summary_inactive_users"))
+        document.getElementById("summary_inactive_users").innerText = hrUserCache.filter((u) => !u.is_active).length;
+
+    // D. Apply Sorting
+    filteredUsers.sort((a, b) => {
+        let valA = a[hrUserSortState.key] || "";
+        let valB = b[hrUserSortState.key] || "";
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+
+        if (valA < valB) return hrUserSortState.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return hrUserSortState.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    // E. Pagination Math (Slice 50 rows)
+    const totalRecords = filteredUsers.length;
+    const totalPages = Math.ceil(totalRecords / hrUserPageSize) || 1;
+    if (hrUserCurrentPage > totalPages) hrUserCurrentPage = 1;
+
+    const startIdx = (hrUserCurrentPage - 1) * hrUserPageSize;
+    const visibleUsers = filteredUsers.slice(startIdx, startIdx + hrUserPageSize);
+
+    // F. Draw HTML (Your exact styles preserved)
+    tbody.innerHTML = "";
+    if (visibleUsers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:40px; color:#64748b;">
+            <i class="fas fa-search" style="font-size:1.5rem; margin-bottom:10px; opacity:0.5;"></i><br>No matching users found.
+        </td></tr>`;
+        if (nav) nav.innerHTML = "";
+        return;
+    }
+
+    tbody.innerHTML = visibleUsers.map((u) => {
+        const rolesJson = JSON.stringify(u.roles_list || []);
+        const isSelf = u.username === (currentUser ? currentUser.toLowerCase() : "");
+        const safeName = (u.full_name || "").replace(/'/g, "\\'");
+        const initials = (u.full_name || "??").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+
+        const statusBadge = u.is_active
+            ? `<span style="background: #f0fdf4; color: #15803d; padding: 4px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: bold; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> Active</span>`
+            : `<span style="background: #fef2f2; color: #b91c1c; padding: 4px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: bold; border: 1px solid #fecaca; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-times-circle" style="font-size:0.6rem;"></i> Inactive</span>`;
+
+        let roleBadges = "";
+        const roleColors = { hr_admin: { bg: "#faf5ff", text: "#7e22ce", icon: "fa-user-shield" }, manager: { bg: "#fff7ed", text: "#c2410c", icon: "fa-user-tie" }, employee: { bg: "#f1f5f9", text: "#475569", icon: "fa-user" } };
+        
+        if (u.roles_list && u.roles_list.length > 0) {
+            roleBadges = u.roles_list.map((r) => {
+                const cfg = roleColors[r.toLowerCase()] || roleColors["employee"];
+                return `<span style="background:${cfg.bg}; color:${cfg.text}; padding:2px 8px; border-radius:4px; margin:2px; font-size:0.65rem; font-weight:bold; display:inline-flex; align-items:center; gap:3px; border:1px solid rgba(0,0,0,0.05);"><i class="fas ${cfg.icon}" style="font-size:0.6rem;"></i> ${r.toUpperCase()}</span>`;
+            }).join("");
+        }
+        if (u.is_senior_manager) {
+            roleBadges += `<span style="font-size:0.65rem; padding:2px 8px; border-radius:4px; margin-left:4px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:bold; display:inline-flex; align-items:center; gap:3px;"><i class="fas fa-award"></i> L2 POWER</span>`;
+        }
+
+        return `
+        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 12px 15px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:32px; height:32px; background:#e0f2fe; color:#0369a1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; box-shadow:0 2px 4px rgba(0,0,0,0.05);">${initials}</div>
+                    <div>
+                        <div style="font-weight:700; color:#1e293b; font-size:0.9rem;">${u.full_name}</div>
+                        <div style="font-size:0.7rem; color:#64748b;">${u.job_title || "No Title"}</div>
+                    </div>
+                </div>
+            </td>
+            <td style="padding: 12px 15px; vertical-align:middle;">
+                <span style="font-family:monospace; color:#475569; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${u.username}</span>
+            </td>
+            <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">${statusBadge}</td>
+            <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">
+                <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:4px;">${roleBadges}</div>
+            </td>
+            <td class="text-center" style="padding: 12px 15px; vertical-align:middle;">
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <button class="icon-btn" onclick="event.stopPropagation(); openFullProfileEditModalById(${u.id})" title="Edit Profile" style="color: #3b82f6;">
+                        <i class="fas fa-user-edit"></i>
+                    </button>
+                    <button class="icon-btn" onclick='event.stopPropagation(); openUserEditModal(${u.id}, "${safeName}", ${rolesJson}, ${u.is_senior_manager})' title="Permissions" style="color: #6366f1;">
+                        <i class="fas fa-shield-alt"></i>
+                    </button>
+                    <button class="icon-btn" style="color:${u.is_active ? "#ef4444" : "#10b981"}; border-color:transparent; background: ${u.is_active ? "#fef2f2" : "#f0fdf4"}; opacity: ${isSelf ? "0.3" : "1"}; cursor: ${isSelf ? "not-allowed" : "pointer"};" 
+                    onclick="${isSelf ? "event.stopPropagation(); alert('🛡️ Security: You cannot deactivate your own account while logged in.')" : `event.stopPropagation(); toggleUserStatus(${u.id}, '${safeName}')`}" title="${isSelf ? "Self-protection active" : u.is_active ? "Deactivate User" : "Activate User"}">
+                        <i class="fas ${u.is_active ? "fa-user-slash" : "fa-user-check"}"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join("");
+
+// G. Draw Pagination Panel (🚀 Centered Stack Layout)
+if (nav) {
+        nav.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px; margin-bottom: 20px; gap: 10px;">
+            
+            <div style="display:flex; align-items:center; gap:15px;">
+                <button class="btn-secondary" 
+                    style="padding: 6px 15px; font-size: 0.8rem; font-weight: 700; border-radius: 6px; display: flex; align-items: center; gap: 5px; cursor: ${hrUserCurrentPage === 1 ? 'not-allowed' : 'pointer'}; opacity: ${hrUserCurrentPage === 1 ? '0.5' : '1'};" 
+                    ${hrUserCurrentPage === 1 ? 'disabled' : ''} 
+                    onclick="changeHrUserPage(-1)">
+                    <i class="fas fa-chevron-left"></i> Prev
+                </button>
+                
+                <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; background: white; padding: 6px 16px; border: 1px solid #e2e8f0; border-radius: 8px; min-width: 100px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    Page ${hrUserCurrentPage} <span style="color: #94a3b8; font-weight: 500; margin-left: 4px;">/ ${totalPages}</span>
+                </div>
+
+                <button class="btn-secondary" 
+                    style="padding: 6px 15px; font-size: 0.8rem; font-weight: 700; border-radius: 6px; display: flex; align-items: center; gap: 5px; cursor: ${hrUserCurrentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer'}; opacity: ${hrUserCurrentPage === totalPages || totalPages === 0 ? '0.5' : '1'};" 
+                    ${hrUserCurrentPage === totalPages || totalPages === 0 ? 'disabled' : ''} 
+                    onclick="changeHrUserPage(1)">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <div style="font-size: 0.8rem; color: #64748b; font-weight: 600; letter-spacing: 0.2px;">
+                Showing <span style="color: #1e293b; font-weight: 800;">${startIdx + 1} - ${Math.min(startIdx + hrUserPageSize, totalRecords)}</span> 
+                of <span style="color: #1e293b; font-weight: 800;">${totalRecords}</span> Employees
+            </div>
+
+        </div>`;
+    }
+}
+
+// 🚀 NAVIGATION & SORTING HELPERS
+function changeHrUserPage(dir) {
+    hrUserCurrentPage += dir;
+    renderHrUsers();
+    // Scroll to top of table container
+    const tableContainer = document.querySelector('#hr_users .table-container');
+    if (tableContainer) tableContainer.scrollTop = 0;
+}
+
+function sortHrUsers(key) {
+    if (hrUserSortState.key === key) {
+        hrUserSortState.direction = hrUserSortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        hrUserSortState.key = key;
+        hrUserSortState.direction = 'asc';
+    }
+
+    // Reset icons (Targets specific IDs to not break other tables)
+    document.querySelectorAll('thead th i[id^="hr-sort-"]').forEach(i => {
+        i.className = 'fas fa-sort'; 
+        i.style.color = '#cbd5e1';
+    });
+    
+    // Highlight active icon
+    const activeIcon = document.getElementById(`hr-sort-${key}`);
+    if (activeIcon) {
+        activeIcon.className = hrUserSortState.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        activeIcon.style.color = '#3b82f6';
+    }
+
+    renderHrUsers();
+}
+
+// 1. The Scroll Execution (Goes all the way to the Filters)
+function scrollToTopUsers() {
+    // We target the main dashboard scroll area (usually '.content')
+    const mainArea = document.querySelector('.content'); 
+    
+    if (mainArea) {
+        mainArea.scrollTo({
+            top: 0,
+            behavior: 'smooth' 
+        });
+    } else {
+        // Fallback: Scroll the whole window if '.content' isn't found
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+// 2. The Scroll Listener (Updated to track the main screen movement)
+// We attach the listener to the main area so the button knows when you've left the top of the page
+const mainScrollArea = document.querySelector('.content') || window;
+
+mainScrollArea.onscroll = function() {
+    const btn = document.getElementById("scrollToTopBtn");
+    if (!btn) return;
+
+    // Detect scroll position (handles both element and window cases)
+    const currentScroll = this.scrollTop || window.scrollY;
+
+    if (currentScroll > 300) { // Show after scrolling 300px down
+        btn.style.display = "flex";
+        btn.style.opacity = "1";
+    } else {
+        btn.style.opacity = "0";
+        // Brief timeout to let the fade animation finish before hiding
+        setTimeout(() => { 
+            const nowScroll = this.scrollTop || window.scrollY;
+            if (nowScroll <= 300) btn.style.display = "none"; 
+        }, 300);
+    }
+};
 
       // // --- CARRY FORWARD SETTINGS LOGIC --- [TO BE DELETED]
 
@@ -9607,11 +9888,11 @@ function resetManagerLeaveFilters() {
     loadManagerRequests();
 }
 
-      /**
+ /**
        * 🚀 NEW HELPER FUNCTION
        * Fills the L2 Dropdown with managers (excluding the current user)
        */
-      async function populateL2ManagerDropdown() {
+       async function populateL2ManagerDropdown() {
         const select = document.getElementById("l2_manager_select");
         if (!select) return;
 
@@ -9624,7 +9905,9 @@ function resetManagerLeaveFilters() {
           const res = await fetchWithAuth(`${API_URL}/users/all`);
           if (!res || !res.ok) throw new Error("Could not fetch managers");
 
-          const users = await res.json();
+          // 🚀 THE FIX: Parse the new dictionary response safely
+          const responseData = await res.json();
+          const users = responseData.users || [];
 
           // 2. 🚀 THE FILTER LOGIC
           const eligibleManagers = users.filter((u) => {
@@ -10272,11 +10555,44 @@ async function showBalanceLogs(empName) {
         // 1. Fetch Employee from High-Speed RAM Cache
         const emp = teamEntitlementCache.find(e => e.name === empName) || {};
         
-        // 2. Fetch History Logs from Server
-        const res = await fetchWithAuth(`${API_URL}/leaves/manager/balance-history?name=${encodeURIComponent(empName)}`);
-        if (!res) return;
-        const data = await res.json();
+        // 🚀 2. MERGED FETCH: Get both Leave and OT history in parallel
+        const [leaveRes, otRes] = await Promise.all([
+            fetchWithAuth(`${API_URL}/leaves/manager/balance-history?name=${encodeURIComponent(empName)}`),
+            fetchWithAuth(`${API_URL}/overtime/my-requests?employee_name=${encodeURIComponent(empName)}`)
+        ]);
+
+        if (!leaveRes || !otRes) return;
         
+        const leaveData = await leaveRes.json();
+        const otDataRaw = await otRes.json();
+        
+        // Handle variations in OT API response safely
+        const otData = Array.isArray(otDataRaw) ? otDataRaw : (otDataRaw.requests || []);
+
+        // 🚀 3. NORMALIZE OT DATA to match the existing Leave log structure
+        const normalizedOT = otData.map(ot => {
+            // Only show Overtime records that are fully processed (Approved/Rejected)
+            return {
+                date: ot.ot_date,
+                action: `Overtime (${ot.ot_type})`,
+                leave_type: "OT Claim",
+                status: ot.status,
+                days: ot.total_value,
+                is_ot: true, // Custom flag to identify it during rendering
+                id: ot.id // used for tie-breaking sorts
+            };
+        });
+
+        // 🚀 4. MERGE AND SORT (Newest First)
+        let allLogs = [...(leaveData.logs || []), ...normalizedOT];
+        
+        allLogs.sort((a, b) => {
+            const dateA = new Date(a.date || "1970-01-01").getTime();
+            const dateB = new Date(b.date || "1970-01-01").getTime();
+            if (dateB !== dateA) return dateB - dateA; // Descending Date
+            return (b.id || 0) - (a.id || 0); // Tie breaker
+        });
+
         // Pill generator helper
         const createPill = (rem, total, color) => {
             const pct = total > 0 ? (rem / total) * 100 : 0;
@@ -10330,7 +10646,7 @@ async function showBalanceLogs(empName) {
             </div>
         </div>`;
 
-        // 3. TIER 4: Audit History Table (Preserved exactly as you had it)
+        // 3. TIER 4: Audit History Table
         let tableHtml = `
         <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
             <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
@@ -10339,39 +10655,49 @@ async function showBalanceLogs(empName) {
                         <th style="padding:12px;">Date</th>
                         <th style="padding:12px;">Action</th>
                         <th style="padding:12px; text-align:center;">Status</th>
-                        <th style="padding:12px; text-align:center;">Days</th>
+                        <th style="padding:12px; text-align:center;">Value</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
-        if (data.logs.length === 0) {
+        if (allLogs.length === 0) {
             tableHtml += `<tr><td colspan="4" class="text-center" style="padding: 20px; color: #94a3b8;">No records found.</td></tr>`;
         } else {
-            data.logs.forEach((log) => {
-                const statusClass = `status-${log.status.toLowerCase().replace(" ", "-")}`;
+            allLogs.forEach((log) => {
+                const statusClass = `status-${(log.status || "").toLowerCase().replace(" ", "-")}`;
                 let dayDisplay = "0"; let dayStyle = "color: #64748b;";
                 let actionDisplay = `<strong>${log.action}</strong><br><small style="color:#64748b">${log.leave_type}</small>`;
 
                 // 🚀 CARRY FORWARD ROW LOGIC
                 if (log.is_cf) {
                     actionDisplay = `<strong style="color: #0ea5e9;"><i class="fas fa-piggy-bank"></i> Carry Forward</strong><br><small style="color:#64748b">Annual Leave</small>`;
-                    if (log.status === "Approved") { dayDisplay = log.days; dayStyle = "color: #0ea5e9; font-weight: bold;"; }
+                    if (log.status === "Approved") { dayDisplay = `${log.days} d`; dayStyle = "color: #0ea5e9; font-weight: bold;"; }
                 } 
+                // 🚀 OVERTIME LOGIC (New)
+                else if (log.is_ot) {
+                    actionDisplay = `<strong style="color: #c2410c;"><i class="fas fa-clock"></i> Overtime</strong><br><small style="color:#64748b">${log.action.replace("Overtime (", "").replace(")", "")}</small>`;
+                    if (log.status === "Approved") { 
+                        dayDisplay = `+${log.days} h`; 
+                        dayStyle = "color: #c2410c; font-weight: bold; background: #fff7ed; padding: 2px 6px; border-radius: 4px;"; 
+                    } else {
+                        dayDisplay = `${log.days} h`;
+                    }
+                }
                 // 🚀 CANCELLATION ROW LOGIC (Money Back)
                 else if (log.action === "Cancellation Request" && log.status === "Cancelled") {
-                    dayDisplay = "+" + log.days; dayStyle = "color: #166534; font-weight: bold;";
+                    dayDisplay = `+${log.days} d`; dayStyle = "color: #166534; font-weight: bold;";
                 } 
                 // 🚀 SPENDING ROW LOGIC (Deduction)
                 else if (log.status === "Approved" || (log.action === "Cancellation Request" && log.status === "Cancel Rejected")) {
-                    dayDisplay = "-" + log.days; dayStyle = "color: #991b1b; font-weight: bold;";
+                    dayDisplay = `-${log.days} d`; dayStyle = "color: #991b1b; font-weight: bold;";
                 }
 
                 tableHtml += `
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding:12px 10px; color:#64748b;">${log.date}</td>
+                    <td style="padding:12px 10px; color:#64748b;">${log.date || "N/A"}</td>
                     <td style="padding:12px 10px;">${actionDisplay}</td>
                     <td style="padding:12px 10px; text-align:center;"><span class="status-badge ${statusClass}" style="font-size: 0.7rem; padding: 3px 8px;">${log.status}</span></td>
-                    <td style="padding:12px 10px; text-align:center; ${dayStyle} font-size: 1rem;">${dayDisplay}</td>
+                    <td style="padding:12px 10px; text-align:center;"><span style="${dayStyle} font-size: 0.95rem;">${dayDisplay}</span></td>
                 </tr>`;
             });
         }
@@ -10384,10 +10710,10 @@ async function showBalanceLogs(empName) {
     }
 }
 
-      /* =========================================
+/* =========================================
          1. LOAD APPROVERS (Populates all 4 lists)
          ========================================= */
-      async function loadApproverList() {
+         async function loadApproverList() {
         // IDs for: Standard Leave, Overtime, Carry Forward, Registration
         const ids = [
           "dash_approver",
@@ -10413,7 +10739,9 @@ async function showBalanceLogs(empName) {
           const res = await fetchWithAuth(`${API_URL}/users/all`);
           if (!res || !res.ok) throw new Error("Failed to fetch approvers");
 
-          const allUsers = await res.json();
+          // 🚀 THE FIX: Parse the dictionary and extract the users array safely
+          const responseData = await res.json();
+          const allUsers = responseData.users || [];
 
           // Filter: Active Managers, NOT HR Admins
           const validApprovers = allUsers.filter((u) => {
@@ -13659,6 +13987,13 @@ async function executeUserStatusToggle(userId) {
             return;
         }
 
+        // 🚀 UPGRADE: Show a Loading Spinner so the user can't double-click
+        Swal.fire({
+            title: 'Updating Password...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
         // 🔗 Hit the backend using the Username as the identifier
         const res = await fetchWithAuth(`${API_URL}/users/${encodeURIComponent(storedUsername)}/change-password`, { 
             method: "PUT", 
@@ -13672,11 +14007,22 @@ async function executeUserStatusToggle(userId) {
         if (!res) return;
 
         if (res.ok) {
-            showModal("Success!", "Your password has been changed successfully.", "success");
+            // 🚀 UPGRADE: Premium SweetAlert Success Pop-up
+            await Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Your password has been changed successfully.',
+                confirmButtonColor: '#10b981' // Matching Green theme
+            });
+            
             document.getElementById("changePasswordForm").reset();
             slots.forEach((id) => clearError(id));
         } else {
             const err = await res.json();
+            
+            // 🚀 UPGRADE: Close the loading spinner so the user can see the inline text error
+            Swal.close();
+            
             // If 404, the username in the URL didn't match the database record
             if (res.status === 404) {
                 showInlineError("p1_error", "User profile synchronization error. Please re-login.");
@@ -13686,7 +14032,13 @@ async function executeUserStatusToggle(userId) {
         }
     } catch (e) {
         console.error("Password Change Error:", e);
-        showModal("Connection Error", "Unable to reach server.", "error");
+        // 🚀 UPGRADE: SweetAlert Network Error
+        Swal.fire({
+            icon: 'error',
+            title: 'Connection Error',
+            text: 'Unable to reach server. Please check your connection.',
+            confirmButtonColor: '#ef4444'
+        });
     }
 }
 
@@ -14023,9 +14375,8 @@ async function exportEntitlementsCSV() {
     document.body.removeChild(link);
 }
 
-      // 1. New function to handle real-time suggestions
-      // 1. Live Search: Fetches suggestions as HR types
-      async function handleLiveSearch(query) {
+// 1. Live Search: Fetches suggestions as HR types
+async function handleLiveSearch(query) {
         const suggestionBox = document.getElementById(
           "employee_suggestions_box"
         );
@@ -14042,14 +14393,17 @@ async function exportEntitlementsCSV() {
           const res = await fetchWithAuth(`${API_URL}/users/all`);
           if (!res) return;
 
-          const allUsers = await res.json();
+          // 🚀 THE FIX: Unbox the dictionary to get the actual users array
+          const responseData = await res.json();
+          const allUsers = responseData.users || [];
 
-          // 🚀 THE FIX: Filter the results based on the input (Tailoring)
+          // 🚀 DATA GUARD: Ensure we have a valid array before filtering
+          // This prevents the system from breaking if the backend response is unexpected
           const filtered = allUsers
             .filter(
               (u) =>
-                u.full_name.toLowerCase().includes(query.toLowerCase()) ||
-                u.username.toLowerCase().includes(query.toLowerCase())
+                (u.full_name || "").toLowerCase().includes(query.toLowerCase()) ||
+                (u.username || "").toLowerCase().includes(query.toLowerCase())
             )
             .slice(0, 8); // Top 8 results for a clean UI
 
@@ -14085,7 +14439,7 @@ async function exportEntitlementsCSV() {
 
           // Exact Match handling (Case insensitive)
           const exactMatch = filtered.find(
-            (u) => u.full_name.toLowerCase() === query.trim().toLowerCase()
+            (u) => (u.full_name || "").toLowerCase() === query.trim().toLowerCase()
           );
 
           if (exactMatch) {
@@ -14098,7 +14452,6 @@ async function exportEntitlementsCSV() {
           console.error("Live search error:", e);
         }
       }
-
       /**
        * 🎯 Selection Helper
        * This function "catches" the name when Natasha clicks a suggestion.
@@ -14212,7 +14565,7 @@ async function loadHomeLeadershipInsights(signal) {
         const otData = isBoss && responses[4]?.ok ? await responses[4].json() : [];
         
         const pendingOT = (Array.isArray(otData) ? otData : []).filter(r => r.status.includes("Pending"));
-        const pendingLeaves = mgrLeaves.filter(l => l.status === "Pending" || l.status === "Pending Cancel");
+        const pendingLeaves = mgrLeaves.filter(l => l.status && l.status.includes("Pending"));
 
         // --- 🗓️ 1. NEXT HOLIDAY ---
         const nextHoliday = holidays.filter(h => h.holiday_date >= todayStr).sort((a, b) => a.holiday_date.localeCompare(b.holiday_date))[0];
@@ -14339,22 +14692,27 @@ async function loadHomeLeadershipInsights(signal) {
 
  // 🚀 MY PROFILE: Modern Digital Dossier (Zero-Bug Version)
  async function loadUserProfile() {
-        try {
-          // Fetch user data
-          const res = await fetchWithAuth(
+    try {
+        // Fetch user data
+        const res = await fetchWithAuth(
             `${API_URL}/users/all?search=${encodeURIComponent(currentUser)}`
-          );
-          if (!res) return;
-          const users = await res.json();
+        );
+        if (!res) return;
+        
+        // 🚀 THE FIX: Parse the new dictionary response
+        const responseData = await res.json();
+        
+        // Extract the actual array of users from the response
+        const users = responseData.users || [];
 
-          // Find the record matching the logged-in user safely
-          const me = users.find(
+        // Find the record matching the logged-in user safely
+        const me = users.find(
             (u) =>
-              (u.username && u.username.toLowerCase() === currentUser.toLowerCase()) ||
-              u.full_name === currentUser
-          );
+                (u.username && u.username.toLowerCase() === currentUser.toLowerCase()) ||
+                u.full_name === currentUser
+        );
 
-          if (me) {
+        if (me) {
             // 🚀 CRITICAL 1: Sync L2 Power (Explicit String for boolean safety)
             localStorage.setItem("is_senior_manager", me.is_senior_manager === true ? "true" : "false");
             console.log("👑 Senior Manager Status Sync:", me.is_senior_manager);
@@ -14373,62 +14731,73 @@ async function loadHomeLeadershipInsights(signal) {
 
             // 1. Generate Avatar Initials
             const initials = (me.full_name || "??")
-              .split(" ")
-              .map((n) => n[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase();
+                .split(" ")
+                .map((n) => n[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase();
+            
             const avatarEl = document.getElementById("prof_avatar");
             if (avatarEl) avatarEl.innerText = initials;
+
+            // ==========================================
+            // 🚀 NEW: Update Topbar UI safely
+            // ==========================================
+            const navAvatarInit = document.getElementById("nav_avatar_init");
+            if (navAvatarInit) navAvatarInit.innerText = initials;
+
+            const topbarNameEl = document.getElementById("topbarName");
+            if (topbarNameEl) topbarNameEl.innerText = me.full_name || currentUser;
+            // ==========================================
 
             // 2. Generate Role Badge
             const roleEl = document.getElementById("prof_role_badge");
             let roleHtml = `<span style="background:#f1f5f9; color:#475569; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid #cbd5e1;">EMPLOYEE</span>`;
 
             if (freshRoles.includes("hr_admin")) {
-              roleHtml = `<span style="background:#faf5ff; color:#7e22ce; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid #e9d5ff;">HR ADMIN</span>`;
+                roleHtml = `<span style="background:#faf5ff; color:#7e22ce; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid #e9d5ff;">HR ADMIN</span>`;
             } else if (freshRoles.includes("manager")) {
-              roleHtml = `<span style="background:#fff7ed; color:#c2410c; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid #fed7aa;">MANAGER</span>`;
+                roleHtml = `<span style="background:#fff7ed; color:#c2410c; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid #fed7aa;">MANAGER</span>`;
             }
 
             // Append L2 Power Badge if applicable
             if (me.is_senior_manager) {
-              roleHtml += `<span style="margin-left:8px; background:#eff6ff; color:#1d4ed8; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid #bfdbfe;">L2 POWER</span>`;
+                roleHtml += `<span style="margin-left:8px; background:#eff6ff; color:#1d4ed8; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid #bfdbfe;">L2 POWER</span>`;
             }
 
             if (roleEl) roleEl.innerHTML = roleHtml;
 
             // 3. Map Fields to HTML
             const mapping = {
-              profileName: me.full_name,
-              prof_username: "@" + me.username,
-              prof_id: me.employee_id,
-              prof_gender: me.gender,
-              prof_marital: me.marital_status,
-              prof_email: me.email,
-              prof_mobile: me.mobile,
-              prof_job: me.job_title,
-              prof_unit: me.business_unit,
-              prof_dept: me.department,
-              prof_manager: me.line_manager,
-              prof_joined: me.joined_date
-                ? new Date(me.joined_date).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "---",
+                profileName: me.full_name,
+                prof_username: "@" + me.username,
+                prof_id: me.employee_id,
+                prof_gender: me.gender,
+                prof_marital: me.marital_status,
+                prof_email: me.email,
+                prof_mobile: me.mobile,
+                prof_job: me.job_title,
+                prof_unit: me.business_unit,
+                prof_dept: me.department,
+                prof_manager: me.line_manager,
+                prof_joined: me.joined_date
+                    ? new Date(me.joined_date).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                    })
+                    : "---",
             };
 
             for (let [id, val] of Object.entries(mapping)) {
-              const el = document.getElementById(id);
-              if (el) el.innerText = val || "---";
+                const el = document.getElementById(id);
+                if (el) el.innerText = val || "---";
             }
-          }
-        } catch (e) {
-          console.error("Profile Load Error:", e);
         }
-      }
+    } catch (e) {
+        console.error("Profile Load Error:", e);
+    }
+}
 
 
       async function applySystemBranding() {
@@ -15046,10 +15415,10 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
     }
 }
 
-      /**
+/**
        * 🧹 Resets all filters in the User Management section
        */
-      function resetUserFilters() {
+       function resetUserFilters() {
         // 1. Reset the text input
         const searchInput = document.getElementById("hr_user_search");
         if (searchInput) searchInput.value = "";
@@ -15061,8 +15430,9 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
         const statusFilter = document.getElementById("hr_status_filter");
         if (statusFilter) statusFilter.selectedIndex = 0;
 
-        // 3. Silent Refresh: Reload the table with no filters applied
-        loadAllUsers();
+        // 3. 🚀 THE FIX: Instantly reset page to 1 and render from RAM without hitting the DB
+        hrUserCurrentPage = 1;
+        renderHrUsers();
       }
 
       // Helper to close this specific modal
