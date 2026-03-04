@@ -13194,34 +13194,35 @@ function sortAuditTable(key) {
  * 🚀 Updated Registration Modal Opener
  * Ensures managers, IDs, and the "Proceed" button are fully loaded and formatted.
  */
-async function openRegisterModal() {
+ async function openRegisterModal() {
     const modal = document.getElementById("registerUserModal");
     if (!modal) return;
+
+    // 🚀 STEP 1: POP THE MODAL IMMEDIATELY
+    // This removes the "frozen button" effect. Natasha sees the form now.
+    modal.style.display = "flex";
+
+    // 🚀 STEP 2: TRIGGER BACKGROUND LOADS (No 'await' here!)
+    // We start these two processes but let the rest of the code run.
+    loadApproverList(); 
+    generateNextEmpID();
 
     // 1. Reset UI State
     const suggestionBox = document.getElementById("reg_manager_suggestions");
     if (suggestionBox) suggestionBox.style.display = "none";
 
-    // 2. 🚀 THE CRITICAL SYNC: Wait for managers to load
-    await loadApproverList();
-
     // 3. Reset Modal Header & Button to "Registration Mode"
     modal.querySelector("h3").innerHTML = `<i class="fas fa-user-plus"></i> Register New Employee`;
     
-    // 🚀 THE UPGRADE: Target the new ID, use "Proceed", and force it back to Green
     const submitBtn = document.getElementById("reg_main_submit_btn");
     if (submitBtn) {
         submitBtn.innerHTML = '<i class="fas fa-check"></i> Proceed';
         submitBtn.onclick = (e) => submitNewUser(e);
         
-        // Visual Polish: Ensure it snaps back to Green (in case it was Blue from an Edit session)
         submitBtn.style.background = "#10b981";
         submitBtn.onmouseover = () => submitBtn.style.background = '#059669';
         submitBtn.onmouseout = () => submitBtn.style.background = '#10b981';
     }
-
-    // 4. Auto-generate the next available ID
-    await generateNextEmpID();
 
     // 5. Restore Credential Fields 
     const usernameField = document.getElementById("reg_username");
@@ -13236,10 +13237,8 @@ async function openRegisterModal() {
     if (passField && passField.parentElement) {
         const passContainer = passField.parentElement.parentElement;
         if (passContainer) passContainer.style.display = "block";
+        passField.value = "password123";
         
-        passField.value = "password123"; // Reset to default
-        
-        // Reset the eye icon back to hidden dots
         const eyeIcon = document.getElementById("eye_reg_password");
         if (eyeIcon) {
             eyeIcon.className = "fas fa-eye";
@@ -13247,7 +13246,7 @@ async function openRegisterModal() {
         }
     }
 
-    // Ensure Reset Button is visible for New Registrations
+    // Ensure Reset Button is visible
     const resetBtn = document.getElementById("reg_reset_btn");
     if (resetBtn) resetBtn.style.display = "flex";
 
@@ -13257,10 +13256,48 @@ async function openRegisterModal() {
             element.value = "";
         }
     });
-
-    // 7. Show Modal
-    modal.style.display = "flex";
 }
+
+      /**
+       * 🆔 System ID Generator
+       * Fetches the next available Employee ID from the server and locks the field.
+       */
+       async function generateNextEmpID() {
+    const idInput = document.getElementById("reg_emp_id");
+    if (!idInput) return;
+
+    // 1. Visual Loading State (Instant Feedback)
+    idInput.value = "Generating...";
+    idInput.disabled = true;
+    idInput.style.background = "#f8fafc"; // Light slate background
+    idInput.style.color = "#94a3b8";      // Muted text color
+    idInput.style.fontStyle = "italic";
+
+    try {
+        // 🚀 THE BACKGROUND FETCH
+        const res = await fetchWithAuth(`${API_URL}/users/next-id`);
+        
+        if (res && res.ok) {
+            const data = await res.json();
+            // 🎯 SUCCESS: Apply the real ID and restore styling
+            idInput.value = data.next_id;
+            idInput.style.color = "#1e293b";   // Dark slate
+            idInput.style.fontStyle = "normal";
+            idInput.style.fontWeight = "800";  // Make the ID pop
+            console.log("✅ Employee ID Generated:", data.next_id);
+        } else {
+            const status = res ? res.status : "No Response";
+            console.error(`❌ ID Generation Failed. Status: ${status}`);
+            idInput.value = `EMP-${new Date().getFullYear()}-TEMP`;
+            idInput.style.color = "#f59e0b"; // Amber for "Temp" warning
+        }
+    } catch (e) {
+        console.error("❌ Network Error during ID generation:", e);
+        idInput.value = "OFFLINE";
+        idInput.style.color = "#ef4444"; // Red for Error
+    }
+}
+
 
 // ==========================================
 // 🚀 NEW: DEDICATED REGISTRATION FORM RESET
