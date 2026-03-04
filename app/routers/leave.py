@@ -933,6 +933,30 @@ def admin_table_query(table_name: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+@router.get("/admin/entitlements-bulk")
+def get_all_entitlements(db: Session = Depends(get_db)):
+    # This single query joins Users, Leave Types, and Entitlements
+    # It calculates everything in the database, not in Python loops.
+    sql = text("""
+        SELECT 
+            u.id as employee_id,
+            u.full_name,
+            u.status,
+            lt.name as leave_type,
+            e.total_days,
+            e.carried_forward,
+            COALESCE(SUM(CASE WHEN l.status = 'approved' THEN l.total_days ELSE 0 END), 0) as used_days
+        FROM users u
+        CROSS JOIN leave_types lt
+        LEFT JOIN entitlements e ON u.id = e.user_id AND lt.id = e.leave_type_id
+        LEFT JOIN leaves l ON u.id = l.user_id AND lt.id = l.leave_type_id AND l.year = 2026
+        WHERE u.status = 'active'
+        GROUP BY u.id, lt.id, e.id
+    """)
+    result = db.execute(sql).mappings().all()
+    return result
+    
+    
 @router.get("/manager/entitlements")
 @router.get("/admin/entitlements")
 def get_team_entitlements(

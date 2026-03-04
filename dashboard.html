@@ -1097,7 +1097,7 @@ div.swal2-container {
                   <i class="fas fa-users-cog"></i> User Management
                 </div>
                 <div class="menu-item" onclick="showSection('manager_entitlements')" style="font-size: 0.9rem">
-                  <i class="fas fa-chart-pie"></i> Company Leave Balances
+                  <i class="fas fa-chart-pie"></i> Employee Leave Overview
                 </div>
                 <div class="menu-item" onclick="showSection('hr_policy')" style="font-size: 0.9rem">
                   <i class="fas fa-file-contract"></i> Global Leave Policy
@@ -2777,7 +2777,7 @@ div.swal2-container {
             <div id="manager_entitlements" class="section">
               <div class="card">
                   <h2>
-                      <i class="fas fa-users"></i> Team Leave Balances (<span class="current-year-display"></span>)
+                      <i class="fas fa-users"></i> Leave Summary & Activity (<span class="current-year-display"></span>)
                   </h2>
 
                 <div id="entitlementStatsTiles" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px;">
@@ -5602,7 +5602,7 @@ function initializeAccess() {
     }
 }
 
- // 🛡️ 5. THE BULLETPROOF AUTH FETCH (Updated for Superuser Security)
+ // 🛡️ 5. THE BULLETPROOF AUTH FETCH (Updated for Superuser Security & Abort Signals)
  async function fetchWithAuth(url, options = {}) {
     // 1. Sync High-speed RAM if empty
     if (!SESSION_ID || SESSION_ID === "null") {
@@ -5617,13 +5617,12 @@ function initializeAccess() {
     }
 
     // 3. Inject Security Headers
-  // 3. Inject Security Headers
-  options.headers = options.headers || {};
+    options.headers = options.headers || {};
     options.headers["X-Session-ID"] = SESSION_ID;
     options.headers["X-Requester-Name"] = CURRENT_USER;
     
     // 🚀 FIXED: Send the immutable 'username' (e.g., "admin") instead of Full Name
-    options.headers["x-username"] = localStorage.getItem("username"); // <--- ✅ CORRECT
+    options.headers["x-username"] = localStorage.getItem("username"); 
 
     // 4. Handle URL Parameters safely
     const separator = url.includes("?") ? "&" : "?";
@@ -5641,11 +5640,11 @@ function initializeAccess() {
     }
 
     try {
+        // The { signal } passed from options is automatically sent to the fetch API here!
         const response = await fetch(finalUrl, options);
 
         // 5. Handle Global Kick-out (401) - 🚀 UPGRADED TO SWEETALERT
-// 5. Handle Global Kick-out (401) - 🚀 UPGRADED TO SWEETALERT
-if (response.status === 401) {
+        if (response.status === 401) {
             if (!isKickedOut) {
                 isKickedOut = true;
                 
@@ -5664,7 +5663,7 @@ if (response.status === 401) {
                             // Safely wipe memory and redirect after the timer finishes
                             localStorage.clear();
                             sessionStorage.clear();
-                            window.location.replace("index.html"); // ✅ CHANGED
+                            window.location.replace("index.html"); 
                         }
                     });
                 } else {
@@ -5672,7 +5671,7 @@ if (response.status === 401) {
                     alert("Session Expired: You are being redirected to the login page.");
                     localStorage.clear();
                     sessionStorage.clear();
-                    window.location.replace("index.html"); // ✅ CHANGED
+                    window.location.replace("index.html"); 
                 }
             }
             return null;
@@ -5681,65 +5680,70 @@ if (response.status === 401) {
         // 6. 🛡️ Handle Access Denied (403) specifically for Superuser routes
         if (response.status === 403) {
             console.error("🚫 Access Denied: Insufficient Permissions for", url);
-            // We return the response so the calling function (like saveBrandingConfig) 
-            // can show a specific "Access Denied" SweetAlert.
             return response; 
         }
 
         return response;
     } catch (error) {
+        // 🚀 THE FIX: Intercept the "AbortError" and re-throw it!
+        // This stops the background process from jumping the screen back to Home.
+        if (error.name === 'AbortError') {
+            throw error; 
+        }
+
+        // Real network errors (e.g. server down) still log normally.
         console.error("Network Error in fetchWithAuth:", error);
         return null;
     }
 }
 
-  // 🏁 THE 401 KILLER: Orchestrated Dashboard Startup
-  async function initializeDashboard() {
-        console.log("🚀 Initializing Secure Dashboard for:", currentUser);
+ // 🏁 THE 401 KILLER: Orchestrated Dashboard Startup
+ async function initializeDashboard() {
+    console.log("🚀 Initializing Secure Dashboard for:", currentUser);
 
-        // 1. Setup UI (No network calls)
-        initializeAccess();
-        document.getElementById("topbarName").innerText = currentUser;
-        document.getElementById("welcomeName").innerText = currentUser;
+    // 1. Setup UI
+    initializeAccess();
+    document.getElementById("topbarName").innerText = currentUser;
+    document.getElementById("welcomeName").innerText = currentUser;
 
-        // 2. Critical Identity Sync
-        await loadUserProfile();
-
-        // 3. 🟢 LOAD GLOBAL SETTINGS
-        // This handles both Carry Forward AND Maintenance/Broadcast settings
-        await loadCFSetting();
-        await loadBroadcastSettings(); // 🚀 NEW: Syncs the toggle and timer
-
-        // 4. Sequential Data Loading
-        await refreshManagerBadges();
-        await loadApproverList();
-        await prefetchBalances();
-
-        // 5. Role-Specific Advanced Data
-        if (userRoles.includes("hr_admin")) {
-            await loadSystemReporting();
-        }
-
-        // 6. Render heavy UI elements last
-        renderCalendar();
-        updateCurrentYearLabels();
-
-        console.log(
-            "✅ Dashboard Fully Synchronized. Terminal should be 200 OK."
-        );
+    // 🚀 STEP A: Set the "Hardcoded" safety version immediately
+    const versionEl = document.getElementById("app_version_display");
+    if (versionEl) {
+        versionEl.innerText = "V1.2.0 (Stable)"; 
     }
 
-      function initDraftListeners() {
-  const fields = ["dash_leave_type", "dash_start", "dash_end", "dash_reason", "dash_approver", "dash_half_day"];
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      // Use 'change' for selects/dates and 'input' for textareas
-      const eventType = (el.tagName === 'INPUT' && el.type === 'checkbox') || el.tagName === 'SELECT' ? 'change' : 'input';
-      el.addEventListener(eventType, saveLeaveDraft);
+    // 2. Critical Identity Sync
+    await loadUserProfile();
+
+    // 3. 🟢 LOAD GLOBAL SETTINGS (This is where the DB version comes from)
+    await loadCFSetting();
+    await loadBroadcastSettings(); 
+
+    // 🚀 STEP B: The DB Overwrite
+    // If your loadBroadcastSettings function saves a version to localStorage, apply it here
+    const dbVersion = localStorage.getItem("system_version_from_db");
+    if (dbVersion && versionEl) {
+        versionEl.innerText = dbVersion;
     }
-  });
+
+    // 4. Fast UI Polish
+    updateCurrentYearLabels();
+
+    console.log("✅ Dashboard Core Synchronized.");
 }
+
+    // (Kept exactly as you had it, no changes here)
+    function initDraftListeners() {
+        const fields = ["dash_leave_type", "dash_start", "dash_end", "dash_reason", "dash_approver", "dash_half_day"];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                // Use 'change' for selects/dates and 'input' for textareas
+                const eventType = (el.tagName === 'INPUT' && el.type === 'checkbox') || el.tagName === 'SELECT' ? 'change' : 'input';
+                el.addEventListener(eventType, saveLeaveDraft);
+            }
+        });
+    }
 
 
       /**
@@ -5959,144 +5963,151 @@ modal.classList.add("show");
         if (typeof loadGlobalPolicy === "function") loadGlobalPolicy();
       });
 
-      async function showSection(sectionId) {
-        // 🛡️ 1. IDENTITY SYNC: Ensure RAM is ready (Moved up to use immediately)
-        if (!SESSION_ID || SESSION_ID === "null") {
-          SESSION_ID = localStorage.getItem("sessionId");
-          CURRENT_USER = localStorage.getItem("currentUser");
-        }
+      // 🛑 GLOBAL NAVIGATION GUARD: Prevents "screen jumping" and ghost loads
+      let navAbortController = new AbortController();
 
-        // 👑 2. BULLETPROOF SUPERUSER CHECK
-        const masterRole = localStorage.getItem("userMasterRole");
-        const loggedInUser = localStorage.getItem("username");
-        const currentUserName = typeof currentUser !== 'undefined' ? currentUser : localStorage.getItem("currentUser");
+async function showSection(sectionId) {
+    // 🚀 THE KILL SWITCH: Instantly stop previous tab's work
+    if (navAbortController) {
+        navAbortController.abort(); 
+    }
+    navAbortController = new AbortController();
+    const signal = navAbortController.signal;
+
+    // 🛡️ 1. IDENTITY SYNC: Ensure RAM is ready 
+    if (!SESSION_ID || SESSION_ID === "null") {
+      SESSION_ID = localStorage.getItem("sessionId");
+      CURRENT_USER = localStorage.getItem("currentUser");
+    }
+
+    // 👑 2. BULLETPROOF SUPERUSER CHECK 
+    const masterRole = localStorage.getItem("userMasterRole");
+    const loggedInUser = localStorage.getItem("username");
+    const currentUserName = typeof currentUser !== 'undefined' ? currentUser : localStorage.getItem("currentUser");
+    
+    const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
+
+    // 🛡️ 3. SECURITY SENTRY 
+    if (sectionId.startsWith("hr_") && !userRoles.includes("hr_admin") && !isSuperuser) {
+      console.warn("🚫 Security: Unauthorized access attempt to", sectionId);
+      sessionStorage.setItem("activeTab", "home");
+      document.querySelectorAll(".section, .menu-item").forEach((el) => el.classList.remove("active"));
+      const homeTarget = document.getElementById("home");
+      if(homeTarget) homeTarget.classList.add("active");
+      return; 
+    }
+
+    sessionStorage.setItem("activeTab", sectionId);
+
+    // 4. UI Reset 
+    document.querySelectorAll(".section, .menu-item").forEach((el) => {
+      el.classList.remove("active");
+    });
+
+    // 5. Show the Target Section 
+    const target = document.getElementById(sectionId);
+    if (target) {
+      target.classList.add("active");
+    }
+
+    // 6. Highlight Sidebar 
+    const menuLink = document.querySelector(`.menu-item[onclick*="${sectionId}"]`);
+    if (menuLink) {
+      menuLink.classList.add("active");
+    }
+
+    // 7. Automatic Data Refresh
+    try {
+      if (!SESSION_ID || !CURRENT_USER) return;
+
+      if (sectionId === "home") {
+        isBadgeRefreshing = false;
         
-        const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
+        // 🚀 THE FIX: Absolute Sequential Isolation (No Promise.all)
+        await prefetchBalances(signal);
+        if (signal.aborted) return; // 🛑 Stop if user clicked away
 
-        // 🛡️ 3. SECURITY SENTRY: Role-Based Access Control (RBAC)
-        // 🚀 THE FIX: Allow Superuser to bypass the 'hr_admin' restriction
-        if (sectionId.startsWith("hr_") && !userRoles.includes("hr_admin") && !isSuperuser) {
-          console.warn("🚫 Security: Unauthorized access attempt to", sectionId);
-          
-          // 🚀 SAFE FALLBACK: Safely show Home without triggering an infinite redirect loop
-          sessionStorage.setItem("activeTab", "home");
-          document.querySelectorAll(".section, .menu-item").forEach((el) => el.classList.remove("active"));
-          const homeTarget = document.getElementById("home");
-          if(homeTarget) homeTarget.classList.add("active");
-          return; 
-        }
+        await loadHomeLeadershipInsights(signal);
+        if (signal.aborted) return; // 🛑 Stop if user clicked away
 
-        sessionStorage.setItem("activeTab", sectionId);
+        await refreshManagerBadges(signal);
 
-        // 4. UI Reset
-        document.querySelectorAll(".section, .menu-item").forEach((el) => {
-          el.classList.remove("active");
-        });
-
-        // 5. Show the Target Section
-        const target = document.getElementById(sectionId);
-        if (target) {
-          target.classList.add("active");
-        }
-
-        // 6. Highlight Sidebar
-        const menuLink = document.querySelector(
-          `.menu-item[onclick*="${sectionId}"]`
-        );
-        if (menuLink) {
-          menuLink.classList.add("active");
-        }
-
-        // 7. Automatic Data Refresh
+      } else if (sectionId === "hr_reporting") {
+        await loadSystemReporting();
+        await renderCalendar();
+      } else if (sectionId === "hr_users") {
+        await loadAllUsers();
+      } else if (sectionId === "hr_policy") {
+        renderGlobalPolicyUI();
         try {
-          if (!SESSION_ID || !CURRENT_USER) return;
-
-          if (sectionId === "home") {
-            isBadgeRefreshing = false;
-            await Promise.all([
-              prefetchBalances(),
-              loadHomeLeadershipInsights(),
-              refreshManagerBadges(),
-            ]);
-          } else if (sectionId === "hr_reporting") {
-            await loadSystemReporting();
-            await renderCalendar();
-          } else if (sectionId === "hr_users") {
-            await loadAllUsers();
-          } else if (sectionId === "hr_policy") {
-            // 🚀 RENDER POLICY UI
-            renderGlobalPolicyUI();
-
-            // 🚀 NEW: SYNC THE L2 TOGGLE STATE FROM DATABASE
-            // This prevents the "reset to OFF" bug when navigating back
-            try {
-              const res = await fetchWithAuth(
-                `${API_URL}/users/policy/current`
-              );
-              if (res && res.ok) {
-                const data = await res.json();
-                const toggle = document.getElementById("l2_workflow_toggle");
-                if (toggle) {
-                  toggle.checked = data.l2_approval_enabled;
-                  console.log(
-                    "L2 Toggle synced from DB:",
-                    data.l2_approval_enabled
-                  );
-                }
-              }
-            } catch (err) {
-              console.error("Failed to sync L2 toggle state:", err);
+          const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
+          if (res && res.ok) {
+            const data = await res.json();
+            const toggle = document.getElementById("l2_workflow_toggle");
+            if (toggle) {
+              toggle.checked = data.l2_approval_enabled;
+              console.log("L2 Toggle synced from DB:", data.l2_approval_enabled);
             }
-          } else if (sectionId === "hr_holidays") {
-            await loadAdminHolidays();
-          } else if (sectionId === "holidays") {
-            await loadPublicHolidays();
-          } else if (sectionId === "hr_audit") {
-            await loadGlobalAuditLogs();
-            if (typeof resetAuditFilters === "function") resetAuditFilters();
-          } else if (sectionId === "apply") {
-            // 1. Fetch latest dropdown data and balances
-            // We 'await' here to ensure the <select> options exist before we try to set their values
-            await Promise.all([loadApproverList(), prefetchBalances()]);
-            
-            // 🚀 2. NEW: SHOW PROXY BANNER ONLY TO HR ADMINS OR SUPERUSER
-            const proxyBanner = document.getElementById("hr_proxy_banner");
-            if (proxyBanner) {
-                proxyBanner.style.display = (userRoles.includes("hr_admin") || isSuperuser) ? "block" : "none";
-            }
-            
-            // 🚀 3. THE FIX: Restore user's typing immediately after the lists load.
-            // This ensures that even if a flicker occurs, the data is put back instantly.
-            if (typeof restoreLeaveDraft === "function") {
-                restoreLeaveDraft();
-                console.log("📝 Draft restored for the Apply section.");
-            }
-          } else if (sectionId === "history") {
-            await loadHistory(1, 10);
-          } else if (sectionId === "manager_requests") {
-            await loadManagerRequests();
-          } else if (sectionId === "manager_ot_requests") {
-            await loadManagerOTRequests();
-          } else if (sectionId === "manager_history") {
-            await loadTeamHistory();
-          } else if (sectionId === "manager_entitlements") {
-            const entSearch = document.getElementById("mgr_ent_search_name");
-            if (entSearch) entSearch.value = "";
-            await loadTeamEntitlements();
-          } else if (sectionId === "profile") {
-            await loadUserProfile();
           }
         } catch (err) {
-          console.error(`Error loading data for ${sectionId}:`, err);
+          console.error("Failed to sync L2 toggle state:", err);
         }
+      } else if (sectionId === "hr_holidays") {
+        await loadAdminHolidays();
+      } else if (sectionId === "holidays") {
+        await loadPublicHolidays();
+      } else if (sectionId === "hr_audit") {
+        await loadGlobalAuditLogs();
+        if (typeof resetAuditFilters === "function") resetAuditFilters();
+      } else if (sectionId === "apply") {
+        
+        // 🚀 THE FIX: Sequential for Apply tab as well
+        await loadApproverList();
+        if (signal.aborted) return; // 🛑 Stop
 
-        // 8. Scroll to top
-        const contentArea = document.querySelector(".content");
-        if (contentArea) contentArea.scrollTop = 0;
+        await prefetchBalances(signal);
+        if (signal.aborted) return; // 🛑 Stop
+
+        const proxyBanner = document.getElementById("hr_proxy_banner");
+        if (proxyBanner) {
+            proxyBanner.style.display = (userRoles.includes("hr_admin") || isSuperuser) ? "block" : "none";
+        }
+        if (typeof restoreLeaveDraft === "function") {
+            restoreLeaveDraft();
+            console.log("📝 Draft restored for the Apply section.");
+        }
+      } else if (sectionId === "history") {
+        await loadHistory(1, 10);
+      } else if (sectionId === "manager_requests") {
+        await loadManagerRequests();
+      } else if (sectionId === "manager_ot_requests") {
+        await loadManagerOTRequests();
+      } else if (sectionId === "manager_history") {
+        await loadTeamHistory();
+      } else if (sectionId === "manager_entitlements") {
+        const entSearch = document.getElementById("mgr_ent_search_name");
+        if (entSearch) entSearch.value = "";
+        await loadTeamEntitlements(signal);
+      } else if (sectionId === "profile") {
+        await loadUserProfile();
       }
+    } catch (err) {
+      // 🚀 Silently ignore navigation cancellations, log actual errors
+      if (err.name === 'AbortError') {
+          console.log(`⏩ Navigation changed smoothly. Ignored old data.`);
+      } else {
+          console.error(`Error loading data for ${sectionId}:`, err);
+      }
+    }
 
-      const leaveEntitlements = {};
-      let annualRemainingGlobal = 0;
+    const contentArea = document.querySelector(".content");
+    if (contentArea) contentArea.scrollTop = 0;
+}
+
+const leaveEntitlements = {};
+let annualRemainingGlobal = 0;
+
+
 
       // Toggle Gaurd listener
       // 🚀 THE TOGGLE GUARD: Handles the Yes/No prompt and saves to DB
@@ -6185,7 +6196,8 @@ modal.classList.add("show");
         // ... rest of your init code ...
       }
 
- async function prefetchBalances() {
+// 🚀 NEW: Added 'signal' as a parameter
+async function prefetchBalances(signal) {
         const types = [
           "Annual Leave",
           "Medical Leave",
@@ -6216,12 +6228,18 @@ modal.classList.add("show");
             el.innerHTML = '<span class="loading-pulse" style="width: 40px; height: 24px;"></span>';
         });
 
-
         try {
           for (let type of types) {
-            // Appended &employee_name=... to the URL to fetch target balances
+            // 🚀 NEW: Check if the user navigated away BEFORE starting the next fetch in the loop
+            if (signal && signal.aborted) {
+                console.log(`⏩ Cancelled fetch for ${type} (Navigation Changed)`);
+                return; // Stop the loop instantly
+            }
+
+            // 🚀 NEW: Pass the { signal } into fetchWithAuth so it can kill active network requests
             const res = await fetchWithAuth(
-              `${API_URL}/leaves/balance?year=${new Date().getFullYear()}&leave_type=${encodeURIComponent(type)}&employee_name=${encodeURIComponent(targetUser)}`
+              `${API_URL}/leaves/balance?year=${new Date().getFullYear()}&leave_type=${encodeURIComponent(type)}&employee_name=${encodeURIComponent(targetUser)}`,
+              { signal } 
             );
 
             if (!res) {
@@ -6362,8 +6380,13 @@ modal.classList.add("show");
             }
           }
         } catch (e) {
+          // 🚀 NEW: Silent exit if aborted, otherwise log real errors
+          if (e.name === 'AbortError') return; 
           console.error("Balance Load Error:", e);
         } finally {
+          // 🚀 NEW: Prevent UI updates if the user is no longer on this tab
+          if (signal && signal.aborted) return; 
+
           if (select) select.disabled = false;
           
           // 🚀 Instantly refresh UI summaries if the form is already active
@@ -9921,7 +9944,7 @@ function logout() {
 // 1. GLOBAL VARIABLES (CRITICAL FOR PAGINATION MATH)
 
 
-async function loadTeamEntitlements() {
+async function loadTeamEntitlements(signal) {
     const tbody = document.getElementById("mgrEntitlementTableBody");
     const loader = document.getElementById("entitlementLoader");
 
@@ -9936,7 +9959,7 @@ async function loadTeamEntitlements() {
         ? `${API_URL}/leaves/admin/entitlements` 
         : `${API_URL}/leaves/manager/entitlements`;
 
-    // 🎨 PROFESSIONAL LOADING STATE
+    // 🎨 PROFESSIONAL LOADING STATE (Keep your exact design)
     tbody.innerHTML = `
         <tr>
             <td colspan="5" class="text-center py-5">
@@ -9963,7 +9986,9 @@ async function loadTeamEntitlements() {
             name: "" 
         });
 
-        const res = await fetchWithAuth(`${fetchUrl}?${params.toString()}`);
+        // 🚀 THE FIX: Pass { signal } inside the options object.
+        // This allows showSection to "kill" this fetch if the user clicks away.
+        const res = await fetchWithAuth(`${fetchUrl}?${params.toString()}`, { signal });
         
         if (!res || !res.ok) {
             throw new Error("Failed to fetch data from server");
@@ -9971,35 +9996,32 @@ async function loadTeamEntitlements() {
 
         const rawData = await res.json();
         
-        // ------------------------------------------------------------------------
-        // 🛡️ THE FIX: DATA NORMALIZATION (Catches boolean and string mismatches)
-        // ------------------------------------------------------------------------
+        // 🛡️ DATA NORMALIZATION (Keep your exact 0-bug logic)
         teamEntitlementCache = rawData.map(emp => {
-            let actualStatus = "Active"; // Default assumption
-            
-            // If backend sends the boolean is_active
+            let actualStatus = "Active"; 
             if (emp.is_active === false) {
                 actualStatus = "Inactive";
             } 
-            // If backend sends a text string (just in case)
             else if (typeof emp.status === 'string' && emp.status.toLowerCase() === 'inactive') {
                 actualStatus = "Inactive";
             }
-
             return {
                 ...emp,
-                status: actualStatus // Hard-locks the status to "Active" or "Inactive"
+                status: actualStatus 
             };
         });
         
-        // Reset pagination back to page 1 on every fresh load
         entCurrentPage = 1;
-
-        // Hide Loader & Render
         if (loader) loader.style.display = "none";
         applyFiltersAndRender();
 
     } catch (e) {
+        // 🛑 NEW SAFETY GUARD: If the error is just a navigation cancel, exit silently.
+        if (e.name === 'AbortError') {
+            console.log("⏩ Team Balances load cancelled: User switched tabs.");
+            return; 
+        }
+
         console.error("Entitlement Load Error:", e);
         if (tbody) {
             tbody.innerHTML = `
@@ -12789,21 +12811,24 @@ function sortAuditTable(key) {
 
       loadHistory();
 
-      async function fetchGlobalSettings() {
-        try {
-          // Reuse the endpoint we made for the Settings page
-          const res = await fetchWithAuth(`${API_URL}/settings/carry-forward`);
-          if (res.ok) {
-            const data = await res.json();
-            ENABLE_CARRY_FORWARD = data.enabled;
+// Duplicate fetchGlobalSettings: You have fetchGlobalSettings() and loadCFSetting(). They both hit the same endpoint.
+// Recommendation: Use loadCFSetting() as the primary one, as it contains the logic to fill the Blue Info Box for employees. You can safely remove fetchGlobalSettings.
 
-            // Update the "Request CF" button visibility immediately
-            applyFeatureToggles();
-          }
-        } catch (e) {
-          console.warn("Could not fetch global settings, using default.", e);
-        }
-      }
+      // async function fetchGlobalSettings() {
+      //   try {
+      //     // Reuse the endpoint we made for the Settings page
+      //     const res = await fetchWithAuth(`${API_URL}/settings/carry-forward`);
+      //     if (res.ok) {
+      //       const data = await res.json();
+      //       ENABLE_CARRY_FORWARD = data.enabled;
+
+      //       // Update the "Request CF" button visibility immediately
+      //       applyFeatureToggles();
+      //     }
+      //   } catch (e) {
+      //     console.warn("Could not fetch global settings, using default.", e);
+      //   }
+      // }
 
       // 1. Set the dashboard to Home first
       function toggleManagerMenu() {
@@ -14126,8 +14151,8 @@ async function exportEntitlementsCSV() {
 
 // 3. Helper to load the form data (Intelligent Dashboard Engine)
 // 3. Helper to load the form data (Intelligent Dashboard Engine)
-// 3. Helper to load the form data (Intelligent Dashboard Engine)
-async function loadHomeLeadershipInsights() {
+// 🚀 ADDED 'signal' parameter
+async function loadHomeLeadershipInsights(signal) {
     // 1. Setup Role Access
     const isHR = userRoles.includes("hr_admin");
     const isManager = userRoles.includes("manager");
@@ -14154,20 +14179,28 @@ async function loadHomeLeadershipInsights() {
         const todayStr = new Date(now.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
         const year = now.getFullYear();
 
-        // 4. CONCURRENT FETCHING
+        // 4. CONCURRENT FETCHING (Now with Signal Propagation!)
+        // 🚀 We pass { signal } into every fetch call so the browser can kill them mid-flight
         const fetchPromises = [
-            fetchWithAuth(`${API_URL}/leaves/public-holidays`),
-            fetchWithAuth(`${API_URL}/leaves/public-calendar`),
-            fetchWithAuth(`${API_URL}/leaves/history?employee_name=${encodeURIComponent(currentUser)}&page_size=100`)
+            fetchWithAuth(`${API_URL}/leaves/public-holidays`, { signal }),
+            fetchWithAuth(`${API_URL}/leaves/public-calendar`, { signal }),
+            fetchWithAuth(`${API_URL}/leaves/history?employee_name=${encodeURIComponent(currentUser)}&page_size=100`, { signal })
         ];
 
         if (isBoss) {
             const roleParam = isHR ? "hr_admin" : "manager";
-            fetchPromises.push(fetchWithAuth(`${API_URL}/leaves/manager/all?user_role=${roleParam}&approver_name=${encodeURIComponent(currentUser)}`));
-            fetchPromises.push(fetchWithAuth(`${API_URL}/overtime/manager-requests?approver_name=${encodeURIComponent(currentUser)}`));
+            fetchPromises.push(fetchWithAuth(`${API_URL}/leaves/manager/all?user_role=${roleParam}&approver_name=${encodeURIComponent(currentUser)}`, { signal }));
+            fetchPromises.push(fetchWithAuth(`${API_URL}/overtime/manager-requests?approver_name=${encodeURIComponent(currentUser)}`, { signal }));
         }
 
         const responses = await Promise.all(fetchPromises);
+
+        // 🛑 THE KILL SWITCH VERIFICATION
+        // If the user clicked away while we were waiting for Promise.all, STOP!
+        if (signal && signal.aborted) {
+            console.log("⏩ Home Screen Insights Aborted");
+            return; 
+        }
 
         const holidays = responses[0]?.ok ? await responses[0].json() : [];
         const publicLeaves = responses[1]?.ok ? await responses[1].json() : [];
@@ -14223,7 +14256,6 @@ async function loadHomeLeadershipInsights() {
         // --- 🔵 3. PENDING LEAVE (TOP 3 + VIEW MORE) ---
         if (document.getElementById("home_leave_count")) document.getElementById("home_leave_count").innerText = pendingLeaves.length;
         if (leaveInbox) {
-            // Logic: Show Top 3. If remaining > 0, show link.
             const visibleItems = pendingLeaves.slice(0, 3);
             const hiddenCount = pendingLeaves.length - 3;
             
@@ -14242,7 +14274,6 @@ async function loadHomeLeadershipInsights() {
         // --- 🟠 4. PENDING OT (TOP 3 + VIEW MORE) ---
         if (document.getElementById("home_ot_count")) document.getElementById("home_ot_count").innerText = pendingOT.length;
         if (otInbox) {
-            // Logic: Show Top 3. If remaining > 0, show link.
             const visibleItems = pendingOT.slice(0, 3);
             const hiddenCount = pendingOT.length - 3;
 
@@ -14259,7 +14290,6 @@ async function loadHomeLeadershipInsights() {
         }
 
         // --- 🟢 5. WHO'S AWAY TODAY (Full List) ---
-        // This will trigger the CSS scrollbar you committed earlier if the list is long.
         if (listEl) {
             const awayToday = publicLeaves.filter(l => todayStr >= l.start_date && todayStr <= l.end_date);
             if (document.getElementById("away_today_title")) {
@@ -14286,13 +14316,23 @@ async function loadHomeLeadershipInsights() {
             document.getElementById("home_stat_total").innerText = mgrLeaves.length;
             document.getElementById("home_stat_approved").innerText = approved.length;
             
-            const userRes = await fetchWithAuth(`${API_URL}/users/all`);
+            // Note: We also pass the signal here just to be completely bulletproof!
+            const userRes = await fetchWithAuth(`${API_URL}/users/all`, { signal });
+            
+            // 🛑 THE FINAL KILL SWITCH VERIFICATION
+            if (signal && signal.aborted) return;
+
             const allUsers = userRes && userRes.ok ? await userRes.json() : [];
             const activeCount = allUsers.filter(u => u.is_active !== false).length || 1;
             document.getElementById("home_stat_medical").innerText = Math.round((medical / activeCount) * 100) + "%";
         }
 
     } catch (err) {
+        // 🚀 THE FIX: Ignore intentional aborts, log real errors.
+        if (err.name === 'AbortError') {
+            console.log("⏩ loadHomeLeadershipInsights: Fetch aborted.");
+            return;
+        }
         console.error("Dashboard Refresh Error:", err);
     }
 }
@@ -14571,7 +14611,6 @@ async function loadHomeLeadershipInsights() {
     if (typeof initBackPrevention === "function") initBackPrevention();
 
     // 2. FORCE SYNC: Move session data from slow storage to fast RAM immediately
-    // 🚀 FIX: We ensure 'currentUser' and 'userRoles' are updated in the global scope
     if (!SESSION_ID || SESSION_ID === "null" || !CURRENT_USER) {
         SESSION_ID = localStorage.getItem("sessionId");
         CURRENT_USER = localStorage.getItem("currentUser");
@@ -14593,23 +14632,9 @@ async function loadHomeLeadershipInsights() {
     // 🚨 3. Security Hard Stop: If no session exists, kick to login
     if (!SESSION_ID || !currentUser || SESSION_ID === "null") {
         console.warn("⚠️ Security Guard: No session found. Redirecting...");
-        window.location.replace("login.html");
+        window.location.replace("index.html");
         return;
     }
-
-    // ==========================================================
-    // 🚀 NEW: SUPERUSER AUTO-REDIRECT LOGIC
-    // ==========================================================
-    let savedTab = sessionStorage.getItem("activeTab") || "home";
-    const isAdminAccount = (localStorage.getItem("username") === "superuser" || currentUser === "System Administrator");
-    
-    // If the Superuser logs in or hits refresh on the empty Home screen, divert them!
-    if (isAdminAccount && savedTab === "home") {
-        savedTab = "hr_audit"; 
-    }
-    // ==========================================================
-
-    console.log(`🔐 Session Verified. User: ${currentUser} | Tab: ${savedTab}`);
 
     // 4. 🟢 UI PREP (Non-blocking)
     try {
@@ -14617,12 +14642,11 @@ async function loadHomeLeadershipInsights() {
     } catch (e) { console.error("UI Prep Error:", e); }
     
     try {
-        // This ensures the L2 Filter in the Manager Dashboard is synced with the DB setting
         if (typeof syncL2ToggleState === "function") syncL2ToggleState();
     } catch (e) { console.error("L2 Sync Error:", e); }
 
-    // 5. 🟢 RUN SETUP ROUTINES (Profile, Settings, Approvers, Balances)
-    // This MUST happen before showing the section to ensure balances are ready
+    // 5. 🟢 RUN SETUP ROUTINES
+    // 🚀 THE FIX: We wait for the core setup to finish BEFORE deciding what tab to show
     if (typeof initializeDashboard === "function") {
         try {
             await initializeDashboard();
@@ -14631,13 +14655,28 @@ async function loadHomeLeadershipInsights() {
         }
     }
 
-    // 6. 🟢 LAUNCH THE UI (Crucial Step: Populates Tables)
+    // ==========================================================
+    // 🚀 THE RACE CONDITION FIX: READ THE TAB *AFTER* INITIALIZATION
+    // If the user clicked a menu item while the dashboard was loading,
+    // sessionStorage will now hold the NEW tab. We read it NOW.
+    // ==========================================================
+    let finalTabToLoad = sessionStorage.getItem("activeTab") || "home";
+    const isAdminAccount = (localStorage.getItem("username") === "superuser" || currentUser === "System Administrator");
+    
+    // Superuser Auto-Redirect
+    if (isAdminAccount && finalTabToLoad === "home") {
+        finalTabToLoad = "hr_audit"; 
+    }
+    // ==========================================================
+
+    console.log(`🔐 Session Verified. User: ${currentUser} | Tab: ${finalTabToLoad}`);
+
+    // 6. 🟢 LAUNCH THE UI
     try {
-        await showSection(savedTab);
+        await showSection(finalTabToLoad);
 
         // 🚀 SUB-TAB PERSISTENCE
-        // Ensures if they were on OT or Carry Forward, they stay there after refresh
-        if (savedTab === 'apply') {
+        if (finalTabToLoad === 'apply') {
             const savedMode = localStorage.getItem("current_apply_mode") || "leave";
             console.log("🔄 Restoring Apply Sub-Tab Mode:", savedMode);
             
@@ -14648,7 +14687,7 @@ async function loadHomeLeadershipInsights() {
     } catch (err) {
         console.error("❌ UI Launch Error:", err);
         // Emergency fallback: If the saved tab fails, go to home
-        if (savedTab !== "home") showSection("home");
+        if (finalTabToLoad !== "home") showSection("home");
     }
 
     // 🚀 7. START DRAFT WATCHERS (Auto-save typing)
@@ -16324,40 +16363,50 @@ async function executeOTFinalDecision(otId, status) {
       // document.addEventListener("DOMContentLoaded", initializeDashboard);
 
  // 🔄 2026 Background Sync Heartbeat (Every 1 Minute)
- setInterval(async () => {
-        // 🛑 NEW SAFETY CHECK 1: Is the user actively typing or selecting?
-        const activeEl = document.activeElement;
-        const isInteracting = activeEl && (
-            activeEl.tagName === 'INPUT' || 
-            activeEl.tagName === 'TEXTAREA' || 
-            activeEl.tagName === 'SELECT'
-        );
+setInterval(async () => {
+    // 🛑 SAFETY CHECK 1: Is the user actively typing or selecting?
+    const activeEl = document.activeElement;
+    const isInteracting = activeEl && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        activeEl.tagName === 'SELECT'
+    );
 
-        // 🛑 NEW SAFETY CHECK 2: Is the user on the Apply Leave screen?
-        const applySection = document.getElementById("apply");
-        const isOnApplyScreen = applySection && applySection.classList.contains("active");
+    // 🛑 SAFETY CHECK 2: Is the user on the Apply Leave screen?
+    const applySection = document.getElementById("apply");
+    const isOnApplyScreen = applySection && applySection.classList.contains("active");
 
-        const modal = document.getElementById("globalModal");
-        const reviewModal = document.getElementById("reviewModal");
-        const successModal = document.getElementById("successModal");
+    const modal = document.getElementById("globalModal");
+    const reviewModal = document.getElementById("reviewModal");
+    const successModal = document.getElementById("successModal");
 
-        // 🛑 HARD STOP: Skip sync if user is busy or on a sensitive screen
-        if (
-          (modal && modal.classList.contains("show")) ||
-          (reviewModal && reviewModal.style.display !== "none") ||
-          (successModal && successModal.style.display !== "none") ||
-          isInteracting || 
-          isOnApplyScreen
-        ) {
-          console.log("⏸️ Heartbeat paused: User is busy with an input, modal, or application form.");
-          return;
-        }
+    // 🚀 NEW SAFETY CHECK 3: Is the main navigator actively loading something else?
+    // If the signal is actively aborted, it means the user is switching tabs right now.
+    if (typeof navAbortController !== 'undefined' && navAbortController && navAbortController.signal.aborted) {
+        console.log("⏸️ Heartbeat paused: Navigation in progress.");
+        return;
+    }
 
-        console.log("💓 Heartbeat: Syncing dashboard data safely...");
+    // 🛑 HARD STOP: Skip sync if user is busy or on a sensitive screen
+    if (
+        (modal && modal.classList.contains("show")) ||
+        (reviewModal && reviewModal.style.display !== "none") ||
+        (successModal && successModal.style.display !== "none") ||
+        isInteracting || 
+        isOnApplyScreen
+    ) {
+        console.log("⏸️ Heartbeat paused: User is busy with an input, modal, or application form.");
+        return;
+    }
 
-        // 1. Refresh Badges
+    console.log("💓 Heartbeat: Syncing dashboard data safely...");
+
+    try {
+        // 1. Refresh Badges 
+        // 🚀 THE FIX: Pass the signal so the background request can be killed if the user navigates
         if (typeof refreshManagerBadges === "function") {
-          await refreshManagerBadges();
+            const currentSignal = (typeof navAbortController !== 'undefined' && navAbortController) ? navAbortController.signal : undefined;
+            await refreshManagerBadges(currentSignal);
         }
 
         // 2. Refresh Audit Log (Only if visible and not searching)
@@ -16365,15 +16414,21 @@ async function executeOTFinalDecision(otId, status) {
         const auditSearch = document.getElementById("audit_search_name");
 
         if (auditSection && auditSection.classList.contains("active")) {
-          const isSearching = auditSearch && auditSearch.value.trim() !== "";
-          if (!isSearching) {
-            console.log("🔄 Background Sync: Refreshing Audit Logs...");
-            if (typeof loadGlobalAuditLogs === "function") {
-              await loadGlobalAuditLogs();
+            const isSearching = auditSearch && auditSearch.value.trim() !== "";
+            if (!isSearching) {
+                console.log("🔄 Background Sync: Refreshing Audit Logs...");
+                if (typeof loadGlobalAuditLogs === "function") {
+                    await loadGlobalAuditLogs();
+                }
             }
-          }
         }
-      }, 60000);
+    } catch (e) {
+        // 🚀 THE FIX: Silently catch AbortErrors so the console stays clean
+        if (e.name !== 'AbortError') {
+            console.error("Heartbeat Error:", e);
+        }
+    }
+}, 60000);
 
       // 🖱️ Global Click Listener: Closes the suggestion box when clicking outside
       document.addEventListener("click", function (e) {
