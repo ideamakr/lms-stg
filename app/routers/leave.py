@@ -81,13 +81,8 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
 
     if not balance_entry: return None
 
-    # Logic: UI/Display usually excludes Pending. Validation ALWAYS includes Pending.
-    if include_pending:
-        # 🛡️ VALIDATION MODE: User cannot apply for more than they have in total
-        active_statuses = ["Approved", "Pending", "Pending Cancel", "Pending L2 Approval"]
-    else:
-        # 📊 DASHBOARD/ESTIMATE MODE: Pull everything to calculate the split UI
-        active_statuses = ["Approved", "Pending", "Pending Cancel", "Pending L2 Approval"]
+    # We fetch all active records so we can calculate the "Projected" vs "Actual" totals
+    active_statuses = ["Approved", "Pending", "Pending Cancel", "Pending L2 Approval"]
 
     used_leaves = db.query(models.Leave).filter(
         models.Leave.employee_name == employee_name,
@@ -96,46 +91,46 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         extract('year', models.Leave.start_date) == year
     ).all()
 
-    total_used_days = 0.0
-    pending_only_days = 0.0 
+    total_deductions = 0.0   # (Approved + Pending) -> Used for 'Remaining'
+    approved_taken_only = 0.0 # (Only Approved) -> Used for 'Taken' tile
+    pending_only_days = 0.0   # (Only Pending)
 
     for l in used_leaves:
-        # 1. Base duration
         days_to_count = float(l.days_taken or 0.0)
-        
-        # 2. Standardize status
         status_str = str(l.status.value if hasattr(l.status, 'value') else l.status)
         
-        # 3. Handle Carry Forward specific math
+        # Handle Carry Forward specific math
         is_annual = str(l.leave_type) == "Annual Leave" or getattr(l.leave_type, "value", l.leave_type) == "Annual Leave"
         if is_annual and "[CARRY FORWARD" in (l.reason or ""):
             match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
             if match:
-                real_cf_days = float(match.group(1))
-                days_to_count = real_cf_days # Use the tag value instead of dates
+                days_to_count = float(match.group(1))
 
-        # 🚀 4. Capture the finalized days_to_count for the pending total
+        # 🚀 THE FIX: Categorize the days based on status
         if status_str in ["Pending", "Pending L2 Approval"]:
             pending_only_days += days_to_count
+        elif status_str in ["Approved", "Pending Cancel"]:
+            # If it's Approved (or currently being cancelled), it counts as 'Taken'
+            approved_taken_only += days_to_count
 
-        # 5. Accumulate total usage
-        total_used_days += days_to_count
+        # 'Total Deductions' always includes everything to prevent over-drawing
+        total_deductions += days_to_count
 
-    # 🚀 6. THE FIX: Safely retrieve both the Base Entitlement AND the Carry Forward Wallet
     base_entitlement = float(balance_entry.entitlement or 0.0)
     cf_wallet = float(balance_entry.carry_forward_total or 0.0)
     
-    # 🚀 7. THE FIX: Correct Math = (Base + CF) - Used
-    remaining = (base_entitlement + cf_wallet) - total_used_days
+    # Math logic:
+    # Remaining = Total Wallet minus everything (Approved + Pending)
+    remaining = (base_entitlement + cf_wallet) - total_deductions
 
     return {
         "employee_name": employee_name,
         "year": year,
         "leave_type": target_entitlement_type,
         "entitlement": base_entitlement, 
-        "carry_forward_total": cf_wallet, # 🚀 Passes CF to frontend to trigger Blue Tile
-        "remaining": remaining,           # 🚀 Now outputs correct balance!
-        "taken": total_used_days,
+        "carry_forward_total": cf_wallet,
+        "remaining": remaining,
+        "taken": approved_taken_only,  # 🚀 CHANGED: Dashboard now only sees Approved days
         "pending_total": pending_only_days
     }
 

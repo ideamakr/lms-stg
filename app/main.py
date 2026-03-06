@@ -24,7 +24,7 @@ from app.routers import leave, user, overtime, system_settings
 load_dotenv()
 
 # 👇 APP INITIALIZATION
-app = FastAPI()
+# app = FastAPI()
 
 # ============================================================
 # 🚀 1. INITIALIZE SUPABASE CLIENT

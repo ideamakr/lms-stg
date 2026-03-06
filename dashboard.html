@@ -1289,61 +1289,70 @@ div.swal2-container {
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 35px;">
     
-                  <div style="background: #5ea1d7; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(94, 161, 215, 0.3);">
-                      <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <span style="font-weight: 700; font-size: 0.9rem">Annual Leave</span>
-                          <i class="fas fa-calendar-alt" style="opacity: 0.7"></i>
-                      </div>
-                      <div id="card_annual" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                          <span class="loading-pulse"></span>
-                      </div>
-                      <small style="opacity: 0.9">Days Available</small>
-                  </div>
-              
-                  <div style="background: #63b39d; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(99, 179, 157, 0.3);">
-                      <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <span style="font-weight: 700; font-size: 0.9rem">Medical</span>
-                          <i class="fas fa-briefcase-medical" style="opacity: 0.7"></i>
-                      </div>
-                      <div id="card_medical" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                          <span class="loading-pulse"></span>
-                      </div>
-                      <small style="opacity: 0.9">Days Available</small>
-                  </div>
-              
-                  <div style="background: #e57d70; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(229, 125, 112, 0.3);">
-                      <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <span style="font-weight: 700; font-size: 0.9rem">Emergency</span>
-                          <i class="fas fa-exclamation-triangle" style="opacity: 0.7"></i>
-                      </div>
-                      <div id="card_emergency" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                          <span class="loading-pulse"></span>
-                      </div>
-                      <small style="opacity: 0.9">Days Available</small>
-                  </div>
-              
-                  <div style="background: #f0b85b; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(240, 184, 91, 0.3);">
-                      <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <span style="font-weight: 700; font-size: 0.9rem">Compassionate</span>
-                          <i class="fas fa-hand-holding-heart" style="opacity: 0.7"></i>
-                      </div>
-                      <div id="card_compassionate" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                          <span class="loading-pulse"></span>
-                      </div>
-                      <small style="opacity: 0.9">Days Available</small>
-                  </div>
-              
-                  <div id="wrapper_unpaid" style="display: none; background: #64748b; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);">
-                      <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <span style="font-weight: 700; font-size: 0.9rem">Unpaid Leave</span>
-                          <i class="fas fa-hand-holding-usd" style="opacity: 0.7"></i>
-                      </div>
-                      <div id="card_unpaid" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
-                          <span class="loading-pulse"></span>
-                      </div>
-                      <small style="opacity: 0.9">Total Days Taken</small>
-                  </div>
-              </div>
+                    <div style="background: #5ea1d7; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(94, 161, 215, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem">Annual Leave</span>
+                            <i class="fas fa-calendar-alt" style="opacity: 0.7"></i>
+                        </div>
+                        <div id="card_annual" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                            <span class="loading-pulse"></span>
+                        </div>
+                        <small style="opacity: 0.9">Days Available</small>
+                    </div>
+                
+                    <div id="wrapper_cf" style="display: none; background: #0ea5e9; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem">Carry Forward</span>
+                            <i class="fas fa-clock-rotate-left" style="opacity: 0.7"></i>
+                        </div>
+                        <div id="card_cf" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">0.0</div>
+                        <div id="cf_expiry_label" style="font-size: 0.7rem; opacity: 0.9; margin-top: 5px; font-weight: 600;"></div>
+                    </div>
+                
+                    <div style="background: #63b39d; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(99, 179, 157, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem">Medical</span>
+                            <i class="fas fa-briefcase-medical" style="opacity: 0.7"></i>
+                        </div>
+                        <div id="card_medical" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                            <span class="loading-pulse"></span>
+                        </div>
+                        <small style="opacity: 0.9">Days Available</small>
+                    </div>
+                
+                    <div style="background: #e57d70; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(229, 125, 112, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem">Emergency</span>
+                            <i class="fas fa-exclamation-triangle" style="opacity: 0.7"></i>
+                        </div>
+                        <div id="card_emergency" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                            <span class="loading-pulse"></span>
+                        </div>
+                        <small style="opacity: 0.9">Days Available</small>
+                    </div>
+                
+                    <div style="background: #f0b85b; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(240, 184, 91, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem">Compassionate</span>
+                            <i class="fas fa-hand-holding-heart" style="opacity: 0.7"></i>
+                        </div>
+                        <div id="card_compassionate" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                            <span class="loading-pulse"></span>
+                        </div>
+                        <small style="opacity: 0.9">Days Available</small>
+                    </div>
+                
+                    <div id="wrapper_unpaid" style="display: none; background: #64748b; padding: 25px; border-radius: 10px; color: white; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem">Unpaid Leave</span>
+                            <i class="fas fa-hand-holding-usd" style="opacity: 0.7"></i>
+                        </div>
+                        <div id="card_unpaid" style="font-size: 2.2rem; font-weight: 800; margin-top: 10px">
+                            <span class="loading-pulse"></span>
+                        </div>
+                        <small style="opacity: 0.9">Total Days Taken</small>
+                    </div>
+                </div>
                 <div id="leadership_panel" style="display: none">
                     <div style="
                         background: white;
@@ -5525,8 +5534,8 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
 
           <script>
-          const API_URL = "https://leave-system-testenv.onrender.com";
-          // const API_URL = "http://127.0.0.1:8000";
+        const API_URL = "https://leave-system-testenv.onrender.com";
+        //  const API_URL = "http://127.0.0.1:8000";
         
             // 🌍 1. GLOBAL IDENTITY (FORCE SYNC)
             // 🚀 Leave Manager Pagination
@@ -6343,204 +6352,113 @@ let annualRemainingGlobal = 0;
         // ... rest of your init code ...
       }
 
-// 🚀 NEW: Added 'signal' as a parameter
+// 🚀 V1.4.2: Parallel, 404-Proof, Standalone CF, and Approved-Only Unpaid Fix
+// 🚀 V1.4.3: The Domino-Proof Standalone Engine
 async function prefetchBalances(signal) {
-        const types = [
-          "Annual Leave",
-          "Medical Leave",
-          "Emergency Leave",
-          "Compassionate Leave",
-          "Unpaid Leave",
-        ];
-        const select = document.getElementById("dash_leave_type");
-        if (select) select.disabled = true;
+    const targetUser = window.proxyUser ? window.proxyUser : currentUser;
+    const currentYear = new Date().getFullYear();
+    const select = document.getElementById("dash_leave_type");
+    
+    // 🛡️ THE FIX: Removed "Carry Forward" from this list to stop the 404 error.
+    // We will extract CF data from the "Annual Leave" response instead.
+    const types = ["Annual Leave", "Medical Leave", "Emergency Leave", "Compassionate Leave", "Unpaid Leave"];
 
-        // 🚀 Determine if we are fetching for the Proxy User or the Logged-In User
-        const targetUser = window.proxyUser ? window.proxyUser : currentUser;
+    if (select) select.disabled = true;
 
-// ====================================================================
-        // 🎨 1. TRIGGER LOADING PULSE ANIMATIONS (BEFORE FETCHING)
-        // ====================================================================
-        const cardIds = ["annual", "medical", "emergency", "compassionate", "unpaid"];
-        cardIds.forEach(id => {
-            const el = document.getElementById("card_" + id);
-            // Replace the current number with the animated pulse span
-            if (el) el.innerHTML = '<span class="loading-pulse"></span>';
+    // 🎨 1. Trigger Loading Pulses
+    const cardIds = ["annual", "cf", "medical", "emergency", "compassionate", "unpaid"];
+    cardIds.forEach(id => {
+        const el = document.getElementById("card_" + id);
+        if (el) el.innerHTML = '<span class="loading-pulse"></span>';
+    });
+
+    try {
+        // 🚀 PHASE 2: The Parallel Engine
+        const fetchPromises = types.map(type => {
+            const url = `${API_URL}/leaves/balance?year=${currentYear}&leave_type=${encodeURIComponent(type)}&employee_name=${encodeURIComponent(targetUser)}`;
+            return fetchWithAuth(url, { signal })
+                .then(res => (res && res.ok) ? res.json() : null)
+                .then(data => ({ type, data }));
         });
 
-        // 🛡️ Safety Catch: If Annual Leave is currently displaying the "Split Tile"
-        // layout (Available & Banked), pulse those specific smaller numbers instead.
-        const splitValues = document.querySelectorAll('.split-value');
-        splitValues.forEach(el => {
-            el.innerHTML = '<span class="loading-pulse" style="width: 40px; height: 24px;"></span>';
-        });
+        const results = await Promise.all(fetchPromises);
+        
+        if (signal && signal.aborted) return;
 
-        try {
-          for (let type of types) {
-            // 🚀 NEW: Check if the user navigated away BEFORE starting the next fetch in the loop
-            if (signal && signal.aborted) {
-                console.log(`⏩ Cancelled fetch for ${type} (Navigation Changed)`);
-                return; // Stop the loop instantly
-            }
+        // 3. Process Results Surgically
+        results.forEach(res => {
+            if (!res || !res.data) return;
+            const { type, data } = res;
 
-            // 🚀 NEW: Pass the { signal } into fetchWithAuth so it can kill active network requests
-            const res = await fetchWithAuth(
-              `${API_URL}/leaves/balance?year=${new Date().getFullYear()}&leave_type=${encodeURIComponent(type)}&employee_name=${encodeURIComponent(targetUser)}`,
-              { signal } 
-            );
+            // Global Cache (Phase 3) - Sarah Connor's data bank
+            window.leaveEntitlements = window.leaveEntitlements || {};
+            window.leaveEntitlements[type] = data;
 
-            if (!res) {
-              console.warn(
-                `⚠️ Prefetch for ${type} paused: Session initializing...`
-              );
-              continue;
-            }
+            // 🎯 SPECIAL CASE: ANNUAL LEAVE & CARRY FORWARD DUAL-UPDATE
+            // This pulls the banked days from Annual Leave to fill the Standalone CF tile.
+            if (type === "Annual Leave") {
+                window.annualRemainingGlobal = data.remaining || 0;
 
-            if (res.ok) {
-              const data = await res.json();
-              leaveEntitlements[type] = data.entitlement;
+                const cfCard = document.getElementById("card_cf");
+                const cfWrapper = document.getElementById("wrapper_cf");
+                const cfVal = parseFloat(data.carry_forward_total || data.cf_banked || 0);
 
-              // 1. UPDATE DROPDOWN TEXT
-              if (select) {
-                for (let i = 0; i < select.options.length; i++) {
-                  if (select.options[i].value === type) {
-                    if (type === "Unpaid Leave") {
-                      select.options[i].text = `${type} (${
-                        data.taken || 0
-                      } days taken)`;
-                    } else {
-                      select.options[
-                        i
-                      ].text = `${type} (${data.remaining} days remaining)`;
+                if (cfCard) {
+                    cfCard.innerText = cfVal.toFixed(1);
+                    cfCard.style.color = "white"; 
+                }
+                
+                if (cfWrapper) {
+                    // Rule: Show CF tile only if Policy is ON AND Sarah has balance > 0
+                    const isCFActive = (typeof ENABLE_CARRY_FORWARD !== 'undefined' && ENABLE_CARRY_FORWARD && cfVal > 0);
+                    cfWrapper.style.display = isCFActive ? "block" : "none";
+
+                    // Handle Expiry Date UI
+                    const expiryEl = document.getElementById("cf_expiry_label");
+                    if (expiryEl && typeof SYSTEM_SETTINGS !== 'undefined') {
+                        const expiryDate = SYSTEM_SETTINGS.carry_forward?.expiry_date;
+                        expiryEl.innerHTML = (expiryDate && expiryDate !== "N/A") 
+                            ? `<i class="fas fa-calendar-times"></i> Expires: ${formatDateNice(expiryDate)}`
+                            : "";
                     }
-                  }
                 }
-              }
-
-              // -------------------------------------------------------------
-              // 🚀 ANNUAL LEAVE SPLIT TILE LOGIC (FIXED TARGETING)
-              // -------------------------------------------------------------
-              if (type === "Annual Leave") {
-                const shortName = "annual";
-
-                // 1. CALCULATION FIX: Capture TRUE remaining balance for the "Apply" form math
-                annualRemainingGlobal = data.remaining || 0;
-
-                // 🎯 FIX: TARGET THE SPECIFIC TILE WRAPPER
-                let tileContainer = document.getElementById(
-                  "wrapper_" + shortName
-                );
-                if (!tileContainer) {
-                  const valEl = document.getElementById("card_" + shortName);
-                  if (valEl) tileContainer = valEl.parentElement;
-                }
-
-                if (tileContainer) {
-                  const rem = data.remaining;
-
-                  // 2. TILE FIX: Read the correct key (carry_forward_total) so the Blue Split Tile appears
-                  const banked =
-                    data.carry_forward_total || data.cf_banked || 0;
-                  const entitlement = data.entitlement;
-
-                  // 🎨 FORCE THE "HERO" BLUE STYLE
-                  tileContainer.style.background = "#2563eb";
-                  tileContainer.style.color = "white";
-                  tileContainer.style.borderRadius = "8px";
-                  tileContainer.style.padding = "25px";
-
-                  // LOGIC: Check Global Toggle & Banked Amount
-                  const isCFEnabled =
-                    typeof ENABLE_CARRY_FORWARD !== "undefined"
-                      ? ENABLE_CARRY_FORWARD
-                      : false;
-
-                  if (isCFEnabled && banked > 0) {
-                    // 🅰️ RENDER SPLIT LAYOUT (Active CF)
-                    tileContainer.innerHTML = `
-                            <div class="tile-split-container">
-                                <div class="tile-header" style="border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">
-                                    <span>Annual Leave</span>
-                                    <i class="fas fa-umbrella-beach"></i>
-                                </div>
-                                
-                                <div class="tile-split-body">
-                                    <div class="split-section">
-                                        <div class="split-label">Available</div>
-                                        <div class="split-value">${rem}</div>
-                                    </div>
-                                    
-                                    <div class="split-divider"></div>
-                                    
-                                    <div class="split-section">
-                                        <div class="split-label">CF Banked</div>
-                                        <div class="split-value banked-highlight">${banked}</div>
-                                    </div>
-                                </div>
-                                
-                                <div style="font-size: 0.7rem; text-align: center; margin-top: 5px; opacity: 0.8;">
-                                   Entitlement: ${entitlement}
-                                </div>
-                            </div>
-                         `;
-                  } else {
-                    // 🅱️ RENDER STANDARD LAYOUT (Default)
-                    // Restore generic IDs so future updates work
-                    tileContainer.innerHTML = `
-                            <h3 style="margin-top:0; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom:15px; margin-bottom:25px; font-size: 1.25rem; color: white;">
-                                Annual Leave <i class="fas fa-umbrella-beach" style="float:right; opacity:0.8;"></i>
-                            </h3>
-                            <h1 id="card_annual" style="font-size: 3rem; margin: 0; font-weight: 700;">${rem}</h1>
-                            <p style="font-size: 0.8rem; opacity: 0.9; margin-top: 5px;">Entitlement: ${entitlement}</p>
-                         `;
-                  }
-                }
-                // STOP HERE for Annual Leave
-                continue;
-              }
-              // -------------------------------------------------------------
-              // END ANNUAL LEAVE LOGIC
-              // -------------------------------------------------------------
-
-              // 2. GENERIC UPDATE FOR OTHER TILES
-              const shortName = type.toLowerCase().split(" ")[0]; // "medical", "unpaid"
-              const cardEl = document.getElementById("card_" + shortName);
-              const wrapper = document.getElementById("wrapper_" + shortName);
-
-              if (cardEl) {
-                // 🎨 OVERWRITE THE PULSE WITH THE REAL DATA
-                const displayVal =
-                  type === "Unpaid Leave" ? data.taken || 0 : data.remaining;
-                cardEl.innerText = displayVal;
-
-                if (type === "Unpaid Leave") {
-                  cardEl.style.color = "#1e3a8a";
-                } else {
-                  cardEl.style.color =
-                    data.remaining <= 0 ? "#ef4444" : "#1e3a8a";
-                }
-              }
-
-              if (type === "Unpaid Leave" && wrapper) {
-                wrapper.style.display = data.taken > 0 ? "block" : "none";
-              }
             }
-          }
-        } catch (e) {
-          // 🚀 NEW: Silent exit if aborted, otherwise log real errors
-          if (e.name === 'AbortError') return; 
-          console.error("Balance Load Error:", e);
-        } finally {
-          // 🚀 NEW: Prevent UI updates if the user is no longer on this tab
-          if (signal && signal.aborted) return; 
 
-          if (select) select.disabled = false;
-          
-          // 🚀 Instantly refresh UI summaries if the form is already active
-          if (typeof showEntitlementInfo === "function") showEntitlementInfo();
-          if (typeof updateLiveSummary === "function") updateLiveSummary();
-        }
-      }
+            // 4. Standard Mapping (Medical, Emergency, Compassionate, Unpaid)
+            const shortName = type.toLowerCase().split(" ")[0];
+            const cardEl = document.getElementById("card_" + shortName);
+            const wrapper = document.getElementById("wrapper_" + shortName);
+
+            if (cardEl) {
+                // Unpaid shows "Taken", everything else shows "Remaining"
+                const val = type === "Unpaid Leave" ? (data.taken || 0) : (data.remaining || 0);
+                cardEl.innerText = parseFloat(val).toFixed(1);
+                
+                if (type !== "Unpaid Leave") {
+                    cardEl.style.color = (data.remaining <= 0) ? "#ef4444" : "white";
+                }
+            }
+
+            // 🚀 UNPAID LEAVE VISIBILITY FIX
+            if (wrapper && type === "Unpaid Leave") {
+                // Only show tile if Approved 'taken' days exist (Uses the backend fix)
+                const hasApprovedTaken = parseFloat(data.taken || 0) > 0;
+                wrapper.style.display = hasApprovedTaken ? "block" : "none";
+            }
+        });
+
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.error("Critical Balance Load Error:", e);
+    } finally {
+        if (signal && signal.aborted) return;
+        if (select) select.disabled = false;
+        
+        // Refresh Summaries for the Apply form math
+        if (typeof showEntitlementInfo === "function") showEntitlementInfo();
+        if (typeof updateLiveSummary === "function") updateLiveSummary();
+    }
+}
 
       function showEntitlementInfo() {
         const type = document.getElementById("dash_leave_type").value;
@@ -6938,35 +6856,42 @@ function changeHistoryPage(newPage) {
     sortAndRenderHistory();
 }
 
-      // 2. MATH LOGIC: Real-time calculation for the Carry Forward Blue Box
-      function updateCarryForwardMath() {
-        // 🚀 FIX: Use the captured 'Remaining Balance' variable instead of 'Entitlement'
-        // This ensures the math starts from what is actually available (e.g. 8.5)
-        const annualBal = annualRemainingGlobal;
+ // 2. MATH LOGIC: Real-time calculation for the Carry Forward Blue Box
+function updateCarryForwardMath() {
+    // 🛡️ DOMINO-PROOF SAFETY NET:
+    // If the global variable is 0, try to pull directly from the cached Annual Leave object
+    let annualBal = window.annualRemainingGlobal;
 
-        const inputVal = document.getElementById("cf_days_input").value;
-        const reqDays = parseFloat(inputVal) || 0;
+    if ((!annualBal || annualBal === 0) && window.leaveEntitlements && window.leaveEntitlements["Annual Leave"]) {
+        annualBal = parseFloat(window.leaveEntitlements["Annual Leave"].remaining) || 0;
+        // Sync it back to the global variable for other functions to use
+        window.annualRemainingGlobal = annualBal;
+        console.log("🔄 Math Guard: Restored balance from cache:", annualBal);
+    }
 
-        // Display Current Balance
-        const currEl = document.getElementById("cf_current");
-        if (currEl) currEl.innerText = annualBal + " Days";
+    const inputVal = document.getElementById("cf_days_input").value;
+    const reqDays = parseFloat(inputVal) || 0;
 
-        // Calculate Result
-        const remaining = annualBal - reqDays;
-        const resultEl = document.getElementById("cf_result");
+    // Display Current Balance
+    const currEl = document.getElementById("cf_current");
+    if (currEl) currEl.innerText = annualBal.toFixed(1) + " Days";
 
-        if (resultEl) {
-          // 🚀 UPDATE: Use toFixed(1) to handle half-days neatly (e.g. 3.5)
-          resultEl.innerText = remaining.toFixed(1) + " Days";
+    // Calculate Result
+    const remaining = annualBal - reqDays;
+    const resultEl = document.getElementById("cf_result");
 
-          // Visual Feedback: Red if negative, Green if valid
-          if (remaining < 0) {
+    if (resultEl) {
+        // 🚀 UPDATE: Use toFixed(1) to handle half-days neatly
+        resultEl.innerText = remaining.toFixed(1) + " Days";
+
+        // Visual Feedback: Red if negative, Green if valid
+        if (remaining < 0) {
             resultEl.style.color = "#ef4444"; // Red (Negative)
-          } else {
+        } else {
             resultEl.style.color = "#15803d"; // Green (Valid)
-          }
         }
-      }
+    }
+}
 
       /**
        * 💾 Step 2: Saves the updated roles to the database
@@ -14797,12 +14722,15 @@ async function loadHomeLeadershipInsights(signal) {
                     </div>`).join("");
         }
 
-        // --- 📊 6. MINI STATS ---
-        if (isBoss && miniStats) {
+// --- 📊 6. MINI STATS ---
+if (isBoss && miniStats) {
             const approved = mgrLeaves.filter(l => (l.status || "").toLowerCase() === "approved");
             const medical = approved.filter(l => l.leave_type === "Medical Leave").length;
-            document.getElementById("home_stat_total").innerText = mgrLeaves.length;
-            document.getElementById("home_stat_approved").innerText = approved.length;
+            
+            if (document.getElementById("home_stat_total")) 
+                document.getElementById("home_stat_total").innerText = mgrLeaves.length;
+            if (document.getElementById("home_stat_approved")) 
+                document.getElementById("home_stat_approved").innerText = approved.length;
             
             // Note: We also pass the signal here just to be completely bulletproof!
             const userRes = await fetchWithAuth(`${API_URL}/users/all`, { signal });
@@ -14810,9 +14738,18 @@ async function loadHomeLeadershipInsights(signal) {
             // 🛑 THE FINAL KILL SWITCH VERIFICATION
             if (signal && signal.aborted) return;
 
-            const allUsers = userRes && userRes.ok ? await userRes.json() : [];
-            const activeCount = allUsers.filter(u => u.is_active !== false).length || 1;
-            document.getElementById("home_stat_medical").innerText = Math.round((medical / activeCount) * 100) + "%";
+            if (userRes && userRes.ok) {
+                const userData = await userRes.json();
+                
+                // 🚀 THE FIX: Safely extract the array whether it's a raw list or a dictionary {"users": []}
+                const allUsers = Array.isArray(userData) ? userData : (userData.users || []);
+                
+                const activeCount = allUsers.filter(u => u.is_active !== false).length || 1;
+                
+                if (document.getElementById("home_stat_medical")) {
+                    document.getElementById("home_stat_medical").innerText = Math.round((medical / activeCount) * 100) + "%";
+                }
+            }
         }
 
     } catch (err) {
@@ -15580,7 +15517,6 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
       function closeUserEditModal() {
         document.getElementById("userEditModal").style.display = "none";
       }
-
       function switchApplyMode(mode) {
     // 1. Get Containers & Tabs
     const leaveContainer = document.getElementById("form_leave_container");
@@ -15589,11 +15525,9 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
     const otTab = document.getElementById("tab_ot");
     const unpaidTab = document.getElementById("tab_unpaid");
 
-    // Shared Element that causes the "leak"
     const reasonField = document.getElementById("dash_reason");
 
     // 🚀 NEW: WIPE SHARED FIELDS BEFORE SWITCHING
-    // This stops the CF reason from "bleeding" into the Standard reason
     if (reasonField) reasonField.value = "";
 
     // 2. Save Mode to Memory
@@ -15613,12 +15547,19 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
         const title = document.getElementById("apply_form_title");
         if (title) title.innerHTML = '<i class="fas fa-clock" style="color:#2563eb;"></i> Apply Overtime';
 
-        // 🚀 Restore OT specifically
         if (typeof restoreOTDraft === "function") restoreOTDraft();
 
     } else if (mode === "unpaid") {
         if (unpaidTab) unpaidTab.classList.add("active");
         if (leaveContainer) leaveContainer.style.display = "block";
+
+        // 🚀 THE FIX: Explicitly sync balance from Global Cache before showing UI
+        // This ensures Sarah sees her 7.0 (or latest) balance instead of 0
+        if (window.leaveEntitlements && window.leaveEntitlements["Annual Leave"]) {
+            const annualData = window.leaveEntitlements["Annual Leave"];
+            window.annualRemainingGlobal = annualData.remaining || 0;
+            console.log("🎯 CF Form Synced from Cache:", window.annualRemainingGlobal);
+        }
 
         const cfUI = document.getElementById("carry_forward_ui");
         const stdUI = document.getElementById("standard_leave_ui");
@@ -15628,12 +15569,13 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
         const title = document.getElementById("apply_form_title");
         if (title) title.innerHTML = '<i class="fas fa-exchange-alt" style="color:#2563eb;"></i> Request Carry Forward';
 
+        // Recalculate the math boxes with the fresh balance
         if (typeof updateCarryForwardMath === "function") updateCarryForwardMath();
 
-        // 🚀 Restore CF specifically (This will fill dash_reason with CF data only)
         if (typeof restoreLeaveDraft === "function") restoreLeaveDraft();
 
     } else {
+        // Standard Leave Mode
         if (leaveTab) leaveTab.classList.add("active");
         if (leaveContainer) leaveContainer.style.display = "block";
 
@@ -15648,7 +15590,6 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
         if (typeof showEntitlementInfo === "function") showEntitlementInfo();
         if (typeof updateLiveSummary === "function") updateLiveSummary();
 
-        // 🚀 Restore Standard specifically (This will fill dash_reason with Standard data only)
         if (typeof restoreLeaveDraft === "function") restoreLeaveDraft();
     }
 }
