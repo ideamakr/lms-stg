@@ -1069,6 +1069,17 @@ div.swal2-container {
     align-items: center;
     height: 100%; /* Helps with the vertical alignment calculation */
 }
+
+/* Specific styling for secondary tiles on the History tab */
+#history .leave-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+#history .card {
+    padding: 15px; /* Slightly more compact than Home cards */
+}
     </style>
   </head>
             <!-- ==========================================
@@ -5535,7 +5546,7 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
           <script>
         const API_URL = "https://leave-system-testenv.onrender.com";
-        //  const API_URL = "http://127.0.0.1:8000";
+        // const API_URL = "http://127.0.0.1:8000";
         
             // 🌍 1. GLOBAL IDENTITY (FORCE SYNC)
             // 🚀 Leave Manager Pagination
@@ -6212,11 +6223,23 @@ async function showSection(sectionId) {
         await loadAdminHolidays();
       } else if (sectionId === "holidays") {
         await loadPublicHolidays();
-      } else if (sectionId === "hr_audit") {
+// ... previous section logic ...
+} else if (sectionId === "hr_audit") {
         await loadGlobalAuditLogs();
         if (typeof resetAuditFilters === "function") resetAuditFilters();
       } else if (sectionId === "apply") {
         
+        // 🚀 THE GHOST FIX: Force hide and clear the summary receipt immediately upon entry
+        const summaryBox = document.getElementById("apply_summary_box");
+        if (summaryBox) {
+            summaryBox.style.display = "none";
+            // Hard-wipe the internal values to prevent the "flicker" of old data
+            const totalDaysSpan = document.getElementById("summary_total_days");
+            const balanceEstimate = document.getElementById("summary_new_balance");
+            if (totalDaysSpan) totalDaysSpan.innerText = "";
+            if (balanceEstimate) balanceEstimate.innerHTML = "";
+        }
+
         // 🚀 THE FIX: Sequential for Apply tab as well
         await loadApproverList();
         if (signal.aborted) return; // 🛑 Stop
@@ -6233,6 +6256,7 @@ async function showSection(sectionId) {
             console.log("📝 Draft restored for the Apply section.");
         }
       } else if (sectionId === "history") {
+      // ... rest of the function ...
         await loadHistory(1, 10);
       } else if (sectionId === "manager_requests") {
         await loadManagerRequests();
@@ -6351,21 +6375,21 @@ let annualRemainingGlobal = 0;
 
         // ... rest of your init code ...
       }
-
-// 🚀 V1.4.2: Parallel, 404-Proof, Standalone CF, and Approved-Only Unpaid Fix
-// 🚀 V1.4.3: The Domino-Proof Standalone Engine
+// 🚀 V1.4.16: The Final Atomic Split-Wallet & Urgency Color Engine
 async function prefetchBalances(signal) {
     const targetUser = window.proxyUser ? window.proxyUser : currentUser;
     const currentYear = new Date().getFullYear();
     const select = document.getElementById("dash_leave_type");
     
-    // 🛡️ THE FIX: Removed "Carry Forward" from this list to stop the 404 error.
-    // We will extract CF data from the "Annual Leave" response instead.
-    const types = ["Annual Leave", "Medical Leave", "Emergency Leave", "Compassionate Leave", "Unpaid Leave"];
+    // 🛡️ SYNC GUARD: Load fresh settings from DB before painting tiles
+    if (typeof loadCFSetting === "function") {
+        await loadCFSetting(); 
+    }
 
+    const types = ["Annual Leave", "Medical Leave", "Emergency Leave", "Compassionate Leave", "Unpaid Leave"];
     if (select) select.disabled = true;
 
-    // 🎨 1. Trigger Loading Pulses
+    // 🎨 1. Trigger Loading States
     const cardIds = ["annual", "cf", "medical", "emergency", "compassionate", "unpaid"];
     cardIds.forEach(id => {
         const el = document.getElementById("card_" + id);
@@ -6373,7 +6397,6 @@ async function prefetchBalances(signal) {
     });
 
     try {
-        // 🚀 PHASE 2: The Parallel Engine
         const fetchPromises = types.map(type => {
             const url = `${API_URL}/leaves/balance?year=${currentYear}&leave_type=${encodeURIComponent(type)}&employee_name=${encodeURIComponent(targetUser)}`;
             return fetchWithAuth(url, { signal })
@@ -6382,92 +6405,172 @@ async function prefetchBalances(signal) {
         });
 
         const results = await Promise.all(fetchPromises);
-        
         if (signal && signal.aborted) return;
 
-        // 3. Process Results Surgically
         results.forEach(res => {
             if (!res || !res.data) return;
             const { type, data } = res;
-
-            // Global Cache (Phase 3) - Sarah Connor's data bank
+            
+            // Store data for UI labels
             window.leaveEntitlements = window.leaveEntitlements || {};
             window.leaveEntitlements[type] = data;
 
-            // 🎯 SPECIAL CASE: ANNUAL LEAVE & CARRY FORWARD DUAL-UPDATE
-            // This pulls the banked days from Annual Leave to fill the Standalone CF tile.
+            // 🎯 CASE 1: ANNUAL & CARRY FORWARD
             if (type === "Annual Leave") {
-                window.annualRemainingGlobal = data.remaining || 0;
-
+                const annualCard = document.getElementById("card_annual");
                 const cfCard = document.getElementById("card_cf");
                 const cfWrapper = document.getElementById("wrapper_cf");
-                const cfVal = parseFloat(data.carry_forward_total || data.cf_banked || 0);
+                
+                const annualVal = parseFloat(data.remaining || 0);
+                const cfVal = parseFloat(data.carry_forward_total || 0);
+
+                if (annualCard) {
+                    annualCard.innerText = annualVal.toFixed(1);
+                    annualCard.style.color = (annualVal <= 0) ? "#ef4444" : "white";
+                }
 
                 if (cfCard) {
                     cfCard.innerText = cfVal.toFixed(1);
-                    cfCard.style.color = "white"; 
-                }
-                
-                if (cfWrapper) {
-                    // Rule: Show CF tile only if Policy is ON AND Sarah has balance > 0
-                    const isCFActive = (typeof ENABLE_CARRY_FORWARD !== 'undefined' && ENABLE_CARRY_FORWARD && cfVal > 0);
-                    cfWrapper.style.display = isCFActive ? "block" : "none";
 
-                    // Handle Expiry Date UI
-                    const expiryEl = document.getElementById("cf_expiry_label");
-                    if (expiryEl && typeof SYSTEM_SETTINGS !== 'undefined') {
-                        const expiryDate = SYSTEM_SETTINGS.carry_forward?.expiry_date;
-                        expiryEl.innerHTML = (expiryDate && expiryDate !== "N/A") 
-                            ? `<i class="fas fa-calendar-times"></i> Expires: ${formatDateNice(expiryDate)}`
-                            : "";
+                    // 📅 DYNAMIC COLOR ENGINE
+                    const now = new Date();
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    let deadline = null;
+
+                    // 🚀 FIX: Access SYSTEM_SETTINGS directly (no window. prefix)
+                    const dbDateStr = (SYSTEM_SETTINGS && SYSTEM_SETTINGS.carry_forward) 
+                                     ? SYSTEM_SETTINGS.carry_forward.expiry_date 
+                                     : "N/A";
+
+                    if (dbDateStr && dbDateStr !== "N/A") {
+                        const parts = dbDateStr.split('-');
+                        deadline = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    } else {
+                        deadline = new Date(today.getFullYear(), 2, 23); 
+                    }
+
+                    const diffTime = deadline.getTime() - today.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                    console.log(`🔍 CF Check: Today=${today.toDateString()}, Deadline=${deadline.toDateString()}, Diff=${diffDays}`);
+
+                    // 🎨 Apply Urgency Colors
+                    if (diffDays < 0) {
+                        cfCard.style.color = "#94a3b8"; // Gray (Expired)
+                    } else if (diffDays <= 3) {
+                        cfCard.style.color = "#ef4444"; // 🔴 URGENT RED (12 March test)
+                        cfCard.style.fontWeight = "900";
+                    } else if (diffDays <= 7) {
+                        cfCard.style.color = "#f59e0b"; // 🟠 WARNING AMBER (16 March test)
+                        cfCard.style.fontWeight = "700";
+                    } else {
+                        cfCard.style.color = "white";   // ⚪ SAFE
+                        cfCard.style.fontWeight = "800";
+                    }
+                    
+                    // 🛡️ EXPIRATION VISIBILITY GUARD
+                    if (cfWrapper) {
+                        // Hide tile and dropdown option if balance is 0 OR date has passed
+                        const isExpired = diffDays < 0;
+                        cfWrapper.style.display = (cfVal > 0 && !isExpired) ? "block" : "none";
+
+                        if (cfVal > 0 && !isExpired && select) {
+                            const optVal = "Claim Carry Forward";
+                            const exists = Array.from(select.options).some(o => o.value === optVal);
+                            if (!exists) {
+                                const newOpt = new Option("Claim Carry Forward", optVal);
+                                newOpt.style.fontWeight = "bold";
+                                newOpt.style.color = "#2563eb";
+                                select.add(newOpt);
+                            }
+                        } else if (isExpired && select) {
+                            // Automatically remove the option if it exists but is now expired
+                            const idx = Array.from(select.options).findIndex(o => o.value === "Claim Carry Forward");
+                            if (idx !== -1) select.remove(idx);
+                        }
                     }
                 }
             }
 
-            // 4. Standard Mapping (Medical, Emergency, Compassionate, Unpaid)
-            const shortName = type.toLowerCase().split(" ")[0];
-            const cardEl = document.getElementById("card_" + shortName);
-            const wrapper = document.getElementById("wrapper_" + shortName);
+            // 🎯 CASE 2: STANDARD TILES (Medical, Emergency, Unpaid)
+            if (type !== "Annual Leave") {
+                const shortName = type.toLowerCase().split(" ")[0];
+                const cardEl = document.getElementById("card_" + shortName);
+                const wrapper = document.getElementById("wrapper_" + shortName);
 
-            if (cardEl) {
-                // Unpaid shows "Taken", everything else shows "Remaining"
-                const val = type === "Unpaid Leave" ? (data.taken || 0) : (data.remaining || 0);
-                cardEl.innerText = parseFloat(val).toFixed(1);
-                
-                if (type !== "Unpaid Leave") {
-                    cardEl.style.color = (data.remaining <= 0) ? "#ef4444" : "white";
+                if (cardEl) {
+                    const val = (type === "Unpaid Leave") ? (data.taken || 0) : (data.remaining || 0);
+                    cardEl.innerText = parseFloat(val).toFixed(1);
+                    if (type !== "Unpaid Leave") {
+                        cardEl.style.color = (parseFloat(val) <= 0) ? "#ef4444" : "white";
+                    }
                 }
-            }
 
-            // 🚀 UNPAID LEAVE VISIBILITY FIX
-            if (wrapper && type === "Unpaid Leave") {
-                // Only show tile if Approved 'taken' days exist (Uses the backend fix)
-                const hasApprovedTaken = parseFloat(data.taken || 0) > 0;
-                wrapper.style.display = hasApprovedTaken ? "block" : "none";
+                if (wrapper && type === "Unpaid Leave") {
+                    const hasData = parseFloat(data.taken || 0) > 0;
+                    wrapper.style.display = hasData ? "block" : "none"; 
+                }
             }
         });
 
     } catch (e) {
-        if (e.name === 'AbortError') return;
-        console.error("Critical Balance Load Error:", e);
+        console.error("Balance Load Error:", e);
     } finally {
-        if (signal && signal.aborted) return;
         if (select) select.disabled = false;
-        
-        // Refresh Summaries for the Apply form math
         if (typeof showEntitlementInfo === "function") showEntitlementInfo();
-        if (typeof updateLiveSummary === "function") updateLiveSummary();
     }
 }
+// 🚀 V1.4.18: Intelligent Labeling for CF & Unpaid Leave
+function showEntitlementInfo() {
+    const type = document.getElementById("dash_leave_type").value;
+    const infoBox = document.getElementById("dash_entitlement_info");
+    if (!infoBox) return;
 
-      function showEntitlementInfo() {
-        const type = document.getElementById("dash_leave_type").value;
-        document.getElementById("dash_entitlement_info").innerHTML =
-          leaveEntitlements[type]
-            ? `<i class="fas fa-info-circle"></i> Total Entitlement: <strong>${leaveEntitlements[type]} days</strong>`
+    const entitlements = window.leaveEntitlements || {};
+    const annualData = entitlements["Annual Leave"] || null;
+    const standardData = entitlements[type] || null;
+
+    // 🎯 CASE 1: CARRY FORWARD (Dual-Line Info)
+    if (type === "Claim Carry Forward") {
+        const val = annualData ? parseFloat(annualData.carry_forward_total || 0) : 0;
+        
+        let deadlineText = "N/A";
+        if (SYSTEM_SETTINGS && SYSTEM_SETTINGS.carry_forward && SYSTEM_SETTINGS.carry_forward.expiry_date !== "N/A") {
+            const parts = SYSTEM_SETTINGS.carry_forward.expiry_date.split('-');
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            deadlineText = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+        }
+
+        infoBox.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 4px; border-left: 3px solid #3b82f6; padding-left: 10px; margin-top: 5px;">
+                <span style="font-size: 0.9rem; color: #1e293b;">
+                    <i class="fas fa-piggy-bank" style="color: #3b82f6;"></i> Available Carry Forward: <strong>${val.toFixed(1)} days</strong>
+                </span>
+                <span style="font-size: 0.75rem; color: #ef4444; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-calendar-times"></i> Valid Until: ${deadlineText}
+                </span>
+            </div>`;
+    } 
+    // 🎯 CASE 2: UNPAID LEAVE (The Sarah Connor Fix)
+    else if (type === "Unpaid Leave") {
+        // Pull 'taken' balance (e.g., 1.5) instead of 'entitlement' (0)
+        const val = standardData ? parseFloat(standardData.taken || 0) : 0;
+        infoBox.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; color: #64748b; font-weight: 600; border-left: 3px solid #64748b; padding-left: 10px; margin-top: 5px;">
+                <i class="fas fa-hand-holding-usd"></i> 
+                Total Taken (To Date): <strong style="color: #1e293b; font-size: 0.95rem;">${val.toFixed(1)} days</strong>
+            </div>`;
+    } 
+    // 🎯 CASE 3: STANDARD (Annual, Medical, etc.)
+    else {
+        const entitlement = standardData ? standardData.entitlement : 0;
+        infoBox.innerHTML = (standardData && entitlement !== undefined)
+            ? `<div style="border-left: 3px solid #10b981; padding-left: 10px; margin-top: 5px; color: #374151;">
+                 <i class="fas fa-info-circle" style="color: #10b981;"></i> Total Entitlement: <strong>${entitlement} days</strong>
+               </div>`
             : "";
-      }
-
+    }
+}
 
 // 1. Function to open the Floating Calendar
 function openCalendarModal() {
@@ -7427,8 +7530,8 @@ modal.style.display = "flex";
 
         updateLiveSummary();
       }
-
-      async function updateLiveSummary() {
+// 🚀 V1.4.15: Optimized Split-Wallet Projection Engine
+async function updateLiveSummary() {
     const type = document.getElementById("dash_leave_type").value;
     const start = document.getElementById("dash_start").value;
     const end = document.getElementById("dash_end").value;
@@ -7436,7 +7539,6 @@ modal.style.display = "flex";
     const summaryBox = document.getElementById("apply_summary_box");
     const totalDaysSpan = document.getElementById("summary_total_days");
     const balanceEstimate = document.getElementById("summary_new_balance");
-    const holidayNotice = document.getElementById("holiday_notice");
 
     if (!type || !start) {
         if (summaryBox) summaryBox.style.display = "none";
@@ -7448,10 +7550,7 @@ modal.style.display = "flex";
     const d2 = new Date(isHalfDay ? start : end);
     if (isNaN(d2.getTime())) return;
 
-    // ... (Keep your holiday and weekend validation logic here exactly as it is) ...
-    // If errorMsg exists, return early with the Red Styling we discussed.
-
-    // Calculate days requested
+    // 1. Calculate requested working days
     let daysRequested = 0;
     if (isHalfDay) {
         daysRequested = 0.5;
@@ -7460,9 +7559,7 @@ modal.style.display = "flex";
         let count = 0;
         let cur = new Date(d1);
         while (cur <= d2) {
-            const dateStr = cur.toISOString().split("T")[0];
             const isWeekend = cur.getDay() === 0 || cur.getDay() === 6;
-            // Note: Assume holidayDates is defined in your existing validation logic
             if (!isWeekend) count++; 
             cur.setDate(cur.getDate() + 1);
         }
@@ -7482,52 +7579,54 @@ modal.style.display = "flex";
             const searchYear = d1.getFullYear();
             const targetUser = window.proxyUser ? window.proxyUser : currentUser;
 
+            // 🎯 Force API to look at Annual record for Carry Forward data
+            const apiType = (type === "Claim Carry Forward") ? "Annual Leave" : type;
+            
             const res = await fetchWithAuth(
-                `${API_URL}/leaves/balance?employee_name=${encodeURIComponent(targetUser)}&year=${searchYear}&leave_type=${encodeURIComponent(type)}`
+                `${API_URL}/leaves/balance?employee_name=${encodeURIComponent(targetUser)}&year=${searchYear}&leave_type=${encodeURIComponent(apiType)}`
             );
 
             if (res && res.ok) {
                 const data = await res.json();
                 
-                // 📊 1. Math Correction
-                // data.remaining is (Entitlement - Approved - Pending)
-                const currentAvailable = data.remaining !== undefined ? data.remaining : 0;
-                
-                // 🚀 FIX: Use the specific pending_total we just added to the backend
-                const awaitingApproval = data.pending_total || 0; 
+                // 📊 2. Wallet Switching Math
+                let currentAvailable = 0;
+                let labelText = "Projected Balance:";
+
+                if (type === "Claim Carry Forward") {
+                    currentAvailable = parseFloat(data.carry_forward_total || 0);
+                    labelText = "Projected CF Balance:";
+                } else {
+                    currentAvailable = parseFloat(data.remaining || 0);
+                }
                 
                 const estimatedRemaining = currentAvailable - daysRequested;
 
-                // 🎨 2. UI Layout Correction
-                // Changed display to flex-direction: column to stop the squashing/overlap
-// 🎨 ALIGNED VERSION: Removes white box and matches vertical alignment
-balanceEstimate.innerHTML = `
+                // 🎨 3. UI Layout Rendering
+                balanceEstimate.innerHTML = `
     <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #bae6fd; display: flex; flex-direction: column; gap: 8px;">
-        
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <span style="color: #64748b; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">Awaiting Approval:</span>
-            <strong style="color: #f59e0b; font-size: 0.95rem; margin-left: 10px;">
-                ${awaitingApproval.toString().replace(/\.0$/, '')} Day(s)
-            </strong>
+            <span style="color: #64748b; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">Current Wallet:</span>
+            <strong style="color: #1e293b; font-size: 0.95rem;">${currentAvailable.toFixed(1)} Day(s)</strong>
         </div>
-
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <span style="color: #64748b; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">Projected Balance:</span>
-            <strong style="color: ${estimatedRemaining < 0 ? "#ef4444" : "#059669"}; font-size: 0.95rem; margin-left: 10px;">
+            <span style="color: #64748b; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">${labelText}</span>
+            <strong style="color: ${estimatedRemaining < 0 ? "#ef4444" : "#059669"}; font-size: 0.95rem;">
                 ${estimatedRemaining.toFixed(1).replace(/\.0$/, '')} Day(s)
             </strong>
         </div>
-
+        ${estimatedRemaining < 0 ? `
+        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 8px; border-radius: 6px; color: #dc2626; font-size: 0.75rem; font-weight: 700; text-align: center; margin-top: 5px;">
+            <i class="fas fa-exclamation-circle"></i> Insufficient ${type === "Claim Carry Forward" ? 'CF' : ''} Balance
+        </div>` : ''}
     </div>`;
             }
-        } catch (e) {
-            console.error("Balance calculation error:", e);
-        }
+        } catch (e) { console.error("Balance check error:", e); }
     }
 }
 
-      function resetApplyForm() {
-    // 1. Standard Form Reset (Clears all inputs, selects, and checkboxes)
+function resetApplyForm() {
+    // 1. Standard Form Reset
     document.getElementById("applyLeaveForm").reset();
 
     // 2. Reset Textarea Height
@@ -7541,11 +7640,18 @@ balanceEstimate.innerHTML = `
         charCount.style.color = "#94a3b8";
     }
 
-    // 4. Hide Summary Box
+    // 4. 🚀 THE FIX: Hide AND Wipe Summary Box
     const summaryBox = document.getElementById("apply_summary_box");
-    if (summaryBox) summaryBox.style.display = "none";
+    if (summaryBox) {
+        summaryBox.style.display = "none";
+        // 🔥 WIPE the inner content so it doesn't "ghost" back on tab switch
+        const totalDaysSpan = document.getElementById("summary_total_days");
+        const balanceEstimate = document.getElementById("summary_new_balance");
+        if (totalDaysSpan) totalDaysSpan.innerText = "";
+        if (balanceEstimate) balanceEstimate.innerHTML = "";
+    }
 
-    // 5. Reset End Date Styling (Unlock it if it was locked by Half Day)
+    // 5. Reset End Date Styling
     const endInput = document.getElementById("dash_end");
     if (endInput) {
         endInput.disabled = false;
@@ -7556,13 +7662,12 @@ balanceEstimate.innerHTML = `
     const info = document.getElementById("dash_entitlement_info");
     if (info) info.innerHTML = "";
 
-    // 7. Clean up the file UI (Including hiding the red X button)
+    // 7. Clean up the file UI
     if (typeof removeAttachment === "function") {
         removeAttachment('leave_attachment', 'leave_file_label', 'leave_remove_btn');
     }
 
     // 🚀 CLEANUP FIX: Clear BOTH draft buckets
-    // This ensures no old data reappears, regardless of which mode was active
     localStorage.removeItem("leave_draft_std");
     localStorage.removeItem("leave_draft_cf");
 }
@@ -7733,7 +7838,6 @@ async function resetProxyUser(silent = false) {
     }
 }
 
-
 async function submitLeaveInDashboard(event) {
     // 1. 🛑 HARD STOP: Prevent default browser submission
     if (event) {
@@ -7774,16 +7878,8 @@ async function submitLeaveInDashboard(event) {
         const cfReasonEl = document.getElementById("cf_reason");
         const cfReasonText = cfReasonEl ? cfReasonEl.value.trim() : "";
 
-        if (!daysReq || daysReq <= 0) {
-            Swal.fire("Input Required", "Please enter a valid number of days.", "warning");
-            return false;
-        }
-        if (!approverValue) {
-            Swal.fire("Input Required", "Select an approver.", "warning");
-            return false;
-        }
-        if (!cfReasonText) {
-            Swal.fire("Input Required", "Provide a reason for carry forward.", "warning");
+        if (!daysReq || daysReq <= 0 || !approverValue || !cfReasonText) {
+            Swal.fire("Input Required", "Please fill in all Carry Forward fields.", "warning");
             return false;
         }
 
@@ -7808,6 +7904,22 @@ async function submitLeaveInDashboard(event) {
         isHalfDay = halfDayCheckbox ? halfDayCheckbox.checked : false;
         endVal = isHalfDay ? startVal : rawEnd;
 
+        // 🛡️ THE DOUBLE-LOCK: Final Date Logic Check
+        // This stops the submission if Start > End, even if the user manually changed it.
+        if (!isHalfDay && startVal && endVal) {
+            const d1 = new Date(startVal);
+            const d2 = new Date(endVal);
+            if (d1 > d2) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Date Range',
+                    text: 'Your Start Date cannot be later than your End Date. Please check your selection.',
+                    confirmButtonColor: '#3b82f6'
+                });
+                return false; // 🛑 KILL SUBMISSION
+            }
+        }
+
         if (!type || !startVal || !endVal || !approverValue || !finalReason) {
             Swal.fire("Missing Info", "Please fill in all fields (Type, Date, Approver, Reason).", "warning");
             return false;
@@ -7817,12 +7929,11 @@ async function submitLeaveInDashboard(event) {
     // --- C. PREPARE DATA ---
     const formData = new FormData();
     
-    // 🚀 Proxy Check (If Natasha is applying for Steve)
+    // 🚀 Proxy Check
     const applicantName = window.proxyUser ? window.proxyUser : currentUser;
     formData.append("employee_name", applicantName);
     
     if (window.proxyUser) {
-        // Tag the record so the manager and Audit Log know HR forced it
         formData.append("applied_by", currentUser); 
     }
 
@@ -7833,9 +7944,7 @@ async function submitLeaveInDashboard(event) {
     formData.append("is_half_day", isHalfDay);
     formData.append("reason", finalReason);
 
-    // 📎 ATTACH FILE (If present)
     if (fileInput && fileInput.files.length > 0) {
-        console.log("📎 Attaching file:", fileInput.files[0].name);
         formData.append("file", fileInput.files[0]);
     }
 
@@ -7846,27 +7955,21 @@ async function submitLeaveInDashboard(event) {
     }
 
     try {
-        // --- E. SEND REQUEST ---
         const response = await fetch(`${API_URL}/leaves/`, {
             method: "POST",
             body: formData
         });
 
-        // 🛡️ SAFE PARSING: Check if response is actually JSON
         const contentType = response.headers.get("content-type");
         let result;
-        
         if (contentType && contentType.indexOf("application/json") !== -1) {
             result = await response.json();
         } else {
-            // Server returned HTML (likely 413 File Too Large or 500 Error)
             const text = await response.text();
-            console.error("Non-JSON Response:", text);
             throw new Error(`Server Error (${response.status}): The file might be too large.`);
         }
 
         if (response.ok) {
-            // ✅ SUCCESS: POP-UP STAYS
             await Swal.fire({
                 title: 'Success!',
                 text: isCarryForward ? 'Carry Forward request sent.' : 'Leave request submitted.',
@@ -7877,43 +7980,33 @@ async function submitLeaveInDashboard(event) {
                 allowEscapeKey: false
               }).then((res) => {
                 if (res.isConfirmed) {
-                    // 1. Reset Form Wrapper
                     const form = document.getElementById("applyLeaveForm");
                     if (form) form.reset();
                     
-                    // 🚀 2. OPTIMIZED CLEAR: Wipe all manual text and numeric inputs
                     ["cf_days_input", "cf_reason", "dash_reason"].forEach(id => {
                         const el = document.getElementById(id);
                         if (el) el.value = "";
                     });
 
-                    // 3. Wipe Drafts
                     localStorage.removeItem("leave_draft_std");
                     localStorage.removeItem("leave_draft_cf");
                     
-                    // 4. Cleanup File UI
                     if(typeof removeAttachment === 'function') {
                         removeAttachment('leave_attachment', 'leave_file_label', 'leave_remove_btn');
                     }
 
-                    // 🚀 THE ENHANCEMENT: Force Newest First Sort
                     if (typeof historySortState !== 'undefined') {
                         historySortState.key = 'id';
                         historySortState.direction = 'desc';
                     }
 
-                    // 🚀 5. NAVIGATE (WITH PROXY REDIRECT FIX)
                     if (window.proxyUser) {
-                        if (typeof showSection === 'function') showSection('manager_history');
+                        showSection('manager_history');
                         if (typeof loadTeamHistory === 'function') loadTeamHistory();
                         if (typeof resetProxyUser === 'function') resetProxyUser(true); 
                     } else {
-                        if (typeof showSection === 'function') {
-                            showSection('history');
-                            if (typeof loadHistory === 'function') loadHistory();
-                        } else {
-                            window.location.reload(); 
-                        }
+                        showSection('history');
+                        if (typeof loadHistory === 'function') loadHistory();
                     }
 
                     if (typeof prefetchBalances === "function") prefetchBalances();
@@ -7921,7 +8014,6 @@ async function submitLeaveInDashboard(event) {
             });
 
         } else {
-            // ❌ API ERROR (Validation, Logic, etc.)
             let msg = result.detail || "Unknown error.";
             if (Array.isArray(msg)) msg = msg.map(e => e.msg).join("<br>");
             Swal.fire("Submission Failed", msg, "error");
@@ -7937,7 +8029,7 @@ async function submitLeaveInDashboard(event) {
         }
     }
     
-    return false; // Final safeguard
+    return false;
 }
 
 

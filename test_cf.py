@@ -18,19 +18,20 @@ def seed_sarah_cf():
         ).first()
 
         if balance:
-            # 💰 Step A: Inject 5.0 days into the CF Wallet column
+            # 💰 Step A: Set the CF Wallet strictly to 5.0
+            # This wipes any previous testing values
             balance.carry_forward_total = 5.0
             
-            # 🛡️ Step B: Update the 'remaining' column
-            # We add 5.0 to whatever her current remaining balance is.
-            # (e.g., if she had 7.0, she now has 12.0)
-            current_rem = float(balance.remaining or 0.0)
-            balance.remaining = current_rem + 5.0
+            # 🛡️ Step B: IDEMPOTENT RESET
+            # We pull the base entitlement (contract days) and add the 5.0 CF.
+            # This prevents the "stacking bug" where multiple runs keep adding 5 days.
+            base_entitlement = float(balance.entitlement or 14.0)
+            balance.remaining = base_entitlement + 5.0
             
             db.commit()
-            print(f"✅ Success! Sarah now has 5.0 days in her {target_year} CF Wallet.")
-            print(f"📊 Previous Remaining: {current_rem}")
-            print(f"📊 New Total Available for Sarah: {balance.remaining} Days")
+            print(f"✅ Success! Sarah has been reset to 5.0 Banked days.")
+            print(f"📊 Base Entitlement: {base_entitlement}")
+            print(f"📊 Total spendable (Annual + CF): {balance.remaining}")
         else:
             print(f"❌ Error: Could not find a 2026 Annual Leave record for {employee}.")
 

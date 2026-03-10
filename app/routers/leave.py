@@ -64,14 +64,21 @@ def get_db():
         db.close()
 
 
-# 🚀 HELPER: SMART BALANCE CALCULATION (Strict Pending & Year Validation)
+# 🚀 V1.5.1: THE ULTIMATE SPLIT-WALLET ENGINE (UNIFIED SYNC)
 def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_type: str, include_pending: bool = False):
     import re
     from sqlalchemy import extract
+    from datetime import date, datetime
     
-    shared_annual_bucket = ["Annual Leave", "Emergency Leave"]
-    target_entitlement_type = "Annual Leave" if leave_type in shared_annual_bucket else leave_type
-    types_to_count = shared_annual_bucket if leave_type in shared_annual_bucket else [leave_type]
+    # 1. Bucket Mapping
+    shared_annual_bucket = ["Annual Leave", "Emergency Leave", "Claim Carry Forward"]
+    
+    if leave_type in shared_annual_bucket:
+        target_entitlement_type = "Annual Leave"
+        types_to_scan = shared_annual_bucket
+    else:
+        target_entitlement_type = leave_type
+        types_to_scan = [leave_type]
 
     balance_entry = db.query(models.LeaveBalance).filter(
         models.LeaveBalance.employee_name == employee_name,
@@ -81,57 +88,79 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
 
     if not balance_entry: return None
 
-    # We fetch all active records so we can calculate the "Projected" vs "Actual" totals
+    # Fetch all active records
     active_statuses = ["Approved", "Pending", "Pending Cancel", "Pending L2 Approval"]
-
     used_leaves = db.query(models.Leave).filter(
         models.Leave.employee_name == employee_name,
-        models.Leave.leave_type.in_(types_to_count),
+        models.Leave.leave_type.in_(types_to_scan),
         models.Leave.status.in_(active_statuses),
         extract('year', models.Leave.start_date) == year
     ).all()
 
-    total_deductions = 0.0   # (Approved + Pending) -> Used for 'Remaining'
-    approved_taken_only = 0.0 # (Only Approved) -> Used for 'Taken' tile
-    pending_only_days = 0.0   # (Only Pending)
+    # 📊 INDEPENDENT WALLET COUNTERS
+    spent_annual = 0.0  
+    spent_cf = 0.0      
+    approved_taken_total = 0.0
+    pending_total = 0.0
 
     for l in used_leaves:
-        days_to_count = float(l.days_taken or 0.0)
+        days = float(l.days_taken or 0.0)
+        l_type = str(l.leave_type.value if hasattr(l.leave_type, 'value') else l.leave_type)
         status_str = str(l.status.value if hasattr(l.status, 'value') else l.status)
         
-        # Handle Carry Forward specific math
-        is_annual = str(l.leave_type) == "Annual Leave" or getattr(l.leave_type, "value", l.leave_type) == "Annual Leave"
-        if is_annual and "[CARRY FORWARD" in (l.reason or ""):
-            match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
-            if match:
-                days_to_count = float(match.group(1))
+        if l_type == "Claim Carry Forward":
+            spent_cf += days
+        elif l_type in ["Annual Leave", "Emergency Leave"]:
+            if "[CARRY FORWARD" in (l.reason or ""):
+                match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
+                cf_part = float(match.group(1)) if match else days
+                spent_cf += cf_part
+                spent_annual += max(0, days - cf_part)
+            else:
+                spent_annual += days
+        else:
+            spent_annual += days
 
-        # 🚀 THE FIX: Categorize the days based on status
         if status_str in ["Pending", "Pending L2 Approval"]:
-            pending_only_days += days_to_count
+            pending_total += days
         elif status_str in ["Approved", "Pending Cancel"]:
-            # If it's Approved (or currently being cancelled), it counts as 'Taken'
-            approved_taken_only += days_to_count
+            approved_taken_total += days
 
-        # 'Total Deductions' always includes everything to prevent over-drawing
-        total_deductions += days_to_count
-
+    # --- 4. 🛡️ EXPIRY SYNC (Unified with Cleanup Script) ---
     base_entitlement = float(balance_entry.entitlement or 0.0)
-    cf_wallet = float(balance_entry.carry_forward_total or 0.0)
+    cf_banked = float(balance_entry.carry_forward_total or 0.0)
+    today = datetime.now().date()
     
-    # Math logic:
-    # Remaining = Total Wallet minus everything (Approved + Pending)
-    remaining = (base_entitlement + cf_wallet) - total_deductions
+    # 🚀 The Fix: Read from the main 'carry_forward' settings JSON
+    settings = db.query(models.SystemSetting).filter(models.SystemSetting.key == "carry_forward").first()
+    
+    expiry_date = None
+    if settings and settings.value.get("expiry_date"):
+        try:
+            # Use the date from your Admin Settings toggle
+            expiry_date = date.fromisoformat(settings.value["expiry_date"])
+        except:
+            expiry_date = date(year, 3, 23) # Fallback
+    else:
+        expiry_date = date(year, 3, 23)
+
+    # 🛑 If today is past the deadline, unrequested days "vanish" from the display
+    if today > expiry_date:
+        cf_banked = spent_cf
+
+    # 5. FINAL CALCULATION
+    annual_remaining = base_entitlement - spent_annual
+    cf_remaining = cf_banked - spent_cf
 
     return {
         "employee_name": employee_name,
         "year": year,
         "leave_type": target_entitlement_type,
         "entitlement": base_entitlement, 
-        "carry_forward_total": cf_wallet,
-        "remaining": remaining,
-        "taken": approved_taken_only,  # 🚀 CHANGED: Dashboard now only sees Approved days
-        "pending_total": pending_only_days
+        "carry_forward_total": max(0, cf_remaining), 
+        "remaining": annual_remaining,                
+        "taken": approved_taken_total,
+        "pending_total": pending_total
     }
 
 @router.get("/balance")
@@ -140,8 +169,13 @@ def get_leave_balance(
     year: int, 
     leave_type: str, 
     db: Session = Depends(get_db),
-    user: models.User = Depends(validate_session) # 🛡️ Guard is ACTIVE
+    user: models.User = Depends(validate_session) 
 ):
+    # 🚀 AUTOMATIC TRIGGER: Run cleanup check every time a balance is requested.
+    # This ensures that as soon as the clock strikes midnight on the expiry day,
+    # the very next person to view a dashboard triggers the cleanup for everyone.
+    check_and_wipe_expired_cf(db)
+
     # 1. First, ensure the year is initialized (2026 fix)
     ensure_leave_balance(db, employee_name, year)
     
@@ -153,10 +187,10 @@ def get_leave_balance(
     
     return balance
 
-# --- 2. UPDATED CREATE LEAVE: STRICT VALIDATION ---
+# --- 2. UPDATED CREATE LEAVE: STRICT VALIDATION (V1.4.9 FINAL) ---
 @router.post("/")
 async def create_leave(
-    background_tasks: BackgroundTasks, # 🚀 INJECTED: Background worker
+    background_tasks: BackgroundTasks, 
     employee_name: str = Form(...), 
     approver_name: str = Form(...),
     leave_type: str = Form(...),
@@ -167,17 +201,15 @@ async def create_leave(
     file: UploadFile = File(None), 
     db: Session = Depends(get_db)
 ):
-    # 🚀 FIX 1: SANITIZE INPUTS
+    # 1. SANITIZE & PARSE
     employee_name = employee_name.strip()
     approver_name = approver_name.strip()
     leave_type = leave_type.strip()
-
-    # --- 0. PARSE DATES (Immediate) ---
     start_obj = date.fromisoformat(start_date)
     end_obj = date.fromisoformat(end_date)
     is_half_day_bool = is_half_day in (True, "true")
 
-    # --- 1. DUPLICATE / OVERLAP CHECK ---
+    # 2. DUPLICATE / OVERLAP CHECK
     collision = db.query(models.Leave).filter(
         models.Leave.employee_name == employee_name,
         models.Leave.status.in_(["Pending", "Pending L2 Approval", "Approved", "Pending Cancel"]),
@@ -190,23 +222,19 @@ async def create_leave(
         type_label = "Carry Forward" if is_cf else "Leave"
         raise HTTPException(
             status_code=400, 
-            detail=f"Duplicate Request: You already have a {type_label} request ({collision.status}) "
-                   f"from {collision.start_date} to {collision.end_date}."
+            detail=f"Duplicate Request: You already have a {type_label} request ({collision.status}) from {collision.start_date} to {collision.end_date}."
         )
 
-    # --- 2. CALENDAR & HOLIDAY VALIDATION ---
+    # 3. CALENDAR & HOLIDAY VALIDATION
     holidays = db.query(models.PublicHoliday).all()
     holiday_dates = [h.holiday_date for h in holidays]
     for check_date in [start_obj, end_obj]:
         if check_date.weekday() >= 5:
-            day_name = check_date.strftime('%A')
-            raise HTTPException(status_code=400, detail=f"Selection Error: {check_date} ({day_name}) is a weekend.")
-        
+            raise HTTPException(status_code=400, detail=f"Selection Error: {check_date} is a weekend.")
         if check_date in holiday_dates:
-            h_name = next((h.name for h in holidays if h.holiday_date == check_date), "a Public Holiday")
-            raise HTTPException(status_code=400, detail=f"Conflict: {check_date} is {h_name}.")
+            raise HTTPException(status_code=400, detail=f"Conflict: {check_date} is a Public Holiday.")
 
-    # --- 3. DURATION & BALANCE VALIDATION ---
+    # 4. CALCULATE DURATION
     if is_half_day_bool:
         days_requested = 0.5
         end_obj = start_obj
@@ -215,57 +243,51 @@ async def create_leave(
         working_days = [d for d in all_dates if d.weekday() < 5 and d.date() not in holiday_dates]
         days_requested = float(len(working_days))
 
-    is_cf_request = "[CARRY FORWARD" in reason
+    # --- 5. 🛡️ HARD WALLET LOCKDOWN (THE FIX) ---
+    current_year = start_obj.year
+    balance = _calculate_shared_balance(db, employee_name, current_year, leave_type, include_pending=True)
     
-    if is_cf_request:
-        match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", reason)
-        real_cost = float(match.group(1)) if match else days_requested
-        balance = _calculate_shared_balance(db, employee_name, start_obj.year, "Annual Leave", include_pending=True)
-        rem_bal = balance["remaining"] if balance else 0
-        
-        if real_cost > rem_bal:
-             raise HTTPException(
-                status_code=400, 
-                detail=f"Insufficient Balance: You have {rem_bal} Annual Leave days, but you attempted to carry forward {real_cost}."
-            )
+    if not balance:
+        raise HTTPException(status_code=404, detail="Balance record not found.")
 
-    elif leave_type != "Unpaid Leave":
-        balance = _calculate_shared_balance(db, employee_name, start_obj.year, leave_type, include_pending=True)
-        rem_bal = balance["remaining"] if balance else 0
-        if rem_bal < days_requested:
-            raise HTTPException(status_code=400, detail=f"Insufficient balance. Remaining: {rem_bal}")
+    # 🎯 ROUTING: Determine which specific bucket we are emptying
+    if leave_type == "Claim Carry Forward":
+        wallet_available = float(balance.get("carry_forward_total", 0))
+        wallet_name = "Carry Forward"
+    elif leave_type == "Unpaid Leave":
+        wallet_available = 999.0  # Unpaid is infinite
+        wallet_name = "Unpaid"
     else:
-        ensure_leave_balance(db, employee_name, start_obj.year)
+        wallet_available = float(balance.get("remaining", 0))
+        wallet_name = "Annual/Medical"
 
-# --- 4. FILE HANDLING (Safe Cloud Upload) ---
+    # 🛑 THE BLOCK: Prevent overspending the specific wallet
+    if days_requested > wallet_available:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Insufficient {wallet_name} Balance: You requested {days_requested} days, but only {wallet_available} days are available."
+        )
+
+    # 🛡️ Special Case: Stop Annual Leave from "bleeding" into Carry Forward
+    if leave_type == "Annual Leave" and days_requested > float(balance.get("remaining", 0)):
+         raise HTTPException(
+            status_code=400, 
+            detail=f"Insufficient Annual Leave: You only have {balance.get('remaining')} days left. Please use 'Claim Carry Forward' to spend banked days."
+        )
+
+    # --- 6. FILE HANDLING (Safe Cloud Upload) ---
     attachment_url = None 
-    
     if file and file.filename:
         try:
             from app.main import compress_and_upload
-            
-            # Now the function is loaded and ready to use
             attachment_url = compress_and_upload(file, folder="mcs")
-            
         except Exception as e:
-            error_msg = str(e)
-            print(f"❌ Upload Failed: {error_msg}")
-            
-            # 1. Catch the specific "Idle/Timeout" empty stream error
-            if "cannot identify image file" in error_msg or "BytesIO" in error_msg:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="Upload Timeout: Your file session expired because the page was idle. Please refresh the page, re-attach your file, and submit again."
-                )
-            
-            # 2. Fallback for actual server/cloud crashes
-            raise HTTPException(
-                status_code=500, 
-                detail="System Error: Failed to upload attachment to cloud."
-            )
+            raise HTTPException(status_code=500, detail="System Error: Failed to upload attachment.")
 
-    # --- 5. SAVE RECORD ---
+    # --- 7. SAVE RECORD ---
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    is_cf_request = (leave_type == "Claim Carry Forward")
+    
     new_leave = models.Leave(
         employee_name=employee_name, 
         approver_name=approver_name, 
@@ -274,40 +296,21 @@ async def create_leave(
         end_date=end_obj, 
         reason=reason, 
         days_taken=days_requested,
-        attachment_path=attachment_url, # ✅ Passes the Cloud URL (or None)
+        attachment_path=attachment_url,
         status="Pending", 
         status_history=f"Submitted ({now_str})"
     )
-    
     db.add(new_leave)
     db.commit()
     db.refresh(new_leave)
 
-    # --- 6. EMAIL NOTIFICATION ---
+    # --- 8. EMAIL NOTIFICATION ---
     manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
-    
     if manager and manager.email:
-        if leave_type == "Medical Leave":
-            subject = f"🚑 ACTION REQUIRED: Medical Leave - {employee_name}"
-            body = template_medical_request(
-                manager_name=manager.full_name,
-                employee_name=employee_name,
-                start=start_date,
-                end=end_date,
-                days=days_requested
-            )
-        else:
-            display_type = "Carry Forward" if is_cf_request else leave_type
-            subject = f"ACTION REQUIRED: New {display_type} Request - {employee_name}"
-            body = template_new_request(
-                manager_name=manager.full_name,
-                employee_name=employee_name,
-                type=display_type,
-                start=start_date, 
-                end=end_date,
-                days=days_requested
-            )
-        
+        display_type = "Carry Forward" if is_cf_request else leave_type
+        subject = f"ACTION REQUIRED: New {display_type} Request - {employee_name}"
+        # (Using standard template for both to keep it clean)
+        body = template_new_request(manager.full_name, employee_name, display_type, start_date, end_date, days_requested)
         background_tasks.add_task(send_email, manager.email, subject, body)
 
     return new_leave
@@ -966,9 +969,8 @@ def get_team_entitlements(
     role_clean = user_role.lower().strip()
     approver_clean = approver_name.strip()
 
-    # 2. 🔍 DATABASE OVERRIDE
+    # 2. 🔍 DATABASE OVERRIDE: Check if user is actually an Admin
     requester = db.query(models.User).filter(models.User.full_name == approver_clean).first()
-    
     if requester:
         user_roles_list = [r.role_name for r in requester.assigned_roles] if hasattr(requester, 'assigned_roles') else []
         if requester.role == "hr_admin" or "hr_admin" in user_roles_list:
@@ -979,15 +981,11 @@ def get_team_entitlements(
     if role_clean not in allowed_roles:
         return []
 
-    # 4. 🚀 THE FIX: Remove '.filter(models.User.is_active == True)'
-    # We want ALL users so the frontend can calculate Active vs Inactive totals
+    # 4. Define Query Scope
     users_query = db.query(models.User)
-    
     if role_clean != "hr_admin":
-        # Manager Logic (Team specific)
         managed_by_profile = db.query(models.User.full_name).filter(models.User.line_manager == approver_clean).all()
         staff_list = [s[0] for s in managed_by_profile]
-
         submitted_to_mgr = db.query(models.Leave.employee_name).filter(models.Leave.approver_name == approver_clean).distinct().all()
         for s in submitted_to_mgr:
             if s[0] not in staff_list: staff_list.append(s[0])
@@ -1000,12 +998,11 @@ def get_team_entitlements(
     
     try:
         users = users_query.all()
-        if not users:
-            return []
+        if not users: return []
             
         user_names = [u.full_name for u in users]
 
-        # Fetch ALL Balances and Leaves at once
+        # 🚀 Bulk Fetch Balances and Leaves for Performance
         all_balances = db.query(models.LeaveBalance).filter(
             models.LeaveBalance.employee_name.in_(user_names),
             models.LeaveBalance.year == current_year
@@ -1026,67 +1023,74 @@ def get_team_entitlements(
             "Compassionate Leave": policy.compassionate_days if policy else 3.0
         }
         
+        # 🗺️ Map data for quick O(1) lookup
         bal_map = {uname: [] for uname in user_names}
-        for b in all_balances: 
-            bal_map[b.employee_name].append(b)
+        for b in all_balances: bal_map[b.employee_name].append(b)
             
         leave_map = {uname: [] for uname in user_names}
-        for l in all_leaves: 
-            leave_map[l.employee_name].append(l)
+        for l in all_leaves: leave_map[l.employee_name].append(l)
 
         results = []
 
+        # 🚀 START LOOP (Indented inside try block)
         for u in users:
             emp_name = u.full_name
             u_bals = bal_map.get(emp_name, [])
             u_leaves = leave_map.get(emp_name, [])
 
+            # 🛠️ INTERNAL CALCULATOR
             def get_bucket(l_type):
                 b = next((x for x in u_bals if str(getattr(x.leave_type, 'value', x.leave_type)) == l_type), None)
                 ent = float(b.entitlement or 0.0) if b else defaults.get(l_type, 0.0)
-                cf = float(b.carry_forward_total or 0.0) if b else 0.0
+                cf_banked = float(b.carry_forward_total or 0.0) if b else 0.0
                 
-                types_to_count = ["Annual Leave", "Emergency Leave"] if l_type == "Annual Leave" else [l_type]
-                used = 0.0
+                shared_annual_bucket = ["Annual Leave", "Emergency Leave", "Claim Carry Forward"]
+                types_to_count = shared_annual_bucket if l_type == "Annual Leave" else [l_type]
+                
+                spent_annual = 0.0
+                spent_cf = 0.0
                 
                 for l in u_leaves:
                     l_type_str = str(getattr(l.leave_type, 'value', l.leave_type))
                     if l_type_str in types_to_count:
-                        days_to_count = float(l.days_taken or 0.0)
-                        if l_type_str == "Annual Leave" and "[CARRY FORWARD" in (l.reason or ""):
-                            match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
-                            if match:
-                                days_to_count = float(match.group(1))
-                        used += days_to_count
-                return {"ent": ent, "cf": cf, "rem": (ent + cf) - used}
+                        days = float(l.days_taken or 0.0)
+                        
+                        if l_type_str == "Claim Carry Forward":
+                            spent_cf += days
+                        elif l_type_str in ["Annual Leave", "Emergency Leave"]:
+                            if "[CARRY FORWARD" in (l.reason or ""):
+                                match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
+                                cf_p = float(match.group(1)) if match else days
+                                spent_cf += cf_p
+                                spent_annual += max(0, days - cf_p)
+                            else:
+                                spent_annual += days
+                        else:
+                            spent_annual += days
+                            
+                return {
+                    "ent": ent, 
+                    "cf_rem": max(0, cf_banked - spent_cf), 
+                    "rem": ent - spent_annual
+                }
 
             ann = get_bucket("Annual Leave")
             med = get_bucket("Medical Leave")
             
-            unpaid = 0.0
-            cf_approved = 0.0
-            
-            for l in u_leaves:
-                l_type_str = str(getattr(l.leave_type, 'value', l.leave_type))
-                status_str = str(getattr(l.status, 'value', l.status))
-                if l_type_str == "Unpaid Leave" and status_str == "Approved":
-                    unpaid += float(l.days_taken or 0.0)
-                if status_str == "Approved" and "[CARRY FORWARD" in (l.reason or ""):
-                    match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
-                    if match: 
-                        cf_approved += float(match.group(1))
+            unpaid_taken = sum(float(l.days_taken or 0.0) for l in u_leaves 
+                               if str(getattr(l.leave_type, 'value', l.leave_type)) == "Unpaid Leave" 
+                               and str(getattr(l.status, 'value', l.status)) == "Approved")
 
-            # 🚀 RESULT: status is now accurately reported for ALL users
             results.append({
                 "name": emp_name,
                 "status": "Active" if u.is_active else "Inactive",
-                "is_active": u.is_active, # Added for frontend safety
+                "is_active": u.is_active,
                 "annual_remaining": ann["rem"],
                 "annual_entitlement": ann["ent"],
                 "medical_remaining": med["rem"],
                 "medical_entitlement": med["ent"],
-                "unpaid_taken": unpaid,
-                "carry_forward_total": cf_approved,
+                "unpaid_taken": unpaid_taken,
+                "carry_forward_total": ann["cf_rem"],
                 "overtime_bank": float(getattr(u, 'overtime_bank', 0) or 0)
             })
             
@@ -1094,6 +1098,8 @@ def get_team_entitlements(
 
     except Exception as e:
         print(f"❌ Database Query Error: {e}")
+        import traceback
+        traceback.print_exc() # This will help you see the exact line if it fails again
         raise HTTPException(status_code=500, detail="Failed to fetch balances")
 
 
@@ -1534,3 +1540,52 @@ def merge_cf_bulk(payload: dict = Body(...), db: Session = Depends(get_db)):
             
     db.commit()
     return {"message": f"Successfully merged {merged_count} requests to next year's balance."}
+# 🧹 V1.5.0: The Carry-Forward "Grim Reaper" with Audit Trail
+def check_and_wipe_expired_cf(db: Session):
+    today = date.today()
+    
+    # 1. Fetch the Expiry Date from your Settings table
+    settings = db.query(models.SystemSetting).filter(models.SystemSetting.key == "carry_forward").first()
+    
+    if not settings or not settings.value.get("expiry_date"):
+        return
+
+    try:
+        expiry_date = date.fromisoformat(settings.value["expiry_date"])
+    except:
+        return 
+
+    # 2. 🛑 THE KILL SWITCH: If today is AFTER the deadline
+    if today > expiry_date:
+        # Find all balances for the current year that still have CF days > 0
+        expired_records = db.query(models.LeaveBalance).filter(
+            models.LeaveBalance.carry_forward_total > 0,
+            models.LeaveBalance.year == today.year
+        ).all()
+
+        if expired_records:
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+            
+            for record in expired_records:
+                old_val = record.carry_forward_total
+                
+                # A. Create an Audit Record in the Leave table
+                # We tag it as 'System Action' so Natasha knows it wasn't a manual deletion
+                expiry_log = models.Leave(
+                    employee_name=record.employee_name,
+                    leave_type="Claim Carry Forward",
+                    start_date=today,
+                    end_date=today,
+                    days_taken=old_val,
+                    status="Cancelled", # Or create a new status like "Expired"
+                    reason=f"[SYSTEM AUTO-CLEANUP] {old_val} banked days expired on {expiry_date}.",
+                    status_history=f"Expired ({now_str})",
+                    approver_name="System Administrator"
+                )
+                db.add(expiry_log)
+
+                # B. Wipe the balance
+                record.carry_forward_total = 0.0
+            
+            db.commit()
+            print(f"🕒 {today}: Cleanup complete. {len(expired_records)} wallets emptied.")
