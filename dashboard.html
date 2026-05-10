@@ -18890,20 +18890,31 @@ async function loadManagerOTRequests() {
         const data = await res.json();
         let requests = Array.isArray(data) ? data : data.requests || [];
 
- // 🔍 CLIENT-SIDE FILTERING (Updated for Needs Attention)
- requests = requests.filter(ot => {
+// 🔍 CLIENT-SIDE FILTERING (Strict Visibility Fix)
+requests = requests.filter(ot => {
             const matchesName = !nameFilter || (ot.employee_name || "").toLowerCase().includes(nameFilter);
             const matchesType = !typeFilter || ot.ot_type === typeFilter;
             const matchesDate = !dateFilter || ot.ot_date === dateFilter;
             const matchesDur = !durFilter || parseFloat(ot.total_value) == parseFloat(durFilter);
 
-            // 🚀 THE FIX: If no specific status is selected, only show items containing "Pending"
+            // 🚀 THE STRICT VISIBILITY FIX: Lock down all "Pending" states
             let matchesStatus = false;
+            const otStatus = ot.status || "";
+            const isPendingState = otStatus.includes("Pending");
+
             if (statusFilter === "") {
-                // Shows "Pending" and "Pending L2 Approval" (Final Approval)
-                matchesStatus = (ot.status || "").includes("Pending"); 
+                // 1. Default "Needs Attention" Tab: Must be pending AND sitting on your desk
+                matchesStatus = isPendingState && ot.is_my_turn === true; 
+                
+            } else if (statusFilter.includes("Pending")) {
+                // 2. Explicit "Pending" or "Final Approval" Dropdown:
+                // If they explicitly filter for a pending state, STRICTLY enforce ownership.
+                matchesStatus = (otStatus === statusFilter) && ot.is_my_turn === true;
+                
             } else {
-                matchesStatus = ot.status === statusFilter;
+                // 3. Historical View ("Approved", "Rejected", "Cancelled"):
+                // Allow viewing of finalized records for their personal history/audit.
+                matchesStatus = otStatus === statusFilter;
             }
             
             return matchesName && matchesType && matchesDate && matchesDur && matchesStatus;
@@ -19257,7 +19268,7 @@ function sortManagerOTQueue(key) {
     modal.style.display = "flex";
 }
 
- // ✅ 0-BUG VERSION: Overtime Execution with Phantom Data Guard
+ // ✅ 0-BUG VERSION: Overtime Execution with Phantom Data Guard & UX Auto-Switch
 async function executeOTFinalDecision(otId, status) {
     const remarks = document.getElementById("mgr_review_remarks").value;
     const l2Container = document.getElementById("l2SelectorContainer");
@@ -19310,7 +19321,6 @@ async function executeOTFinalDecision(otId, status) {
             closeReviewModal();
 
             // 🚀 THE CRITICAL SYNC FIX: Await the success popup
-            // Tony (or the manager) must click OK before the code proceeds to refresh the list
             await Swal.fire({
                 title: modalTitle,
                 html: modalMsg,
@@ -19320,8 +19330,18 @@ async function executeOTFinalDecision(otId, status) {
                 allowOutsideClick: false
             });
 
-// 3. REFRESH DATA (Row is guaranteed to vanish now)
-console.log("🔄 Synchronizing OT queue and badges...");
+            // 🚀 NEW UX FIX: Auto-switch the dropdown filter to History view!
+            const filterDropdown = document.getElementById("mgr_ot_filter_status");
+            if (filterDropdown) {
+                if (status === "Rejected") {
+                    filterDropdown.value = "Rejected";
+                } else {
+                    filterDropdown.value = "Approved";
+                }
+            }
+
+            // 3. REFRESH DATA (Table will reload using the newly set filter)
+            console.log("🔄 Synchronizing OT queue and badges...");
             await loadManagerOTRequests();
             
             if (typeof refreshManagerBadges === "function") {

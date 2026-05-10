@@ -189,19 +189,28 @@ def get_all_overtime_requests(db: Session = Depends(get_db)):
 
 # 3. GET MANAGER PENDING & HISTORY REQUESTS (Unified)
 @router.get("/manager-requests")
-def get_manager_ot_requests(approver_name: str, db: Session = Depends(get_db)):
-    # 🚀 THE FIX: Return ALL requests the manager has interacted with!
-    # The frontend inbox will automatically filter out only the "Pending" ones,
-    # while the Activity Log will use the full history to show past approvals.
-    results = db.query(models.Overtime).filter(
-        or_(
-            models.Overtime.approver_name.ilike(approver_name.strip()),
-            models.Overtime.approver_l2.ilike(approver_name.strip()),
-            models.Overtime.status_history.ilike(f"%{approver_name.strip()}%") 
+def get_manager_ot_requests(
+    approver_name: str = Query(None),
+    page: int = 1,
+    page_size: int = 1000,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Overtime)
+    if approver_name:
+        query = query.filter(
+            or_(
+                models.Overtime.approver_name.ilike(approver_name.strip()),
+                models.Overtime.approver_l2.ilike(approver_name.strip()),
+                models.Overtime.status_history.ilike(f"%{approver_name.strip()}%") 
+            )
         )
-    ).order_by(models.Overtime.id.desc()).all()
+    else:
+        return []
+        
+    results = query.order_by(models.Overtime.id.desc()).all()
     
     # 🛡️ PREPARE SUPABASE CONSTANTS
+    import os
     SUPABASE_URL = os.getenv("SUPABASE_URL")
     SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
 
@@ -216,7 +225,6 @@ def get_manager_ot_requests(approver_name: str, db: Session = Depends(get_db)):
             "id": o.id,
             "employee_name": o.employee_name,
             "approver_name": o.approver_name,
-            "approver_l2": o.approver_l2,
             "ot_date": o.ot_date.strftime("%Y-%m-%d"),
             "ot_type": o.ot_type,
             "ot_unit": o.ot_unit,
@@ -225,7 +233,10 @@ def get_manager_ot_requests(approver_name: str, db: Session = Depends(get_db)):
             "reason": o.reason,
             "attachment_path": full_attachment_url,
             "manager_remarks": o.manager_remarks or "",
-            "status_history": o.status_history or "Pending"
+            "status_history": o.status_history or "Pending",
+            
+            # 🚀 THE FIX: This tells the frontend if the logged-in user is STILL the active approver
+            "is_my_turn": o.approver_name == approver_name.strip() if approver_name else False
         })
     return formatted_results
 
@@ -289,7 +300,7 @@ async def process_ot_action(
             ot.status = "Approved"
             ot.status_history += f" > Cancellation REJECTED by {approver_name} ({timestamp})"
 
-    # =========================================================
+# =========================================================
     # B. NORMAL APPROVAL LOGIC
     # =========================================================
     else:
@@ -297,10 +308,16 @@ async def process_ot_action(
             if l2_active and current_status == "Pending" and not is_senior:
                 if not l2_name:
                     raise HTTPException(status_code=400, detail="L2 Manager must be selected.")
-                ot.status = "Pending L2 Approval"
+                
+                # 🚀 THE FIX: Pass the 'active' baton to the L2 Manager
+                # Handover the primary responsibility to Tony Stark
+                ot.approver_name = l2_name 
                 ot.approver_l2 = l2_name
-                ot.status_history += f" > L1 Approved by {approver_name}. Routed to {l2_name} ({timestamp})"
+                
+                ot.status = "Pending L2 Approval"
+                ot.status_history += f" > L1 Approved by {approver_name}. Routed to L2: {l2_name} ({timestamp})"
             else:
+                # Final Approval Path (No L2 needed or Senior Manager acting)
                 if user_record:
                     current_bank = float(user_record.overtime_bank or 0.0)
                     user_record.overtime_bank = current_bank + float(ot.total_value or 0.0)
@@ -313,7 +330,7 @@ async def process_ot_action(
             ot.status_history += f" > Rejected by {approver_name} ({timestamp})"
 
     ot.manager_remarks = remarks
-    db.commit() # 💾 Commit changes to the OT record first
+    db.commit() # 💾 Commit changes to the OT record
 
     # 📧 --- 🚀 NEW: NOTIFY EMPLOYEE OF THE DECISION (The Merged Fix) ---
     if user_record and user_record.email:
