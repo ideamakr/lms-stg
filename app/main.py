@@ -2,12 +2,14 @@ import io
 import os
 import uuid
 import pytz
+import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 # 👇 THIRD PARTY IMPORTS
 from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile, Header
+from fastapi.staticfiles import StaticFiles 
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -15,16 +17,14 @@ from PIL import Image
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-# 👇 LOCAL APPLICATION IMPORTS (Absolute paths)
+# 👇 LOCAL APPLICATION IMPORTS
 from app.database import engine, Base, get_db
 from app import models, schemas
 from app.routers import leave, user, overtime, system_settings 
+from fastapi.responses import RedirectResponse, FileResponse
 
 # 👇 INITIALIZE ENVIRONMENT
 load_dotenv()
-
-# 👇 APP INITIALIZATION
-# app = FastAPI()
 
 # ============================================================
 # 🚀 1. INITIALIZE SUPABASE CLIENT
@@ -41,7 +41,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # 🚀 2. SET GLOBAL TIMEZONE
 LOCAL_TZ = pytz.timezone('Asia/Kuala_Lumpur')
 
-# Create Database Tables
+# Create Database Tables (Note: Only creates NEW tables, won't update existing ones)
 Base.metadata.create_all(bind=engine)
 
 # ============================================================
@@ -54,16 +54,26 @@ class LoginRequest(BaseModel):
 # ============================================================
 # 🛠️ APP INITIALIZATION
 # ============================================================
-# 👇 APP INITIALIZATION (Initialize once with title)
 app = FastAPI(title="Leave System API")
 
-# 🔒 CORS Configuration (Unified block with all origins)
+# 🚀 MOUNT THE UPLOADS FOLDER
+# serving local fallback images for profiles
+if not os.path.exists("uploads"):
+    os.makedirs("uploads", exist_ok=True)
+    os.makedirs("uploads/avatars", exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# 🔒 CORS Configuration
+# 🚀 ACTION REQUIRED: Ensure your Staging and Production URLs are in this list!
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://127.0.0.1:5500", 
         "http://localhost:5500",
-        "https://ideamakr.github.io"  # 🚀 Your GitHub Pages domain
+        "https://ideamakr.github.io", 
+        "https://parenting-substantially-oregon-strongly.trycloudflare.com",
+        "https://leave-system-testenv.onrender.com", # 👈 Ensure this matches your staging site
     ], 
     allow_credentials=True,
     allow_methods=["*"],
@@ -76,43 +86,33 @@ app.add_middleware(
 def compress_and_upload(file: UploadFile, folder: str = "mcs") -> str:
     """Shrinks images to < 500KB and uploads to Supabase."""
     try:
-        # 1. Read file into memory
         contents = file.file.read()
         img = Image.open(io.BytesIO(contents))
 
-        # 2. Convert transparent/palette images to RGB (Required for JPEG)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
         
-        # 3. Compress
         output = io.BytesIO()
         img.save(output, format="JPEG", quality=60, optimize=True)
         compressed_data = output.getvalue()
 
-        # 🚀 FIX: Prevent double extension (.jpg.jpg)
-        # We extract just the name "photo" from "photo.jpg"
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         clean_filename = Path(file.filename).stem 
         
-        # Construct new name: 20260225_123000_photo.jpg
         clean_name = f"{timestamp}_{clean_filename.replace(' ', '_')}.jpg"
         storage_path = f"{folder}/{clean_name}"
 
-        # 4. Upload to Cloud
         supabase.storage.from_(SUPABASE_BUCKET).upload(
             path=storage_path,
             file=compressed_data,
             file_options={"content-type": "image/jpeg"}
         )
 
-        # 5. Return Public URL
         return supabase.storage.from_(SUPABASE_BUCKET).get_public_url(storage_path)
 
     except Exception as e:
         print(f"❌ Cloud Upload Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to upload file to cloud storage")
-    
-    
 
 def is_system_locked(db: Session):
     """Checks if maintenance mode is active within the scheduled window."""
@@ -170,14 +170,11 @@ def get_system_today():
 
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
-    # 1. Identify User
     user_record = db.query(models.User).filter(models.User.username == data.username).first()
     
-    # 2. Verify Credentials
     if not user_record or user_record.password != data.password:
         raise HTTPException(status_code=400, detail="Access Denied: Invalid credentials.")
 
-    # 3. Maintenance Gatekeeper
     if is_system_locked(db):
         if user_record.role != "superuser":
             raise HTTPException(
@@ -185,12 +182,11 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
                 detail="System is currently under maintenance. Please try again later."
             )
     
-    # 4. Generate and Save Session ID (Sync with models.py)
     new_session_id = f"session-{uuid.uuid4()}" 
     user_record.current_session_id = new_session_id 
     db.commit()
 
-    # 5. Success Path
+    # Success Path - Map assigned roles
     roles_list = [r.role_name for r in user_record.assigned_roles]
     if not roles_list:
         roles_list = [user_record.role] if user_record.role else ["employee"]
@@ -222,3 +218,7 @@ app.include_router(system_settings.router)
 @app.get("/")
 def read_root():
     return {"status": "Leave System API is Online", "docs": "/docs"}
+
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return RedirectResponse(url="https://cdn-icons-png.flaticon.com/512/1063/1063376.png")

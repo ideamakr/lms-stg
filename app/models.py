@@ -101,29 +101,56 @@ class User(Base):
     role = Column(String, default="employee")
     is_active = Column(Boolean, default=True)
     
-    # 🚀 Manager Power Column (CRITICAL FOR SENIOR MGMT)
+    # 🚀 Manager Power Column
     is_senior_manager = Column(Boolean, default=False) 
-    
     current_session_id = Column(String, nullable=True)
     
-    # New Profile Fields
-    employee_id = Column(String, unique=True)
-    gender = Column(String)
-    marital_status = Column(String)
-    email = Column(String)
-    mobile = Column(String)
-    job_title = Column(String)
-    business_unit = Column(String)
-    department = Column(String)
-    line_manager = Column(String)
-    joined_date = Column(String) 
+    # 📋 EMPLOYMENT & IDENTITY (Step 1)
+    employee_id = Column(String, unique=True, nullable=True)
+    first_name = Column(String, nullable=True)
+    middle_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    joined_date = Column(String, nullable=True) 
+    job_title = Column(String, nullable=True)
+    department = Column(String, nullable=True)
+    business_unit = Column(String, nullable=True)
+
+# EMPLOYMENT & IDENTITY
+    line_manager = Column(JSON, nullable=True, default=list) # 🚀 Changed from String to JSON
+    hod_name = Column(JSON, nullable=True, default=list)
+
     
-    # 🚀 THE MISSING WALLETS
+    contract_type = Column(String, nullable=True) # 🆕 New
+    work_location = Column(String, nullable=True) # 🆕 New
+    
+    # 👤 PERSONAL INFO (Step 2)
+    preferred_name = Column(String, nullable=True) # 🆕 New
+    profile_pic_url = Column(String, nullable=True) # 🆕 New
+    gender = Column(String, nullable=True)
+    marital_status = Column(String, nullable=True)
+    ic_number = Column(String, nullable=True)      # 🆕 New
+    nationality = Column(String, nullable=True)    # 🆕 New
+    dob = Column(String, nullable=True)            # 🆕 New
+    race = Column(String, nullable=True)           # 🆕 New
+    religion = Column(String, nullable=True)       # 🆕 New
+    
+    # 📞 CONTACT & LOGISTICS (Step 3)
+    email = Column(String, nullable=True) # Office Email
+    personal_email = Column(String, nullable=True) # 🆕 New
+    mobile = Column(String, nullable=True)         # Office/Primary Mobile
+    home_address = Column(String, nullable=True)    # 🆕 New
+    current_address = Column(String, nullable=True) # 🆕 New
+    
+    # 🚨 EMERGENCY CONTACT (Step 3)
+    emergency_contact_name = Column(String, nullable=True)   # 🆕 New
+    emergency_contact_rel = Column(String, nullable=True)    # 🆕 New
+    emergency_contact_mobile = Column(String, nullable=True) # 🆕 New
+    
+    # 💰 THE WALLETS
     overtime_bank = Column(Float, default=0.0)
     unpaid_taken = Column(Float, default=0.0)
     
     assigned_roles = relationship("UserRole", backref="user", cascade="all, delete-orphan")
-
 class GlobalPolicy(Base):
     __tablename__ = "global_policy"
     id = Column(Integer, primary_key=True, index=True)
@@ -179,3 +206,32 @@ class Broadcast(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now)
     created_by = Column(String) # Stores "System Administrator"
+    
+# ============================================================
+# 📜 ACTIVITY LOG MODEL
+# ============================================================
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # The person whose dashboard this log appears on
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    
+    # The person who actually clicked the button (Manager or Employee)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Types: 'SUBMISSION', 'APPROVAL', 'REJECTION', etc.
+    action_type = Column(String)
+    
+    # Categories: 'Annual Leave', 'Medical Leave', 'OT', etc.
+    category = Column(String)
+    
+    # The actual text (e.g., "You submitted Annual Leave")
+    message = Column(String)
+    
+    # Link to the specific record in 'leaves' or 'overtime_claims'
+    reference_id = Column(Integer, nullable=True)
+    
+    # The date it happened
+    created_at = Column(DateTime, default=datetime.now)    

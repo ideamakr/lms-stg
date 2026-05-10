@@ -5,19 +5,19 @@ import json
 import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import urllib.request
 
 # ---------------------------------------------------------
-# ⚙️ CONFIGURATION
+# ⚙️ CONFIGURATION (Synchronized with .env)
 # ---------------------------------------------------------
 USE_MOCK_EMAIL = False 
 
-# 🔑 BREVO API V3 KEY (Required for Render API Bypass)
-API_KEY = os.getenv("Render-API")
+# 🔑 BREVO API V3 KEY 
+# Updated to match the "BREVO_API_KEY" name found in your .env file
+API_KEY = os.getenv("BREVO_API_KEY")
 
 # 🚀 THE VERIFIED SENDER 
-# IMPORTANT: Use the address Brevo recognizes to avoid Gmail DMARC blocks
-SENDER_EMAIL = "leavesystemnotif@gmail.com"
+# Pulls from .env if available, otherwise defaults to your verified gmail
+SENDER_EMAIL = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
 
 
 def send_email(to_email: str, subject: str, body: str):
@@ -30,11 +30,10 @@ def send_email(to_email: str, subject: str, body: str):
         print(f"⚠️ Skipping email: Invalid recipient address '{to_email}'")
         return False
 
-    # 🔑 CONFIGURATION
-    # Matches the Key exactly as seen in your Render Dashboard
-    API_KEY = os.getenv("Render-API") 
-    SENDER_EMAIL = "leavesystemnotif@gmail.com"
-    SYSTEM_URL = "https://ideamakr.github.io/lms-stg/" 
+    # 🔑 CONFIGURATION SYNC
+    current_api_key = os.getenv("BREVO_API_KEY") 
+    current_sender = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
+    SYSTEM_URL = "https://ideamakr.github.io/lms-stg/"
 
     if USE_MOCK_EMAIL:
         print("\n" + "="*60)
@@ -71,20 +70,18 @@ def send_email(to_email: str, subject: str, body: str):
         </div>
         """
         
-        # ✅ FIX: Standard single braces for dictionary payload
         payload = {
-            "sender": {"name": "Leave System", "email": SENDER_EMAIL},
+            "sender": {"name": "Leave System", "email": current_sender},
             "to": [{"email": to_email}],
             "subject": subject,
             "htmlContent": html_content
         }
 
-        # ✅ FIX: Standard single braces for headers
         req = urllib.request.Request(
             "https://api.brevo.com/v3/smtp/email",
             data=json.dumps(payload).encode("utf-8"),
             headers={
-                "api-key": API_KEY,
+                "api-key": current_api_key,
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
@@ -98,7 +95,6 @@ def send_email(to_email: str, subject: str, body: str):
             
     except Exception as e:
         try:
-            # Captures exact error from Brevo if available
             error_detail = e.read().decode('utf-8')
             print(f"❌ Brevo API Error: {error_detail}")
         except:
@@ -127,23 +123,28 @@ Best regards,
 HR Team
 """
 
-def template_new_request(manager_name, employee_name, type, start, end, days):
+def template_new_request(manager_name, employee_name, type, start, end, days, admin_name=None):
+    """
+    🚀 FIXED: Added 'admin_name' as the 7th argument to prevent the error.
+    """
+    # Create a note only if Natasha/Admin applied on behalf of someone
+    admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
+
     return f"""
 Hi {manager_name},
 
-Action Required: New Leave Request
-
+Action Required: New Leave Request{admin_note}
 --------------------------------
 Employee:   {employee_name}
 Leave Type: {type}
-Duration:   {days} Days
+Duration:   {days} Day(s)
 Dates:      {start} to {end}
 --------------------------------
 
-Please log in to the Dashboard to Approve or Reject this request.
+Please log in to the Dashboard to review and take action.
 
 Best regards,
-Leave System
+Leave Management System
 """
 
 def template_request_approved(employee_name, manager_name, type, start, end):
@@ -165,7 +166,10 @@ Best regards,
 Leave System
 """
 
-def template_request_rejected(employee_name, manager_name, type, start, end, reason):
+def template_request_rejected(employee_name, manager_name, type, start, end, remarks):
+    """
+    🚀 UPDATED: Named 'remarks' to match leave.py and added a fallback for empty notes.
+    """
     return f"""
 Hi {employee_name},
 
@@ -176,7 +180,7 @@ Approver:   {manager_name}
 Type:       {type}
 Dates:      {start} to {end}
 Status:     ❌ REJECTED
-Reason:     {reason}
+Remarks:    {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
 The days have been returned to your balance.
@@ -264,15 +268,19 @@ Best regards,
 Leave System
 """
 
-def template_new_ot_request(manager_name, employee_name, ot_type, ot_date, duration):
+def template_new_ot_request(manager_name, employee_name, ot_type, ot_date, duration, admin_name=None):
+    """
+    🚀 FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
+    """
+    # Create a note only if Natasha/Admin applied on behalf of someone
+    admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
+
     return f"""
 Hi {manager_name},
 
-Action Required: New Overtime Claim
-
-{employee_name} has submitted a new overtime claim.
-
+Action Required: New Overtime Claim{admin_note}
 --------------------------------
+Employee:   {employee_name}
 Type:       {ot_type}
 Date:       {ot_date}
 Duration:   {duration}
@@ -281,27 +289,30 @@ Duration:   {duration}
 Please log in to the Manager Dashboard to review this claim.
 
 Best regards,
-Overtime System
+Leave System
 """
 
 def template_ot_decision(employee_name, manager_name, status, ot_type, ot_date, remarks):
-    icon = "✅" if status == "Approved" else "❌"
+    # 🚀 Use .upper() to ensure the icon works even if 'status' is lowercase
+    icon = "✅" if status.upper() == "APPROVED" else "❌"
+    
     return f"""
 Hi {employee_name},
 
 Your Overtime Claim has been {status.upper()}.
 
 --------------------------------
-Status:     {icon} {status}
+Status:     {icon} {status.upper()}
 Manager:    {manager_name}
 Type:       {ot_type}
 Date:       {ot_date}
-Remarks:    {remarks}
+Remarks:    {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
 Best regards,
-Overtime System
+Leave System
 """
+
 
 def template_l2_ot_request(l2_manager_name, l1_manager_name, employee_name, ot_type, ot_date, duration):
     return f"""
@@ -323,14 +334,13 @@ L1 Status:  ✅ Approved by {l1_manager_name}
 Please log in to the Manager Dashboard to finalize this request.
 
 Best regards,
-Overtime System
+Leave System
 """
 
 # ---------------------------------------------------------
 # 🚀 CANCELLATION WORKFLOW TEMPLATES
 # ---------------------------------------------------------
 
-# 1. Notification to L1 (When Employee clicks "Cancel")
 def template_cancellation_request(manager_name, employee_name, type, start, end, reason):
     return f"""
 Hi {manager_name},
@@ -352,7 +362,6 @@ Best regards,
 Leave System
 """
 
-# 2. Notification to L2 (When L1 Approves a Cancellation, but L2 is ON)
 def template_l2_cancellation_request(l2_manager_name, l1_manager_name, employee_name, type, start, end):
     return f"""
 Hi {l2_manager_name},
@@ -375,7 +384,6 @@ Best regards,
 Leave System
 """
 
-# 3. Final Confirmation to Employee (Cancellation Approved)
 def template_cancellation_approved(employee_name, manager_name, type, start, end):
     return f"""
 Hi {employee_name},
@@ -393,7 +401,6 @@ Best regards,
 Leave System
 """
 
-# 4. Rejection Notification to Employee (Cancellation Denied)
 def template_cancellation_rejected(employee_name, manager_name, type, start, end, remarks):
     return f"""
 Hi {employee_name},
@@ -405,43 +412,29 @@ Denied By:   {manager_name}
 Type:        {type}
 Dates:       {start} to {end}
 Status:      ⚠️ CANCELLATION REJECTED
-Remarks:     {remarks}
+Remarks:     {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
 Best regards,
 Leave System
 """
 
-def send_system_email(recipient_email: str, subject: str, body: str):
-    """
-    Universal Email Helper
-    MOCK MODE: Prints to terminal.
-    PROD MODE: Plug in SendGrid/SMTP here.
-    """
-    print("\n" + "="*50)
-    print(f"📧 SYSTEM EMAIL QUEUED")
-    print(f"To: {recipient_email}")
-    print(f"Subject: {subject}")
-    print(f"Body: {body}")
-    print("="*50 + "\n")
-    
-    # FUTURE TODO: 
-    # sg = SendGridAPIClient('YOUR_API_KEY')
-    # response = sg.send(message)
-    return True
+# ---------------------------------------------------------
+# 🏥 MEDICAL & SECURITY TEMPLATES
+# ---------------------------------------------------------
 
-def template_medical_request(manager_name, employee_name, start, end, days):
+def template_medical_request(manager_name, employee_name, start, end, days, admin_name=None):
     """
     Specific template for Medical Leaves.
-    🚀 UPDATED: Removed 'Evidence' line to force Manager login for details.
+    🚀 FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
     """
+    # Create a note only if Natasha/Admin applied on behalf of someone
+    admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
+
     return f"""
 Hi {manager_name},
 
-Action Required: Medical Leave Reported
-
-{employee_name} has submitted a Medical Leave request.
-
+Action Required: Medical Leave Reported{admin_note}
 --------------------------------
 Employee:   {employee_name}
 Type:       Medical Leave 🚑

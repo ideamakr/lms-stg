@@ -122,8 +122,7 @@
       </footer>
     </div>
 
-    </div>
-
+    <!-- Reusable Error Modal -->
     <div
       id="errorModal"
       style="
@@ -209,63 +208,70 @@
       </div>
     </div>
 
-    
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- <script src="http://127.0.0.1:8000/static/sweetalert2.js"></script> -->
-        <!-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script>
+      /**
+       * 📡 DYNAMIC API URL DETECTION
+       * This centralizes your API endpoint configuration.
+       */
+      const getApiUrl = () => {
+        const host = window.location.hostname;
+        // Check for local development environments
+        if (host === "127.0.0.1" || host === "localhost") {
+          return "http://127.0.0.1:8000";
+        }
+        // Staging/Production Environment
+        return "https://leave-system-testenv.onrender.com";
+      };
 
-particlesJS("particles-js", {
-  "particles": {
-    "number": { "value": 150 },
-    "color": { "value": "#2563eb" }, /* Match your blue theme */
-    "shape": { "type": "circle" },
-    "opacity": { "value": 0.8 },
-    "size": { "value": 3 },
-    "line_linked": {
-      "enable": true,
-      "distance": 100,
-      "color": "#2563eb",
-      "opacity": 0.3,
-      "width": 1
-    },
-    "move": { "enable": true, "speed": 2 }
-  }
-});
+      const API_URL = getApiUrl();
+      console.log("🌐 Initializing handshake with API:", API_URL);
 
-const API_URL = "https://leave-system-testenv.onrender.com";
-// const API_URL = "http://127.0.0.1:8000";
+      // Initialize Particles background
+      particlesJS("particles-js", {
+        "particles": {
+          "number": { "value": 150 },
+          "color": { "value": "#2563eb" },
+          "shape": { "type": "circle" },
+          "opacity": { "value": 0.8 },
+          "size": { "value": 3 },
+          "line_linked": {
+            "enable": true,
+            "distance": 100,
+            "color": "#2563eb",
+            "opacity": 0.3,
+            "width": 1
+          },
+          "move": { "enable": true, "speed": 2 }
+        }
+      });
 
-      // 🛡️ MAINTENANCE GATEKEEPER (UI Display Only)
+      /**
+       * 🛡️ MAINTENANCE GATEKEEPER
+       * Checks backend for broadcast messages or maintenance locks.
+       */
       async function runMaintenanceCheck() {
         try {
-          // Fetch fresh data
           const res = await fetch(`${API_URL}/settings/branding?t=${new Date().getTime()}`);
           if (!res.ok) return;
           const data = await res.json();
           
           if (!data.broadcast_enabled || !data.broadcast_start || !data.broadcast_end) return;
 
-          // 🚀 Parse dates strictly in Local Time
           const now = new Date();
+          // Force standard format for date parsing across browsers
           const start = new Date(data.broadcast_start.replace(/-/g, "/").replace("T", " "));
           const end = new Date(data.broadcast_end.replace(/-/g, "/").replace("T", " "));
 
-          // If current time is within the broadcast window
           if (now >= start && now <= end) {
               const isLockMode = data.maintenance_mode === true;
-
               const injectInterval = setInterval(() => {
                 const card = document.querySelector(".login-card");
                 if (card) {
                   clearInterval(injectInterval);
-                  
-                  // Prevent duplicate banners
                   if (document.getElementById("maint-banner")) return;
 
-                  // 🎨 Create the Banner
                   const banner = document.createElement("div");
                   banner.id = "maint-banner";
                   banner.style = "background:#fffbeb; border:1px solid #fde68a; padding:15px; border-radius:8px; margin-bottom:20px; color:#92400e; font-size:0.85rem; font-weight:600; border-left:4px solid #f59e0b; text-align:left; animation: fadeIn 0.4s ease;";
@@ -274,7 +280,6 @@ const API_URL = "https://leave-system-testenv.onrender.com";
                   banner.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><i class="fas ${icon}"></i> <span>${data.broadcast_message}</span></div>`;
 
                   card.prepend(banner);
-                  console.log("✅ Banner injected. Sign-in button remains fully active for backend validation.");
                 }
               }, 50);
           }
@@ -283,11 +288,35 @@ const API_URL = "https://leave-system-testenv.onrender.com";
         }
       }
       
-      // Execute the check immediately
-      runMaintenanceCheck();
+      /**
+       * 🚀 VERSION LOGIC
+       * Displays system version from backend.
+       */
+      async function loadLoginVersion() {
+          const display = document.getElementById('login_version_display');
+          if (!display) return;
 
-    
-      // 🔴 ERROR MODAL FUNCTIONS
+          try {
+              const res = await fetch(`${API_URL}/settings/branding?t=${new Date().getTime()}`);
+              if (res.ok) {
+                  const data = await res.json();
+                  if (data.system_version) {
+                      display.innerText = data.system_version;
+                      display.style.color = "#2563eb";
+                  } else {
+                      display.innerText = "v1.0.0"; // Default
+                  }
+              } else {
+                  display.innerText = "OFFLINE";
+                  display.style.color = "#ef4444";
+              }
+          } catch (e) {
+              display.innerText = "OFFLINE";
+              display.style.color = "#ef4444";
+          }
+      }
+
+      // 🔴 ERROR MODAL HELPERS
       function showError(message) {
         const msgEl = document.getElementById("errorMessage");
         const modalEl = document.getElementById("errorModal");
@@ -309,7 +338,10 @@ const API_URL = "https://leave-system-testenv.onrender.com";
         const modal = document.getElementById("errorModal");
         if (event.target == modal) closeErrorModal();
       };
-    
+
+      /**
+       * 🔐 LOGIN HANDLER
+       */
       async function handleLogin(event) {
         event.preventDefault(); 
         localStorage.clear(); 
@@ -332,22 +364,17 @@ const API_URL = "https://leave-system-testenv.onrender.com";
             if (res.ok) {
                 const data = await res.json();
                 
-                // 1. Save Basic User Info
+                // Persistence
                 localStorage.setItem("currentUser", data.full_name); 
                 localStorage.setItem("username", usernameInput);       
                 localStorage.setItem("userRoles", JSON.stringify(data.roles));
                 
-                // 2. 🛡️ FIX: Use the REAL Session ID from the server
-                // This matches what is now stored in your Supabase database.
                 if (data.session_id) {
                     localStorage.setItem("sessionId", data.session_id);
                 } else {
-                    // Fallback just in case backend wasn't updated yet
-                    console.warn("Backend didn't return session_id. Using fallback.");
                     localStorage.setItem("sessionId", "session-" + new Date().getTime());
                 }
 
-                // 3. Handle Roles
                 if (data.roles && data.roles.length > 0) {
                      localStorage.setItem("userMasterRole", data.roles[0]); 
                      localStorage.setItem("role", data.roles[0]); 
@@ -356,10 +383,7 @@ const API_URL = "https://leave-system-testenv.onrender.com";
                      localStorage.setItem("role", "employee");
                 }
 
-                // 4. Redirect
-                console.log("Login synced with DB. Redirecting...");
                 window.location.replace("dashboard.html");
-                // window.location.replace("/lms-stg/dashboard.html");
             } else {
                 const errorData = await res.json();
                 if (res.status === 503) {
@@ -374,21 +398,20 @@ const API_URL = "https://leave-system-testenv.onrender.com";
                 }
             }
         } catch (e) {
-            console.error(e);
+            console.error("Login attempt failed:", e);
             showError("System Error: Cannot connect to server.");
         }
       }
     
       /**
-       * 🛡️ ACCOUNT RECOVERY (Username + Password)
-       * This handles the "Forgot username or password" flow.
+       * 🔑 FORGOT PASSWORD HANDLER
        */
       async function handleForgotPassword() {
         const { value: email } = await Swal.fire({
           title: "Account Recovery",
           text: "Enter your email and we will send your username and a temporary password.",
           input: "email",
-          inputPlaceholder: "e.g. niel@company.com",
+          inputPlaceholder: "e.g. employee@company.com",
           showCancelButton: true,
           confirmButtonColor: "#2563eb",
           cancelButtonColor: "#94a3b8",
@@ -397,7 +420,6 @@ const API_URL = "https://leave-system-testenv.onrender.com";
         });
     
         if (email) {
-          // 🔄 Visual Loading State
           Swal.fire({
             title: "Processing...",
             html: "Verifying email and generating credentials...",
@@ -410,16 +432,12 @@ const API_URL = "https://leave-system-testenv.onrender.com";
           try {
             const formData = new FormData();
             formData.append("email", email);
-    
-            // Hits the @router.post("/forgot-password") endpoint
             const res = await fetch(`${API_URL}/users/forgot-password`, {
               method: "POST",
               body: formData,
             });
     
             if (res.ok) {
-              const data = await res.json();
-              // ✅ SUCCESS: Generic message maintained for security
               Swal.fire({
                 icon: "success",
                 title: "Check Your Inbox",
@@ -427,64 +445,29 @@ const API_URL = "https://leave-system-testenv.onrender.com";
                 confirmButtonColor: "#2563eb",
               });
             } else {
-              // ❌ SERVER ERROR
               const err = await res.json();
-              Swal.fire(
-                "Request Failed",
-                err.detail || "Could not process account recovery.",
-                "error"
-              );
+              Swal.fire("Request Failed", err.detail || "Could not process account recovery.", "error");
             }
           } catch (error) {
-            // 📡 NETWORK ERROR
-            console.error("Recovery Error:", error);
-            Swal.fire(
-              "Connection Error",
-              "Check your internet or server status.",
-              "error"
-            );
+            Swal.fire("Connection Error", "Check your internet or server status.", "error");
           }
         }
       }
 
-      // 🚀 THE VERSION HANDSHAKE
-async function loadLoginVersion() {
-    const display = document.getElementById('login_version_display');
-    
-    // Safety check: ensure the element exists
-    if (!display) return;
-
-    try {
-        // Fetch branding from your system_settings router
-        const res = await fetch(`${API_URL}/settings/branding?t=${new Date().getTime()}`);
-        
-        if (res.ok) {
-            const data = await res.json();
-            if (data.system_version) {
-                display.innerText = data.system_version;
-                display.style.color = "#2563eb"; // Success Blue
-            }
+      function togglePass(id) {
+        const input = document.getElementById(id);
+        if (input.type === "password") {
+          input.type = "text";
         } else {
-            // Server replied with an error (e.g., 500)
-            display.innerText = "OFFLINE";
-            display.style.color = "#ef4444"; // Error Red
+          input.type = "password";
         }
-    } catch (e) {
-        // Server is completely stopped/unreachable
-        console.warn("Backend unreachable for version check.");
-        display.innerText = "OFFLINE";
-        display.style.color = "#ef4444"; // Error Red
-    }
-}
+      }
 
-// 🏁 INITIALIZE
-// Ensure this runs as soon as the page is ready
-document.addEventListener('DOMContentLoaded', () => {
-    runMaintenanceCheck(); // Your existing maintenance logic
-    loadLoginVersion();    // Your new version logic
-});
-
-
+      // Start services on load
+      document.addEventListener('DOMContentLoaded', () => {
+          runMaintenanceCheck();
+          loadLoginVersion();
+      });
     </script>
   </body>
 </html>

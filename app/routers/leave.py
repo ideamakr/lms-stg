@@ -198,6 +198,7 @@ async def create_leave(
     end_date: str = Form(...),
     reason: str = Form(...), 
     is_half_day: Union[bool, str] = Form(False),
+    applied_by: Optional[str] = Form(None), # 🚀 Added to capture Natasha's name
     file: UploadFile = File(None), 
     db: Session = Depends(get_db)
 ):
@@ -243,39 +244,36 @@ async def create_leave(
         working_days = [d for d in all_dates if d.weekday() < 5 and d.date() not in holiday_dates]
         days_requested = float(len(working_days))
 
-    # --- 5. 🛡️ HARD WALLET LOCKDOWN (THE FIX) ---
+    # --- 5. 🛡️ HARD WALLET LOCKDOWN ---
     current_year = start_obj.year
     balance = _calculate_shared_balance(db, employee_name, current_year, leave_type, include_pending=True)
     
     if not balance:
         raise HTTPException(status_code=404, detail="Balance record not found.")
 
-    # 🎯 ROUTING: Determine which specific bucket we are emptying
     if leave_type == "Claim Carry Forward":
         wallet_available = float(balance.get("carry_forward_total", 0))
         wallet_name = "Carry Forward"
     elif leave_type == "Unpaid Leave":
-        wallet_available = 999.0  # Unpaid is infinite
+        wallet_available = 999.0
         wallet_name = "Unpaid"
     else:
         wallet_available = float(balance.get("remaining", 0))
         wallet_name = "Annual/Medical"
 
-    # 🛑 THE BLOCK: Prevent overspending the specific wallet
     if days_requested > wallet_available:
         raise HTTPException(
             status_code=400, 
             detail=f"Insufficient {wallet_name} Balance: You requested {days_requested} days, but only {wallet_available} days are available."
         )
 
-    # 🛡️ Special Case: Stop Annual Leave from "bleeding" into Carry Forward
     if leave_type == "Annual Leave" and days_requested > float(balance.get("remaining", 0)):
          raise HTTPException(
             status_code=400, 
-            detail=f"Insufficient Annual Leave: You only have {balance.get('remaining')} days left. Please use 'Claim Carry Forward' to spend banked days."
+            detail=f"Insufficient Annual Leave: You only have {balance.get('remaining')} days left."
         )
 
-    # --- 6. FILE HANDLING (Safe Cloud Upload) ---
+    # --- 6. FILE HANDLING ---
     attachment_url = None 
     if file and file.filename:
         try:
@@ -286,7 +284,6 @@ async def create_leave(
 
     # --- 7. SAVE RECORD ---
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-    is_cf_request = (leave_type == "Claim Carry Forward")
     
     new_leave = models.Leave(
         employee_name=employee_name, 
@@ -303,6 +300,50 @@ async def create_leave(
     db.add(new_leave)
     db.commit()
     db.refresh(new_leave)
+
+    # 📧 --- 8. NOTIFY MANAGER (The Merged Fix) ---
+    manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
+    
+    if manager and manager.email:
+        try:
+            subject = f"Action Required: New Leave Request ({employee_name})"
+            
+            # Check if this was a Natasha "Apply on Behalf" override
+            # We use the 'applied_by' parameter we added to the signature
+            admin_name = applied_by if applied_by and applied_by != employee_name else None
+
+            if leave_type == "Medical Leave":
+                body = template_medical_request(manager.full_name, employee_name, str(start_obj), str(end_obj), days_requested)
+            else:
+                # We use the template_new_request which can now accept admin_name
+                body = template_new_request(manager.full_name, employee_name, leave_type, str(start_obj), str(end_obj), days_requested, admin_name)
+            
+            background_tasks.add_task(send_email, manager.email, subject, body)
+            print(f"📧 Manager Notification queued for {manager.email}")
+            
+        except Exception as e:
+            print(f"⚠️ Email Trigger Error: {e}")
+
+    return {"message": "Leave request submitted successfully", "leave_id": new_leave.id}
+
+    # ============================================================
+    # 🚀 RECORD TO ACTIVITY LOG (STEP 3)
+    # ============================================================
+    try:
+        # 1. Find the user ID based on the employee name
+        user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
+        
+        if user_record:
+            log_activity(
+                db=db,
+                user_id=user_record.id,
+                action_type="SUBMISSION",
+                category=leave_type,
+                message=f"You submitted a {leave_type} request for {start_date}",
+                reference_id=new_leave.id
+            )
+    except Exception as log_error:
+        print(f"⚠️ Activity Log Warning: {log_error}")
 
     # --- 8. EMAIL NOTIFICATION ---
     manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
@@ -674,169 +715,187 @@ def fix_db_schema(db: Session = Depends(get_db)):
 
 
 # app/routers/leave.py
-
 @router.post("/manager/action/{leave_id}")
 async def approve_leave( 
     leave_id: int, 
     background_tasks: BackgroundTasks, 
     status: str = Query(...),       
     remarks: str = Query(""),       
-    approver_name: str = Query(""), 
+    approver_name: str = Query(""), # We will clean this below
     l2_name: str = Query(None), 
     db: Session = Depends(get_db)
 ):
+    # --- 🛡️ 1. SANITIZE NAMES (The Fix for Sarah Connor's empty feed) ---
+    approver_name = approver_name.strip()
+    if l2_name: l2_name = l2_name.strip()
+
     leave = db.query(models.Leave).filter(models.Leave.id == leave_id).first()
     if not leave:
         raise HTTPException(status_code=404, detail="Leave request not found")
 
-    # 1. Manager Identity & Permissions
+    # --- 2. Identity & Permission Checks ---
     acting_mgr = db.query(models.User).filter(models.User.full_name == approver_name).first()
     is_senior = acting_mgr.is_senior_manager if acting_mgr else False
     is_l1 = (approver_name == leave.approver_name)
     
-    # 2. Get Global Policy for L2 Toggle
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     l2_active = policy.l2_approval_enabled if policy else False
 
-    # 3. 📝 PREPARE VARIABLES
-    current_status = leave.status
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     note_str = f" | Note: {remarks}" if remarks else ""
     l_type_str = str(leave.leave_type.value) if hasattr(leave.leave_type, 'value') else str(leave.leave_type)
-
-    # 🕵️ CRITICAL FIX: DETECT CANCELLATION JOURNEY
-    # We check if this is a cancellation flow by looking at status OR history.
-    # This ensures that even if status is "Pending L2 Approval", we know it's a cancellation.
+    
     history_log = leave.status_history or ""
-    is_cancellation_journey = (
-        current_status == "Pending Cancel" or 
-        "Cancellation" in history_log or
-        "Request Cancellation" in history_log
-    )
+    is_cancellation_journey = (leave.status == "Pending Cancel" or "Cancellation" in history_log)
 
-    # =========================================================================
-    # 4. HANDLE CANCELLATION LOGIC (For BOTH L1 and L2 Stages)
+    final_response_message = "Request processed successfully"
+
+# =========================================================================
+    # 3. HANDLE CANCELLATION LOGIC
     # =========================================================================
     if is_cancellation_journey:
         if status == "Approved":
-            # 🚀 SUPER-ADMIN OVERRIDE
             is_hr_admin = acting_mgr and (acting_mgr.role == "hr_admin" or any(r.role_name == "hr_admin" for r in acting_mgr.assigned_roles))
 
-            # 🔶 SCENARIO A: L1 Approves Cancellation -> Route to L2 (Only if L2 is active & required)
-            # Logic: If we are strictly at L1 stage ("Pending Cancel") AND L2 is required
-            if current_status == "Pending Cancel" and not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2:
+            # 🔶 Scenario A: L1 Approves -> Route to L2
+            if leave.status == "Pending Cancel" and not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2:
                 l2_user = db.query(models.User).filter(models.User.full_name == leave.approver_l2).first()
-                l2_still_valid = l2_user and l2_user.is_active and l2_user.is_senior_manager
-
-                if l2_still_valid:
-                    # Log History and Route
+                if l2_user and l2_user.is_active:
                     leave.status = "Pending L2 Approval"
                     leave.status_history += f" > L1 Approved Cancellation. Routed to {leave.approver_l2} ({timestamp}){note_str}"
                     
-                    # 📧 Notify L2 Manager
+                    # 🚀 THE FIX: Change 'return' to 'final_response_message'
+                    final_response_message = "Cancellation approved by L1. Routed to L2."
+                    
+                    # (Keep your email logic here...)
                     try:
                         if l2_user.email:
-                            body = template_l2_cancellation_request(
-                                l2_manager_name=l2_user.full_name, 
-                                l1_manager_name=approver_name, 
-                                employee_name=leave.employee_name, 
-                                type=l_type_str, 
-                                start=str(leave.start_date), 
-                                end=str(leave.end_date)
-                            )
+                            body = template_l2_cancellation_request(l2_user.full_name, approver_name, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
                             background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: L2 Cancellation - {leave.employee_name}", body)
-                    except Exception as e:
-                        print(f"⚠️ Email Error (L2 Route): {e}")
+                    except Exception as e: print(f"⚠️ Email Error: {e}")
 
-                    db.commit()
-                    return {"message": "Cancellation approved by L1. Routed to L2."}
+            # 🟢 Scenario B: Final Cancellation
+            else:
+                leave.status = "Cancelled"
+                leave.status_history += f" > Cancellation FINALIZED by {approver_name} ({timestamp}){note_str}"
                 
-            # 🟢 SCENARIO B: Final Cancellation 
-            # This executes if:
-            # 1. It is L1 but L2 is OFF
-            # 2. It is L1 but User is Senior
-            # 3. It is already at L2 ("Pending L2 Approval") <-- THIS FIXES YOUR BUG
-            leave.status = "Cancelled"
-            admin_note = " by HR Admin" if is_hr_admin else ""
-            leave.status_history += f" > Cancellation FINALIZED{admin_note} by {approver_name} ({timestamp}){note_str}"
-            
-            # 📧 Notify Employee
-            try:
-                emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
-                if emp and emp.email:
-                    body = template_cancellation_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                    background_tasks.add_task(send_email, emp.email, f"Leave Cancelled: {l_type_str}", body)
-            except Exception as e:
-                print(f"⚠️ Email Error (Final Cancel): {e}")
+                # 🚀 THE FIX: Change 'return' to 'final_response_message'
+                final_response_message = "Cancellation finalized"
+                
+                # (Keep your email logic here...)
 
         else:
-            # 🔴 SCENARIO C: Cancellation Rejected (Revert to Approved)
-            # If ANYONE rejects the cancellation, it goes back to being an Active Approved Leave
+            # 🔴 Scenario C: Cancellation Rejected
             leave.status = "Approved" 
             leave.status_history += f" > Cancellation REJECTED by {approver_name} ({timestamp}){note_str}"
             
-            # 📧 Notify Employee
-            try:
-                emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
-                if emp and emp.email:
-                    body = template_cancellation_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks)
-                    background_tasks.add_task(send_email, emp.email, f"Cancellation Denied: {l_type_str}", body)
-            except Exception as e:
-                print(f"⚠️ Email Error (Cancel Reject): {e}")
+            # 🚀 THE FIX: Change 'return' to 'final_response_message'
+            final_response_message = "Cancellation rejected"
 
     # =========================================================================
-    # 5. HANDLE NORMAL LEAVE REQUESTS (Pending -> Approved/Rejected)
+    # 4. HANDLE NORMAL LEAVE REQUESTS
     # =========================================================================
     else:
+        # ... (Keep your normal leave logic exactly as it is)
+        # Just ensure that inside 'else', you also use final_response_message instead of return
         if status == "Approved":
-            # 🔶 L1 Approval -> Route to L2
             if l2_name: 
                 leave.status = "Pending L2 Approval"
                 leave.approver_l2 = l2_name
                 leave.status_history += f" > L1 Approved. Routed to {l2_name} ({timestamp}){note_str}"
-                
-                # Notify L2
-                try:
-                    l2_user = db.query(models.User).filter(models.User.full_name == l2_name).first()
-                    if l2_user and l2_user.email:
-                        body = template_l2_request(l2_name, approver_name, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                        background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: L2 Approval - {leave.employee_name}", body)
-                except Exception as e:
-                    print(f"⚠️ Email Error (Normal L2): {e}")
-
-            # 🟢 Final Approval
+                final_response_message = f"L1 Approved. Routed to {l2_name}"
             else: 
                 leave.status = "Approved"
                 leave.approved_at = datetime.now()
                 leave.status_history += f" > Fully Approved by {approver_name} ({timestamp}){note_str}"
-                
-                # Notify Employee
-                try:
-                    emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
-                    if emp and emp.email:
-                        body = template_request_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                        background_tasks.add_task(send_email, emp.email, f"Leave Approved: {l_type_str}", body)
-                except Exception as e:
-                    print(f"⚠️ Email Error (Normal Approve): {e}")
-
         else: 
-            # 🔴 Rejection
             leave.status = "Rejected"
             leave.rejected_at = datetime.now()
             leave.status_history += f" > Rejected by {approver_name} ({timestamp}){note_str}"
 
-            # Notify Employee
-            try:
-                emp = db.query(models.User).filter(models.User.full_name == leave.employee_name).first()
-                if emp and emp.email:
-                    body = template_request_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks)
-                    background_tasks.add_task(send_email, emp.email, f"Leave Rejected: {l_type_str}", body)
-            except Exception as e:
-                print(f"⚠️ Email Error (Normal Reject): {e}")
-
+ # --- 💾 COMMIT CHANGES (Saves the Leave Status first - Safe!) ---
     db.commit()
-    return {"message": "Request processed successfully"}
 
+# ============================================================
+    # 🚀 5. RECORD TO ACTIVITY LOG (MANAGER & EMPLOYEE)
+    # ============================================================
+    try:
+        # ✅ SMART LOOKUP
+        emp_record = db.query(models.User).filter(
+            or_(models.User.full_name == leave.employee_name, models.User.username == leave.employee_name)
+        ).first()
+
+        mgr_record = db.query(models.User).filter(
+            or_(models.User.full_name == approver_name, models.User.username == approver_name)
+        ).first()
+
+        # Prepare log strings
+        if status == "Approved":
+            suffix = " (Pending L2)" if "Pending L2" in leave.status else ""
+            log_msg_emp = f"Your {l_type_str} request was APPROVED{suffix}"
+            log_msg_mgr = f"You APPROVED {leave.employee_name}'s {l_type_str}{suffix}"
+            act_type = "APPROVAL"
+        else:
+            log_msg_emp = f"Your {l_type_str} request was REJECTED"
+            log_msg_mgr = f"You REJECTED {leave.employee_name}'s {l_type_str}"
+            act_type = "REJECTION"
+
+        # 🅰️ LOG FOR EMPLOYEE (Julian)
+        if emp_record:
+            try:
+                log_activity(
+                    db=db, user_id=emp_record.id, action_type=act_type, 
+                    category=l_type_str, message=log_msg_emp, 
+                    reference_id=leave.id, actor_id=mgr_record.id if mgr_record else None
+                )
+                db.commit() 
+            except Exception as e:
+                print(f"⚠️ Employee Log Hint: {e}")
+
+        # 🅱️ LOG FOR MANAGER (Ned Stark)
+        if mgr_record:
+            try:
+                log_activity(
+                    db=db, user_id=mgr_record.id, action_type=act_type, 
+                    category=l_type_str, message=log_msg_mgr, 
+                    reference_id=leave.id
+                )
+                db.commit() 
+            except Exception as e:
+                print(f"⚠️ Manager Log Hint: {e}")
+
+        # 📧 --- STEP 2: NOTIFY EMPLOYEE VIA EMAIL ---
+        # We trigger this now that the logs are saved
+        if emp_record and emp_record.email:
+            try:
+                # Determine if we are notifying about a request or a cancellation
+                if status == "Approved":
+                    if is_cancellation_journey:
+                        subject = f"✅ Leave Cancellation Approved - {l_type_str}"
+                        body = template_cancellation_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                    else:
+                        subject = f"✅ Leave Request Approved - {l_type_str}"
+                        body = template_request_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                else:
+                    # Rejection path
+                    if is_cancellation_journey:
+                        subject = f"⚠️ Leave Cancellation Denied - {l_type_str}"
+                        body = template_cancellation_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "No remarks provided.")
+                    else:
+                        subject = f"❌ Leave Request Rejected - {l_type_str}"
+                        body = template_request_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "No remarks provided.")
+                
+                # Queue the background email task
+                background_tasks.add_task(send_email, emp_record.email, subject, body)
+                print(f"📧 Decision email queued for Julian: {emp_record.email}")
+
+            except Exception as email_err:
+                print(f"⚠️ Email Notification Warning: {email_err}")
+
+    except Exception as general_log_error:
+        print(f"⚠️ Activity Log System Warning: {general_log_error}")
+
+    return {"message": final_response_message}
 
 @router.get("/manager/all")
 def get_all_manager_leaves(
@@ -981,24 +1040,34 @@ def get_team_entitlements(
     if role_clean not in allowed_roles:
         return []
 
-    # 4. Define Query Scope
-    users_query = db.query(models.User)
-    if role_clean != "hr_admin":
-        managed_by_profile = db.query(models.User.full_name).filter(models.User.line_manager == approver_clean).all()
-        staff_list = [s[0] for s in managed_by_profile]
-        submitted_to_mgr = db.query(models.Leave.employee_name).filter(models.Leave.approver_name == approver_clean).distinct().all()
-        for s in submitted_to_mgr:
-            if s[0] not in staff_list: staff_list.append(s[0])
-        
-        if not staff_list: return [] 
-        users_query = users_query.filter(models.User.full_name.in_(staff_list))
+# ============================================================
+    # 📊 SECTION 4: SMART ROUTING QUERY (LM vs HOD vs HR)
+    # ============================================================
+    # 1. Base query (Always hide superuser from balances)
+    users_query = db.query(models.User).filter(models.User.role != "superuser")
 
+    if role_clean != "hr_admin":
+        # 🚀 THE CRITICAL FIX: Array/JSON Mapping
+        # This finds all employees where the current approver's name
+        # exists in their line_manager list OR their hod_name list.
+        users_query = users_query.filter(
+            or_(
+                models.User.line_manager.contains([approver_clean]),
+                models.User.hod_name.contains([approver_clean])
+            )
+        )
+        
+        # 💡 NOTE: We removed the old 'staff_list' and 'submitted_to_mgr' 
+        # loops. The User Profile is now the absolute Source of Truth.
+
+    # 2. Apply Name Search (if manager is typing in the search box)
     if name:
-        users_query = users_query.filter(models.User.full_name.ilike(f"%{name}%"))
-    
+        users_query = users_query.filter(models.User.full_name.ilike(f"%{name.strip()}%"))
+
     try:
         users = users_query.all()
-        if not users: return []
+        if not users: 
+            return [] # Returns empty list safely if no staff assigned
             
         user_names = [u.full_name for u in users]
 
@@ -1025,20 +1094,22 @@ def get_team_entitlements(
         
         # 🗺️ Map data for quick O(1) lookup
         bal_map = {uname: [] for uname in user_names}
-        for b in all_balances: bal_map[b.employee_name].append(b)
+        for b in all_balances: 
+            bal_map[b.employee_name].append(b)
             
         leave_map = {uname: [] for uname in user_names}
-        for l in all_leaves: leave_map[l.employee_name].append(l)
+        for l in all_leaves: 
+            leave_map[l.employee_name].append(l)
 
         results = []
 
-        # 🚀 START LOOP (Indented inside try block)
+        # 🚀 START CALCULATION LOOP
         for u in users:
             emp_name = u.full_name
             u_bals = bal_map.get(emp_name, [])
             u_leaves = leave_map.get(emp_name, [])
 
-            # 🛠️ INTERNAL CALCULATOR
+            # 🛠️ INTERNAL BUCKET CALCULATOR
             def get_bucket(l_type):
                 b = next((x for x in u_bals if str(getattr(x.leave_type, 'value', x.leave_type)) == l_type), None)
                 ent = float(b.entitlement or 0.0) if b else defaults.get(l_type, 0.0)
@@ -1074,8 +1145,13 @@ def get_team_entitlements(
                     "rem": ent - spent_annual
                 }
 
+
             ann = get_bucket("Annual Leave")
             med = get_bucket("Medical Leave")
+            
+            # 🚀 ADD THESE TWO LINES HERE:
+            emg = get_bucket("Emergency Leave")
+            com = get_bucket("Compassionate Leave")
             
             unpaid_taken = sum(float(l.days_taken or 0.0) for l in u_leaves 
                                if str(getattr(l.leave_type, 'value', l.leave_type)) == "Unpaid Leave" 
@@ -1089,6 +1165,13 @@ def get_team_entitlements(
                 "annual_entitlement": ann["ent"],
                 "medical_remaining": med["rem"],
                 "medical_entitlement": med["ent"],
+                
+                # 🚀 ADD THESE FOUR FIELDS TO THE DICTIONARY:
+                "emergency_remaining": emg["rem"],
+                "emergency_entitlement": emg["ent"],
+                "compassionate_remaining": com["rem"],
+                "compassionate_entitlement": com["ent"],
+                
                 "unpaid_taken": unpaid_taken,
                 "carry_forward_total": ann["cf_rem"],
                 "overtime_bank": float(getattr(u, 'overtime_bank', 0) or 0)
@@ -1099,7 +1182,7 @@ def get_team_entitlements(
     except Exception as e:
         print(f"❌ Database Query Error: {e}")
         import traceback
-        traceback.print_exc() # This will help you see the exact line if it fails again
+        traceback.print_exc() 
         raise HTTPException(status_code=500, detail="Failed to fetch balances")
 
 
@@ -1169,16 +1252,27 @@ def delete_public_holiday(holiday_id: int, db: Session = Depends(get_db)):
 
 @router.get("/public-calendar")
 def get_public_calendar(db: Session = Depends(get_db)):
-    # 🚀 FIX: Use string comparison "Approved" to match saved data
-    leaves = db.query(models.Leave).filter(models.Leave.status == "Approved").all()
+    # 🚀 THE FIX: We join the Leave table with the User table
+    # This allows us to grab the 'profile_pic_url' for each person away
+    results = db.query(
+        models.Leave, 
+        models.User.profile_pic_url 
+    ).join(
+        models.User, models.Leave.employee_name == models.User.full_name
+    ).filter(models.Leave.status == "Approved").all()
+
     public_data = []
-    for l in leaves:
+    
+    # Since we joined tables, 'results' is now a list of pairs: (Leave object, Photo string)
+    for leave, profile_pic_url in results:
         public_data.append({
-            "employee_name": l.employee_name,
-            "start_date": str(l.start_date),
-            "end_date": str(l.end_date),
-            "leave_type": l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type)
+            "employee_name": leave.employee_name,
+            "start_date": str(leave.start_date),
+            "end_date": str(leave.end_date),
+            "leave_type": leave.leave_type.value if hasattr(leave.leave_type, 'value') else str(leave.leave_type),
+            "profile_pic_url": profile_pic_url  # 📸 Now the frontend can see the face!
         })
+        
     return public_data
 
 @router.get("/admin/audit-logs")
@@ -1589,3 +1683,75 @@ def check_and_wipe_expired_cf(db: Session):
             
             db.commit()
             print(f"🕒 {today}: Cleanup complete. {len(expired_records)} wallets emptied.")
+
+# ============================================================
+# 🛠️ ACTIVITY LOG HELPER (STEP 2)
+# ============================================================
+def log_activity(db: Session, user_id: int, action_type: str, category: str, message: str, reference_id: int = None, actor_id: int = None):
+    """
+    Saves a record to the activity_logs table.
+    - user_id: The person who 'owns' the log (who sees it).
+    - actor_id: The person who did the action (e.g., a Manager).
+    """
+    try:
+        new_log = models.ActivityLog(
+            user_id=user_id,
+            actor_id=actor_id if actor_id else user_id, # If no actor is provided, the user is the actor
+            action_type=action_type,
+            category=category,
+            message=message,
+            reference_id=reference_id
+        )
+        db.add(new_log)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"⚠️ Activity Log Error: {e}")
+
+# ============================================================
+# 📊 DASHBOARD FEED (FIXED: SHOW LATEST ACTIONS FIRST)
+# ============================================================
+@router.get("/activity-feed")
+def get_activity_feed(employee_name: str, db: Session = Depends(get_db)):
+    from datetime import timedelta
+    
+    employee_name = employee_name.strip()
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+
+    # 1. Smart Lookup finds the user by Name OR Username
+    user = db.query(models.User).filter(
+        or_(
+            models.User.full_name == employee_name,
+            models.User.username == employee_name
+        )
+    ).first()
+    
+    if not user:
+        return []
+
+    # 🛡️ 2. THE FIX: Sort by DESC (Descending) 
+    # This ensures the newest actions appear at the top and aren't buried.
+    logs = db.query(models.ActivityLog).filter(
+        models.ActivityLog.user_id == user.id,
+        models.ActivityLog.created_at >= thirty_days_ago
+    ).order_by(
+        models.ActivityLog.created_at.desc(), 
+        models.ActivityLog.id.desc() 
+    ).limit(10).all()
+
+    # 3. Format Timestamps
+    formatted_logs = []
+    for log in logs:
+        is_today = log.created_at.date() == datetime.now().date()
+        display_time = log.created_at.strftime("%I:%M %p") if is_today else log.created_at.strftime("%b %d")
+
+        formatted_logs.append({
+            "id": log.id,
+            "action_type": log.action_type,
+            "category": log.category,
+            "message": log.message,
+            "timestamp": display_time,
+            "reference_id": log.reference_id
+        })
+
+    return formatted_logs

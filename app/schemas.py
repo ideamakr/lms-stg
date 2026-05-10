@@ -15,22 +15,65 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     employee_id: Optional[str] = None
-    gender: Optional[str] = None
-    marital_status: Optional[str] = None
-    email: Optional[str] = None
-    mobile: Optional[str] = None
+    # 🚀 Step 1: Employment
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    office_email: Optional[str] = None
     job_title: Optional[str] = None
-    business_unit: Optional[str] = None
     department: Optional[str] = None
+    business_unit: Optional[str] = None
     line_manager: Optional[str] = None
+    hod_name: Optional[str] = None
     joined_date: Optional[str] = None
+    contract_type: Optional[str] = None
+    work_location: Optional[str] = None
 
 class UserDisplay(UserBase):
     id: int
     employee_id: Optional[str] = None
-    # This helps Pydantic read the SQLAlchemy relationship for roles if needed
     roles_list: Optional[List[str]] = [] 
     
+    # 📋 Step 1: Employment & Identity
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    preferred_name: Optional[str] = None
+    profile_pic_url: Optional[str] = None
+    joined_date: Optional[str] = None 
+    job_title: Optional[str] = None
+    department: Optional[str] = None
+    business_unit: Optional[str] = None
+    line_manager: Optional[str] = None
+    hod_name: Optional[str] = None
+    contract_type: Optional[str] = None
+    work_location: Optional[str] = None
+    
+    # 👤 Step 2: Personal Info
+    gender: Optional[str] = None
+    marital_status: Optional[str] = None
+    ic_number: Optional[str] = None
+    nationality: Optional[str] = None
+    dob: Optional[str] = None
+    race: Optional[str] = None
+    religion: Optional[str] = None
+    
+    # 📞 Step 3: Contact & Logistics
+    email: Optional[str] = None # Mapping to Office Email
+    personal_email: Optional[str] = None
+    mobile: Optional[str] = None
+    home_address: Optional[str] = None
+    current_address: Optional[str] = None
+    
+    # 🚨 Emergency Contact
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_rel: Optional[str] = None
+    emergency_contact_mobile: Optional[str] = None
+    
+    # 💰 Wallets
+    overtime_bank: float = 0.0
+    unpaid_taken: float = 0.0
+
     model_config = ConfigDict(from_attributes=True)
 
 # --- LEAVE SCHEMAS ---
@@ -48,28 +91,24 @@ class LeaveResponse(LeaveCreate):
     days_taken: float
     model_config = ConfigDict(from_attributes=True)
 
-# 🚀 NEW: LEAVE BALANCE SCHEMA (Add this to fix the empty tiles)
+# 🚀 NEW: LEAVE BALANCE SCHEMA
 class LeaveBalanceResponse(BaseModel):
     employee_name: str
     year: int
     leave_type: str
     entitlement: float
-    remaining: float           # 🟢 Critical for Dashboard
-    carry_forward_total: float = 0.0 # 🟢 Critical for CF Logic
-    taken: float = 0.0         # Optional helpful stat
+    remaining: float           
+    carry_forward_total: float = 0.0 
+    taken: float = 0.0         
 
     model_config = ConfigDict(from_attributes=True)
 
-
-    # --- SYSTEM SETTINGS / BRANDING SCHEMAS ---
+# --- SYSTEM SETTINGS / BRANDING SCHEMAS ---
 
 class BrandingConfig(BaseModel):
-    # Original Required Fields
     company_name: str
     company_sub_info: str  
     company_logo: str
-    
-    # New Optional Fields (Defaults ensure old frontend requests don't crash)
     broadcast_enabled: bool = False
     broadcast_message: str = ""
     broadcast_start: str = ""

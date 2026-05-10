@@ -4,12 +4,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # 1. Load the secrets from your .env file
-# 1. Load the secrets
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     raise ValueError("❌ DATABASE_URL not found in .env file!")
+
+# 🚀 PROTOCOL FIX: SQLAlchemy 1.4+ requires 'postgresql://' 
+# but many providers still give 'postgres://'
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # 2. Check the environment
 is_sqlite = DATABASE_URL.startswith("sqlite")
@@ -24,15 +28,17 @@ else:
     # ✅ Cloud PostgreSQL (Supabase) Settings
     engine = create_engine(
         DATABASE_URL, 
-        pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=10,
-        pool_recycle=300
+        pool_pre_ping=True,    # 🔄 Checks if connection is alive before using it
+        pool_size=30,          # 🪑 Base connection pool
+        max_overflow=20,       # 📈 Extra connections during traffic spikes
+        pool_timeout=60,       # ⏱️ Wait 60s before timing out
+        pool_recycle=1800      # ♻️ Refresh connections every 30 mins
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-# ... rest of file
+
+# Utility to get DB session
 def get_db():
     db = SessionLocal()
     try:
