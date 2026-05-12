@@ -612,7 +612,8 @@ async def toggle_user_status( # 🚀 Async execution for background tasks
         print(f"❌ Status Toggle Error: {e}")
         raise HTTPException(status_code=500, detail="Database error toggling user status.")
 
-from fastapi import Header
+
+
 @router.put("/{user_id}/profile-update")
 async def update_user_profile(
     user_id: int,
@@ -624,7 +625,7 @@ async def update_user_profile(
     joined_date: str = Form(...),
     mobile: str = Form(...), 
 
-    # 📋 OPTIONALS
+    # 📋 OPTIONALS (Admins only)
     middle_name: Optional[str] = Form(None),
     job_title: Optional[str] = Form(None),
     department: Optional[str] = Form(None),
@@ -634,7 +635,7 @@ async def update_user_profile(
     business_unit: Optional[str] = Form(None),
     work_location: Optional[str] = Form(None),
 
-    # 👤 STEP 2
+    # 👤 STEP 2 (Personal Info)
     preferred_name: Optional[str] = Form(None),
     gender: Optional[str] = Form(None),
     marital_status: Optional[str] = Form(None),
@@ -644,7 +645,7 @@ async def update_user_profile(
     race: Optional[str] = Form(None),
     religion: Optional[str] = Form(None),
 
-    # 📞 STEP 3
+    # 📞 STEP 3 (Contact Info)
     personal_email: Optional[str] = Form(None),
     home_address: Optional[str] = Form(None),
     current_address: Optional[str] = Form(None),
@@ -660,7 +661,7 @@ async def update_user_profile(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 1. Helper to parse manager lists
+    # 1. 🛡️ MANAGER LIST PARSER
     def parse_manager_list(data):
         if not data: return []
         try:
@@ -672,11 +673,12 @@ async def update_user_profile(
     final_line_managers = parse_manager_list(line_manager)
     final_hod_names = parse_manager_list(hod_name)
 
-    # 2. Cascading Name Sync
+    # 2. 🚀 CASCADING NAME SYNC (Identity Protection)
     old_name = user.full_name
     new_name = full_name.strip()
 
     if old_name != new_name:
+        # Update every table that uses employee_name or approver_name
         db.query(models.LeaveBalance).filter(models.LeaveBalance.employee_name == old_name).update({"employee_name": new_name})
         db.query(models.Leave).filter(models.Leave.employee_name == old_name).update({"employee_name": new_name})
         db.query(models.Overtime).filter(models.Overtime.employee_name == old_name).update({"employee_name": new_name})
@@ -684,7 +686,7 @@ async def update_user_profile(
         db.query(models.Overtime).filter(models.Overtime.approver_name == old_name).update({"approver_name": new_name})
         db.query(models.Leave).filter(models.Leave.approver_l2 == old_name).update({"approver_l2": new_name})
 
-    # 3. Avatar Upload
+    # 3. 📸 AVATAR UPDATE
     if profile_pic:
         try:
             from app.main import compress_and_upload
@@ -692,7 +694,7 @@ async def update_user_profile(
         except Exception as e:
             print(f"Avatar Upload Warning: {e}")
 
-    # 4. Security Check (Calculated once)
+    # 4. 🔒 ADMIN SECURITY CHECK
     is_admin = False
     if x_username:
         requester = db.query(models.User).filter(models.User.username == x_username).first()
@@ -701,17 +703,17 @@ async def update_user_profile(
             if requester.role in ["hr_admin", "admin", "superuser"] or "hr_admin" in roles_list:
                 is_admin = True
 
-    # 5. ALWAYS ALLOWED: Update Personal & Contact Fields
+    # 5. ✅ SELF-EDITABLE FIELDS (Always Updated)
     user.full_name = new_name
-    user.first_name = first_name.strip() if first_name else None
+    user.first_name = first_name.strip()
     user.middle_name = middle_name.strip() if middle_name else None
-    user.last_name = last_name.strip() if last_name else None
+    user.last_name = last_name.strip()
     user.preferred_name = preferred_name.strip() if preferred_name else None
     user.email = email.strip().lower()
     user.mobile = mobile.strip()
     user.gender = gender
     user.marital_status = marital_status
-    user.ic_number = ic_no.strip() if ic_no else None
+    user.ic_number = ic_no.strip() if ic_no else None # 🎯 Mapping ic_no to ic_number
     user.nationality = nationality.strip() if nationality else None
     user.dob = dob
     user.race = race.strip() if race else None
@@ -723,22 +725,29 @@ async def update_user_profile(
     user.emergency_contact_rel = emergency_contact_rel.strip() if emergency_contact_rel else None
     user.emergency_contact_mobile = emergency_contact_mobile.strip() if emergency_contact_mobile else None
 
-    # 6. LOCKDOWN ZONE: Admins only
+    # 6. 🔓 ADMIN LOCKDOWN ZONE (Safe Update)
     if is_admin:
         print(f"🔓 [SECURITY] Admin {x_username} updating official employment fields.")
-        # Only update if the field is NOT None or empty string
-        if job_title: user.job_title = job_title.strip()
-        if department: user.department = department.strip()
-        if joined_date: user.joined_date = joined_date
-        if contract_type: user.contract_type = contract_type.strip()
-        if business_unit: user.business_unit = business_unit.strip()
-        if work_location: user.work_location = work_location.strip()
+        
+        # 🚀 THE FIX: Only update if the field is not empty/None
+        if job_title and job_title.strip(): 
+            user.job_title = job_title.strip()
+        if department and department.strip(): 
+            user.department = department.strip()
+        if joined_date: 
+            user.joined_date = joined_date
+        if contract_type and contract_type.strip(): 
+            user.contract_type = contract_type.strip()
+        if business_unit and business_unit.strip(): 
+            user.business_unit = business_unit.strip()
+        if work_location and work_location.strip(): 
+            user.work_location = work_location.strip()
 
-        # Manager Protection: Only overwrite if the new list has content
-        if final_line_managers:
+        # 🚀 PROTECT MANAGERS: Only overwrite if the new list is not empty
+        if final_line_managers and len(final_line_managers) > 0:
             user.line_manager = final_line_managers
         
-        if final_hod_names:
+        if final_hod_names and len(final_hod_names) > 0:
             user.hod_name = final_hod_names
     else:
         print(f"🔒 [SECURITY] Ignored employment fields for {user.username}. Requester is not an admin.")
