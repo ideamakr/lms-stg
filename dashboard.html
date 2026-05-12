@@ -1936,6 +1936,18 @@ div.swal2-container {
 #proxy_user_search::-webkit-input-placeholder { font-weight: 400 !important; }
 #proxy_user_search::-moz-placeholder { font-weight: 400 !important; }
 
+/* 🎠 SMART SLIDER FIX */
+#balance_grid_scrollable::-webkit-scrollbar { display: none; }
+#balance_grid_scrollable { scrollbar-width: none; -ms-overflow-style: none; }
+
+.balance-card-snap { 
+    scroll-snap-align: start; 
+    flex: 0 0 240px !important; 
+    transition: transform 0.2s;
+    box-sizing: border-box;
+}
+.balance-card-snap:hover { transform: translateY(-2px); }
+
     </style>
   </head>
             <!-- ==========================================
@@ -2108,19 +2120,29 @@ div.swal2-container {
                 <i class="fas fa-sign-out-alt"></i> 
                 <span class="menu-text">Logout</span>
             </div>
-  
-        </div> <div class="sidebar-footer" style="margin-top: auto; padding: 25px 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
-            <div class="menu-text" style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px; opacity: 0.8;">
-                © 2026 IdeaMakr • <span id="app_version_display">Loading...</span>
-            </div>
-            <div class="menu-text" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">
-                Built by <span style="color: #3b82f6;">IdeaMakr</span>
-            </div>
-            <div class="menu-text" style="font-size: 0.6rem; color: #64748b; margin-top: 6px; font-weight: 500;">
-                All rights reserved.
+        </div> 
+
+        <div class="sidebar-footer" style="margin-top: auto; padding: 25px 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                
+                <div style="font-size: 0.65rem; color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">
+                    System Build <span id="display_app_version" style="color: #94a3b8; margin-left: 4px; font-weight: 700; text-transform: none;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 0.6rem;"></i>
+                    </span>
+                </div>
+
+                <div class="menu-text" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600; margin-top: 6px;">
+                    © 2026 Built by <span style="color: #3b82f6;">IdeaMakr</span>
+                </div>
+                <div class="menu-text" style="font-size: 0.6rem; color: #64748b; font-weight: 500;">
+                    All rights reserved.
+                </div>
+                
             </div>
         </div>
-    </div> <div class="main">
+    </div>
+
+    <div class="main">
         <div id="mobile-overlay" onclick="toggleSidebar()"></div>
 
         <div class="topbar" style="display: flex; justify-content: space-between; align-items: center; padding: 0 24px; background: #ffffff; border-bottom: 1px solid #e2e8f0; height: 60px; position: sticky; top: 0; z-index: 100;">
@@ -2431,95 +2453,130 @@ div.swal2-container {
                                         Full History
                                     </button>
                                 </div> </div> </div> </div> </div> <section id="apply" class="section saas-canvas" style="background: #f1f5f9; min-height: 50vh; width: 100%; padding: 0; margin: 0; display: none;">
-            
-                            <div style="max-width: 800px; margin: 0 auto; padding: 10px 10px; width: 100%; box-sizing: border-box;">
+                                    <div style="max-width: 800px; margin: 0 auto; padding: 10px 10px; width: 100%; box-sizing: border-box;">
+                                        
+                                        <!-- Header -->
+                                        <div style="text-align: center; margin-bottom: 25px;">
+                                            <h2 style="margin: 0; font-size: 1.8rem; color: #1e293b; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: 900; border: none;">
+                                                <i class="fas fa-paper-plane" style="color: #3b82f6;"></i> Application Center
+                                            </h2>
+                                            <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.75rem; font-weight: 500;">
+                                                Submit and manage your leave, overtime, and carry forward requests in one place.
+                                            </p>
+                                        </div>
                                 
-                                <div style="text-align: center; margin-bottom: 25px;">
-                                    <h2 style="margin: 0; font-size: 1.8rem; color: #1e293b; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: 900;">
-                                        <i class="fas fa-paper-plane" style="color: #3b82f6;"></i> Application Center
-                                    </h2>
-                                    <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.75rem; font-weight: 500;">
-                                        Submit and manage your leave, overtime, and carry forward requests in one place.
-                                    </p>
-                                </div>
-                        
-                                <div style="display: flex; justify-content: center; margin-bottom: 30px;">
-                                    <div style="display: inline-flex; background: #e2e8f0; padding: 5px; border-radius: 12px; border: 1px solid #cbd5e1;">
-                                        <button id="tab_leave" onclick="switchApplyMode('leave')" style="padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: white; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;">
-                                            <i class="fas fa-calendar-plus"></i> Leave Request
-                                        </button>
-                                        <button id="tab_ot" onclick="switchApplyMode('ot')" style="padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: transparent; color: #64748b; display: flex; align-items: center; gap: 8px;">
-                                            <i class="fas fa-clock"></i> Overtime Claim
-                                        </button>
-                                        <button id="tab_unpaid" onclick="switchApplyMode('unpaid')" style="padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: transparent; color: #64748b; display: flex; align-items: center; gap: 8px;">
-                                            <i class="fas fa-exchange-alt"></i> Carry Forward
-                                        </button>
-                                    </div>
-                                </div>
-                
-                                <div class="leave-grid" style="display: flex !important; flex-direction: row !important; justify-content: center; flex-wrap: nowrap !important; gap: 15px; margin-bottom: 30px; padding: 0 10px; position: relative; z-index: 1; overflow-x: auto;">
-    
-                                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; border-top: 4px solid #3b82f6; padding: 20px 25px; min-width: 220px; flex: 1; max-width: 280px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); box-sizing: border-box;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
-                                            <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Annual<br>Leave</div>
-                                            <div style="display: flex; align-items: baseline; gap: 5px;">
-                                                <span class="val-annual" style="font-size: 2.4rem; font-weight: 900; color: #1e293b; line-height: 1;">0.0</span>
-                                                <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8;">DAYS</span>
+                                        <!-- Mode Switcher Tabs -->
+                                        <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                                            <div style="display: inline-flex; background: #e2e8f0; padding: 5px; border-radius: 12px; border: 1px solid #cbd5e1;">
+                                                <button id="tab_leave" onclick="switchApplyMode('leave')" style="padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: white; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;">
+                                                    <i class="fas fa-calendar-plus"></i> Leave Request
+                                                </button>
+                                                <button id="tab_ot" onclick="switchApplyMode('ot')" style="padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: transparent; color: #64748b; display: flex; align-items: center; gap: 8px;">
+                                                    <i class="fas fa-clock"></i> Overtime Claim
+                                                </button>
+                                                <button id="tab_unpaid" onclick="switchApplyMode('unpaid')" style="padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: transparent; color: #64748b; display: flex; align-items: center; gap: 8px;">
+                                                    <i class="fas fa-exchange-alt"></i> Carry Forward
+                                                </button>
                                             </div>
                                         </div>
-                                    </div>
                                 
-                                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; border-top: 4px solid #10b981; padding: 20px 25px; min-width: 220px; flex: 1; max-width: 280px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); box-sizing: border-box;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
-                                            <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Medical<br>Leave</div>
-                                            <div style="display: flex; align-items: baseline; gap: 5px;">
-                                                <span class="val-medical" style="font-size: 2.4rem; font-weight: 900; color: #1e293b; line-height: 1;">0.0</span>
-                                                <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8;">DAYS</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        <!-- 🎠 SMART BALANCE SLIDER -->
+                                        <div id="balance_slider_wrapper" style="position: relative; width: 100%; margin-bottom: 30px; padding: 0 5px;">
+                                            
+                                            <!-- Left Navigation Arrow -->
+                                            <button id="btn_bal_left" onclick="scrollBalances(-1)" style="position: absolute; left: -15px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; color: #2563eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: pointer; z-index: 100; display: none; align-items: center; justify-content: center; transition: 0.2s; opacity: 0.9;">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </button>
                                 
-                                    <div id="wrapper_ot_apply" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; border-top: 4px solid #f59e0b; padding: 20px 25px; min-width: 220px; flex: 1; max-width: 280px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); box-sizing: border-box;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
-                                            <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Total<br>Overtime</div>
-                                            <div style="display: flex; align-items: baseline; gap: 5px;">
-                                                <span class="val-ot" style="font-size: 2.4rem; font-weight: 900; color: #1e293b; line-height: 1;">0.0</span>
-                                                <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8;">HRS</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                            <!-- Scrollable Grid Container -->
+                                            <div id="balance_grid_scrollable" class="leave-grid" style="display: flex !important; flex-direction: row !important; overflow-x: auto !important; scroll-behavior: smooth; flex-wrap: nowrap !important; gap: 15px; padding: 10px 5px; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; border: none; background: transparent;">
+                                                
+                                                <!-- Internal styles for the slider behavior -->
+                                                <style>
+                                                    #balance_grid_scrollable::-webkit-scrollbar { display: none; }
+                                                    .balance-card-snap { 
+                                                        scroll-snap-align: start; 
+                                                        flex: 0 0 240px !important; /* Forces fixed width for cards */
+                                                        background: white; 
+                                                        border: 1px solid #e2e8f0; 
+                                                        border-radius: 12px; 
+                                                        padding: 20px 25px; 
+                                                        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); 
+                                                        box-sizing: border-box;
+                                                    }
+                                                </style>
                                 
-                                    <div id="wrapper_unpaid_apply" style="display: none; background: white; border: 1px solid #e2e8f0; border-radius: 12px; border-top: 4px solid #64748b; padding: 20px 25px; min-width: 220px; flex: 1; max-width: 280px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); box-sizing: border-box;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
-                                            <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Unpaid<br>Taken</div>
-                                            <div style="display: flex; align-items: baseline; gap: 5px;">
-                                                <span class="val-unpaid" style="font-size: 2.4rem; font-weight: 900; color: #1e293b; line-height: 1;">0.0</span>
-                                                <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8;">DAYS</span>
+                                                <!-- 1. Annual Leave Card -->
+                                                <div class="balance-card-snap" style="border-top: 4px solid #3b82f6;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
+                                                        <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Annual<br>Leave</div>
+                                                        <div style="display: flex; align-items: baseline; gap: 5px;">
+                                                            <span class="val-annual" style="font-size: 2.2rem; font-weight: 900; color: #1e293b; line-height: 1;">0.0</span>
+                                                            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8;">DAYS</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            
+                                                <!-- 2. Medical Leave Card -->
+                                                <div class="balance-card-snap" style="border-top: 4px solid #10b981;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
+                                                        <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Medical<br>Leave</div>
+                                                        <div style="display: flex; align-items: baseline; gap: 5px;">
+                                                            <span class="val-medical" style="font-size: 2.2rem; font-weight: 900; color: #1e293b; line-height: 1;">0.0</span>
+                                                            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8;">DAYS</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            
+                                                <!-- 3. Overtime Card -->
+                                                <div id="wrapper_ot_apply" class="balance-card-snap" style="border-top: 4px solid #f59e0b;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
+                                                        <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Total<br>Overtime</div>
+                                                        <div style="display: flex; align-items: baseline; gap: 5px;">
+                                                            <span class="val-ot" style="font-size: 2.2rem; font-weight: 900; color: #1e293b; line-height: 1;">0.0</span>
+                                                            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8;">HRS</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            
+                                                <!-- 4. Unpaid Taken Card (Controlled by prefetchBalances) -->
+                                                <div id="wrapper_unpaid_apply" class="balance-card-snap" style="display: none; border-top: 4px solid #64748b;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
+                                                        <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Unpaid<br>Taken</div>
+                                                        <div style="display: flex; align-items: baseline; gap: 5px;">
+                                                            <span class="val-unpaid" style="font-size: 2.2rem; font-weight: 900; color: #1e293b; line-height: 1;">0.0</span>
+                                                            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8;">DAYS</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                
+                                                <!-- 5. Carry Forward Card (Controlled by prefetchBalances) -->
+                                                <div id="wrapper_cf_apply" class="balance-card-snap" style="display: none; border-top: 4px solid #0ea5e9;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
+                                                        <div style="font-size: 0.75rem; font-weight: 800; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Carry<br>Forward</div>
+                                                        <div style="display: flex; align-items: baseline; gap: 5px;">
+                                                            <span class="val-cf" style="font-size: 2.2rem; font-weight: 900; color: #0ea5e9; line-height: 1;">0.0</span>
+                                                            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8;">DAYS</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
+                                
+                                            <!-- Right Navigation Arrow -->
+                                            <button id="btn_bal_right" onclick="scrollBalances(1)" style="position: absolute; right: -15px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; color: #2563eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: pointer; z-index: 100; display: none; align-items: center; justify-content: center; transition: 0.2s; opacity: 0.9;">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </button>
                                         </div>
-                                    </div>
-                    
-                                    <div id="wrapper_cf_apply" style="display: none; background: white; border: 1px solid #e2e8f0; border-radius: 12px; border-top: 4px solid #0ea5e9; padding: 20px 25px; min-width: 220px; flex: 1; max-width: 280px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); box-sizing: border-box;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
-                                            <div style="font-size: 0.75rem; font-weight: 800; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.3;">Carry<br>Forward</div>
-                                            <div style="display: flex; align-items: baseline; gap: 5px;">
-                                                <span class="val-cf" style="font-size: 2.4rem; font-weight: 900; color: #0ea5e9; line-height: 1;">0.0</span>
-                                                <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8;">DAYS</span>
+                                
+                                        <div class="saas-card" style="margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; position: relative; z-index: 10; overflow: hidden; display: flex; flex-direction: column; width: 100% !important; max-width: 100% !important; box-sizing: border-box; min-height: 700px;">                                  
+                                            <div class="saas-card-header" style="padding: 25px 35px; border-bottom: 1px solid #f1f5f9;">
+                                                <h2 id="apply_form_title" style="margin: 0; color: #1e293b; display: flex; gap: 15px; align-items: center; font-size: 1.3rem; font-weight: 800;">
+                                                    <div style="width: 28px; display: flex; justify-content: center;">
+                                                        <i class="fas fa-calendar-plus" style="color: #2563eb"></i>
+                                                    </div>
+                                                    <span>New Leave Request</span>
+                                                </h2>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-                
-                                <div class="saas-card" style="margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; position: relative; z-index: 10; overflow: hidden; display: flex; flex-direction: column; width: 100% !important; max-width: 100% !important; box-sizing: border-box; min-height: 700px;">                                  
-    
-                                    <div class="saas-card-header" style="padding: 25px 35px; border-bottom: 1px solid #f1f5f9;">
-                                        <h2 id="apply_form_title" style="margin: 0; color: #1e293b; display: flex; gap: 15px; align-items: center; font-size: 1.3rem; font-weight: 800;">
-                                            <div style="width: 28px; display: flex; justify-content: center;">
-                                                <i class="fas fa-calendar-plus" style="color: #2563eb"></i>
-                                            </div>
-                                            <span>New Leave Request</span>
-                                        </h2>
-                                    </div>
                                 
                                     <div id="hr_context_tabs" style="display: none; padding: 10px 35px; background: #f8fafc; border-bottom: 1px solid #f1f5f9;">
                                         <div class="context-tab-wrapper">
@@ -6923,6 +6980,14 @@ async function showSection(sectionId) {
         } else if (sectionId === "apply") {
             const summaryBox = document.getElementById("apply_summary_box");
             if (summaryBox) summaryBox.style.display = "none";
+
+            // 🚀 THE FIX: Show "Apply on Behalf" tabs only for HR/Superusers
+            const contextTabs = document.getElementById("hr_context_tabs");
+            if (contextTabs) {
+                const isHR = userRoles.includes("hr_admin") || localStorage.getItem("userMasterRole") === "superuser";
+                contextTabs.style.display = isHR ? "block" : "none";
+            }
+
             await loadApproverList();
             if (signal.aborted) return; 
             await prefetchBalances(signal);
@@ -7552,9 +7617,26 @@ function updateFileLabel(input, labelId, btnId) {
         }
       }
 
-      // 3. 🛡️ Event Listeners (UI Interaction only)
-      document.addEventListener("DOMContentLoaded", () => {
-        // --- Modal Behavior ---
+// 3. 🛡️ Event Listeners (UI Interaction & System Sync)
+document.addEventListener("DOMContentLoaded", async () => {
+        
+        // 🚀 1. SYNC DYNAMIC VERSION (From Database)
+        if (typeof syncVersionDisplay === "function") {
+            syncVersionDisplay();
+        }
+
+        // 👑 2. SUPERUSER COMMAND CENTER INITIALIZATION
+        // Only show the God Mode toggle if the user is Julian or a designated Superuser
+        const isSuperUser = localStorage.getItem("is_superuser") === "true" || (typeof currentUser !== 'undefined' && currentUser === "Julian");
+        const toggleContainer = document.getElementById("superuser_toggle_container");
+        
+        if (isSuperUser && toggleContainer) {
+            toggleContainer.style.display = "block";
+            // Pre-load global stats for the Command Center cards
+            if (typeof loadGlobalStats === "function") loadGlobalStats();
+        }
+
+        // --- Existing Modal Behavior ---
         const modal = document.getElementById("globalModal");
         if (modal) {
           modal.addEventListener("click", (e) => {
@@ -7569,7 +7651,6 @@ function updateFileLabel(input, labelId, btnId) {
         // 🚀 NOTE: We REMOVED the loadUserProfile() and showSection() calls from here.
         // They are now handled exclusively by window.onload to prevent the AbortError.
       });
-
 
 
 
@@ -7743,8 +7824,38 @@ function triggerRefreshSafetyError() {
 
 
       
-// 🚀 V1.5.5: The Multi-Tab Hybrid Engine (Dossier-Standard Sync)
-// 🛡️ Domino-Proof: Cross-references raw OT requests & updates Home Screen Card IDs
+/**
+ * 🎡 BALANCE SLIDER ENGINE
+ * Manages left/right scrolling and arrow visibility
+ */
+ function scrollBalances(direction) {
+    const container = document.getElementById('balance_grid_scrollable');
+    if (!container) return;
+    
+    // We scroll by approximately one card width + gap
+    const scrollAmount = 255; 
+    container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+}
+
+function updateBalanceArrowVisibility() {
+    const container = document.getElementById('balance_grid_scrollable');
+    const leftBtn = document.getElementById('btn_bal_left');
+    const rightBtn = document.getElementById('btn_bal_right');
+
+    if (!container || !leftBtn || !rightBtn) return;
+
+    // 1. Show Left button if we have scrolled away from the start
+    leftBtn.style.display = container.scrollLeft > 20 ? 'flex' : 'none';
+
+    // 2. Show Right button if there is more content to the right
+    const hasMoreRight = container.scrollWidth > (container.scrollLeft + container.clientWidth + 20);
+    rightBtn.style.display = hasMoreRight ? 'flex' : 'none';
+}
+
+/**
+ * 📊 PREFETCH BALANCES
+ * Fetches and renders the balance cards, then triggers slider visibility
+ */
 async function prefetchBalances(signal) {
     const targetUser = window.proxyUser ? window.proxyUser : currentUser;
     const currentYear = new Date().getFullYear();
@@ -7811,13 +7922,12 @@ async function prefetchBalances(signal) {
                 barEl.style.width = percentage + "%";
                 
                 // 🚀 NEW: DYNAMIC BAR COLORS
-                // Logic: Red if < 2 days, Yellow if < 5 days, White otherwise
                 if (remainingVal <= 2) {
-                    barEl.style.backgroundColor = "#fca5a5"; // Soft Red alert
+                    barEl.style.backgroundColor = "#fca5a5"; 
                 } else if (remainingVal <= 5) {
-                    barEl.style.backgroundColor = "#fde047"; // Soft Yellow warning
+                    barEl.style.backgroundColor = "#fde047"; 
                 } else {
-                    barEl.style.backgroundColor = "white";   // Standard healthy
+                    barEl.style.backgroundColor = "white";   
                 }
 
                 if (fractionEl) fractionEl.innerText = `${remainingVal}/${entitlementVal}`;
@@ -7830,25 +7940,21 @@ async function prefetchBalances(signal) {
                 const otBankVal = parseFloat(data.overtime_bank || approvedOTSum || 0);
                 const otBankDisplay = otBankVal.toFixed(1);
 
-                // Update Home OT Card
                 const homeOtCard = document.getElementById("card_ot");
                 if (homeOtCard) {
                     homeOtCard.innerText = otBankDisplay;
                     homeOtCard.style.color = "white";
                 }
                 
-                // Update All small .val-ot labels (Application Center)
                 document.querySelectorAll(".val-ot").forEach(el => {
                     el.innerText = otBankDisplay;
                     el.style.color = (otBankVal > 0) ? "#f59e0b" : "#1e293b";
                 });
 
-                // Update small value labels for Annual
                 document.querySelectorAll(".val-annual").forEach(el => {
                     el.innerText = remainingVal.toFixed(1);
                 });
 
-                // Carry Forward Card & Visibility
                 const cfElements = [document.getElementById("card_cf"), ...document.querySelectorAll(".val-cf")];
                 cfElements.forEach(el => { if (el) el.innerText = cfVal.toFixed(1); });
 
@@ -7884,13 +7990,33 @@ async function prefetchBalances(signal) {
             }
         });
 
+        // 🎡 🚀 TRIGGER SLIDER CHECK AFTER DATA LOADS
+        setTimeout(updateBalanceArrowVisibility, 150);
+
     } catch (e) {
+        // 🚀 THE FIX: Ignore AbortErrors so they don't clutter your logs as "Critical Errors"
+        if (e.name === 'AbortError') {
+            return; // Silently exit if it's just a cancelled request due to fast tab switching
+        }
         console.error("Critical Sync Error:", e);
     } finally {
         if (select) select.disabled = false;
         if (typeof showEntitlementInfo === "function") showEntitlementInfo();
+        // Final sanity check for slider arrows
+        setTimeout(updateBalanceArrowVisibility, 500);
     }
 }
+
+// Attach the listener to the grid so it updates while scrolling
+document.addEventListener("DOMContentLoaded", () => {
+    const grid = document.getElementById('balance_grid_scrollable');
+    if (grid) {
+        grid.addEventListener('scroll', updateBalanceArrowVisibility);
+        // Initial check in case many cards appear on load
+        setTimeout(updateBalanceArrowVisibility, 1000);
+    }
+});
+
 // 🚀 V1.4.18: Intelligent Labeling for CF & Unpaid Leave
 function showEntitlementInfo() {
     const type = document.getElementById("dash_leave_type").value;
@@ -19934,7 +20060,7 @@ async function clearBrandingLogo() {
 // 📢 SYSTEM BROADCAST & MAINTENANCE LOGIC (ULTIMATE FINAL)
 // ============================================================
 async function loadBroadcastSettings() {
-    const versionDisplay = document.getElementById('app_version_display'); // Grab this first
+    const versionDisplay = document.getElementById('display_app_version');
 
     try {
         const res = await fetchWithAuth(`${API_URL}/settings/branding?t=${new Date().getTime()}`);
@@ -22271,6 +22397,33 @@ function generateSelfEditSummary() {
             title: 'Update Error',
             text: error.message
         });
+    }
+}
+
+/**
+ * 🛰️ DYNAMIC VERSION SYNC
+ * Pulls the version directly from the system_settings table via the API
+ */
+ async function syncVersionDisplay() {
+    try {
+        // 🚀 THE FIX: Added /api to match your Python route
+        const res = await fetch(`${API_URL}/api/system/version`);
+        
+        // If the server returns 404 or other errors, stop here
+        if (!res.ok) return;
+        
+        const data = await res.json();
+        const versionEl = document.getElementById("display_app_version");
+        
+        if (versionEl) {
+            // Pulling 'version' key from your specific backend response
+            const finalBuild = data.version || data.system_version || "v1.4.1";
+            
+            versionEl.innerHTML = `<i class="fas fa-code-branch" style="margin-right:5px; opacity:0.7; font-size: 0.65rem;"></i> ${finalBuild}`;
+            localStorage.setItem("system_version_from_db", finalBuild);
+        }
+    } catch (e) {
+        console.warn("Version sync failed. DB might be unreachable.");
     }
 }
     </script>

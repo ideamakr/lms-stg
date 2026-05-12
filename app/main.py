@@ -22,6 +22,7 @@ from app.database import engine, Base, get_db
 from app import models, schemas
 from app.routers import leave, user, overtime, system_settings 
 from fastapi.responses import RedirectResponse, FileResponse
+from sqlalchemy import text
 
 # 👇 INITIALIZE ENVIRONMENT
 load_dotenv()
@@ -65,21 +66,20 @@ if not os.path.exists("uploads"):
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # 🔒 CORS Configuration
-# 🚀 ACTION REQUIRED: Ensure your Staging and Production URLs are in this list!
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://127.0.0.1:5500", 
         "http://localhost:5500",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
         "https://ideamakr.github.io", 
-        "https://parenting-substantially-oregon-strongly.trycloudflare.com",
-        "https://leave-system-testenv.onrender.com", # 👈 Ensure this matches your staging site
+        "https://leave-system-testenv.onrender.com", 
     ], 
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"], # Allows GET, POST, OPTIONS, etc.
+    allow_headers=["*"], # Allows Content-Type, Authorization, etc.
 )
-
 # ============================================================
 # 📸 UTILITIES
 # ============================================================
@@ -222,3 +222,20 @@ def read_root():
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     return RedirectResponse(url="https://cdn-icons-png.flaticon.com/512/1063/1063376.png")
+
+@app.get("/api/system/version")
+async def get_version(db: Session = Depends(get_db)):
+    try:
+        # 👈 2. Wrap the raw SQL string inside text()
+        query = text("SELECT value FROM system_settings WHERE key = 'system_version'")
+        version_setting = db.execute(query).fetchone()
+        
+        if version_setting:
+            return {"version": version_setting[0]}
+        
+        return {"version": "v1.0.0-fallback"}
+        
+    except Exception as e:
+        # 👈 3. Catch any DB errors (like missing tables) so it doesn't cause a 500 crash
+        print(f"⚠️ Version Sync Error: {e}")
+        return {"version": "v1.0.0-fallback"}
