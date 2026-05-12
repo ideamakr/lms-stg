@@ -613,12 +613,10 @@ async def toggle_user_status( # 🚀 Async execution for background tasks
         raise HTTPException(status_code=500, detail="Database error toggling user status.")
 
 from fastapi import Header
-
 @router.put("/{user_id}/profile-update")
 async def update_user_profile(
     user_id: int,
-    
-    # 📋 STEP 1
+    # 📋 STEP 1 (Required)
     full_name: str = Form(...), 
     first_name: str = Form(...),
     last_name: str = Form(...),
@@ -655,14 +653,14 @@ async def update_user_profile(
     emergency_contact_mobile: Optional[str] = Form(None),
     
     profile_pic: Optional[UploadFile] = File(None),
-    x_username: Optional[str] = Header(None), # 🔒 SECURITY BADGE INJECTED HERE
+    x_username: Optional[str] = Header(None), 
     db: Session = Depends(get_db)
 ):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 🚀 PHASE 2 UPDATE: Helper logic to parse multiple manager lists
+    # 1. Helper to parse manager lists
     def parse_manager_list(data):
         if not data: return []
         try:
@@ -674,10 +672,10 @@ async def update_user_profile(
     final_line_managers = parse_manager_list(line_manager)
     final_hod_names = parse_manager_list(hod_name)
 
+    # 2. Cascading Name Sync
     old_name = user.full_name
     new_name = full_name.strip()
 
-    # 🚀 CASCADING NAME SYNC
     if old_name != new_name:
         db.query(models.LeaveBalance).filter(models.LeaveBalance.employee_name == old_name).update({"employee_name": new_name})
         db.query(models.Leave).filter(models.Leave.employee_name == old_name).update({"employee_name": new_name})
@@ -686,7 +684,7 @@ async def update_user_profile(
         db.query(models.Overtime).filter(models.Overtime.approver_name == old_name).update({"approver_name": new_name})
         db.query(models.Leave).filter(models.Leave.approver_l2 == old_name).update({"approver_l2": new_name})
 
-    # Update Profile Picture if uploaded
+    # 3. Avatar Upload
     if profile_pic:
         try:
             from app.main import compress_and_upload
@@ -694,24 +692,16 @@ async def update_user_profile(
         except Exception as e:
             print(f"Avatar Upload Warning: {e}")
 
-    # ============================================================
-    # 🛡️ THE BACKEND SECURITY LOCKDOWN
-    # ============================================================
+    # 4. Security Check (Calculated once)
     is_admin = False
-    is_self_edit = False
-    
-    # 1. Check who is making this request via the header
     if x_username:
         requester = db.query(models.User).filter(models.User.username == x_username).first()
         if requester:
-            if requester.id == user.id:
-                is_self_edit = True
-            
             roles_list = [r.role_name for r in requester.assigned_roles] if hasattr(requester, 'assigned_roles') else []
             if requester.role in ["hr_admin", "admin", "superuser"] or "hr_admin" in roles_list:
                 is_admin = True
 
-    # 2. ALWAYS ALLOWED: Map Personal & Contact Fields
+    # 5. ALWAYS ALLOWED: Update Personal & Contact Fields
     user.full_name = new_name
     user.first_name = first_name.strip() if first_name else None
     user.middle_name = middle_name.strip() if middle_name else None
@@ -733,21 +723,28 @@ async def update_user_profile(
     user.emergency_contact_rel = emergency_contact_rel.strip() if emergency_contact_rel else None
     user.emergency_contact_mobile = emergency_contact_mobile.strip() if emergency_contact_mobile else None
 
-# 3. LOCKDOWN ZONE: Admins can update employment fields for ANYONE (including themselves)
+    # 6. LOCKDOWN ZONE: Admins only
     if is_admin:
-        print(f"🔓 [SECURITY] Admin {x_username} updated official employment fields.")
-        user.job_title = job_title.strip() if job_title else None
-        user.department = department.strip() if department else None
-        user.line_manager = final_line_managers
-        user.hod_name = final_hod_names
-        user.joined_date = joined_date
-        user.contract_type = contract_type.strip() if contract_type else None
-        user.business_unit = business_unit.strip() if business_unit else None
-        user.work_location = work_location.strip() if work_location else None
+        print(f"🔓 [SECURITY] Admin {x_username} updating official employment fields.")
+        # Only update if the field is NOT None or empty string
+        if job_title: user.job_title = job_title.strip()
+        if department: user.department = department.strip()
+        if joined_date: user.joined_date = joined_date
+        if contract_type: user.contract_type = contract_type.strip()
+        if business_unit: user.business_unit = business_unit.strip()
+        if work_location: user.work_location = work_location.strip()
+
+        # Manager Protection: Only overwrite if the new list has content
+        if final_line_managers:
+            user.line_manager = final_line_managers
+        
+        if final_hod_names:
+            user.hod_name = final_hod_names
     else:
-        print(f"🔒 [SECURITY] Ignored employment fields. Requester is self-editing and is not an admin.")
+        print(f"🔒 [SECURITY] Ignored employment fields for {user.username}. Requester is not an admin.")
 
     db.commit()
+    db.refresh(user)
     return {"message": "Profile updated successfully"}
 
 @router.put("/{user_id}/reset-password")

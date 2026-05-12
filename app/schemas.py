@@ -114,3 +114,26 @@ class BrandingConfig(BaseModel):
     broadcast_start: str = ""
     broadcast_end: str = ""
     maintenance_mode: bool = False
+
+
+    # Add this to schemas.py
+class UserUpdate(BaseModel):
+    # Identity & Role
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_senior_manager: Optional[bool] = None
+    
+    # Employment (The likely trouble area)
+    employee_id: Optional[str] = None
+    job_title: Optional[str] = None
+    department: Optional[str] = None
+    business_unit: Optional[str] = None
+    line_manager: Optional[str] = None
+    hod_name: Optional[str] = None  # 👈 Ensure this matches your models.py!
+    joined_date: Optional[str] = None
+    contract_type: Optional[str] = None
+    work_location: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)

@@ -15384,12 +15384,19 @@ async function submitNewUser(event) {
     };
 
     const getJsonListFromCheckboxes = (containerId) => {
-        const container = document.getElementById(containerId);
-        if (!container) return JSON.stringify([]);
-        const checked = container.querySelectorAll('input[type="checkbox"]:checked');
-        const values = Array.from(checked).map(cb => cb.value);
-        return JSON.stringify(values);
-    };
+    const container = document.getElementById(containerId);
+    // 🚀 THE FIX: Return null instead of an empty stringified list
+    if (!container) return null; 
+    
+    const checked = container.querySelectorAll('input[type="checkbox"]:checked');
+    
+    // 🚀 THE FIX: If nothing is checked, return null. 
+    // This tells the backend "Do not touch this field."
+    if (checked.length === 0) return null; 
+
+    const values = Array.from(checked).map(cb => cb.value);
+    return JSON.stringify(values);
+};
 
     const safeGet = (id) => document.getElementById(id) ? document.getElementById(id).value.trim() : "";
 
