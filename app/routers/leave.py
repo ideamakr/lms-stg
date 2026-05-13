@@ -17,6 +17,9 @@ from app import models
 from app.database import SessionLocal
 from app.dependencies import validate_session
 
+from sqlalchemy import or_, cast, String, extract
+import re
+
 # 📧 Email Utilities
 # Robust import strategy to handle different environment paths
 try:
@@ -1041,24 +1044,23 @@ def get_team_entitlements(
         return []
 
 # ============================================================
-    # 📊 SECTION 4: SMART ROUTING QUERY (LM vs HOD vs HR)
+    # 📊 SECTION 4: SMART ROUTING QUERY (LM vs HOD vs HR) (FIXED)
     # ============================================================
     # 1. Base query (Always hide superuser from balances)
     users_query = db.query(models.User).filter(models.User.role != "superuser")
 
     if role_clean != "hr_admin":
-        # 🚀 THE CRITICAL FIX: Array/JSON Mapping
-        # This finds all employees where the current approver's name
-        # exists in their line_manager list OR their hod_name list.
+        # 🚀 THE NUCLEAR FIX: 
+        # We cast the JSONB columns to String so the LIKE operator (~~) 
+        # works correctly in PostgreSQL. This stops the 500 Internal Server Error.
         users_query = users_query.filter(
             or_(
-                models.User.line_manager.contains([approver_clean]),
-                models.User.hod_name.contains([approver_clean])
+                cast(models.User.line_manager, String).ilike(f"%{approver_clean}%"),
+                cast(models.User.hod_name, String).ilike(f"%{approver_clean}%")
             )
         )
         
-        # 💡 NOTE: We removed the old 'staff_list' and 'submitted_to_mgr' 
-        # loops. The User Profile is now the absolute Source of Truth.
+        # 💡 NOTE: The User Profile is now the absolute Source of Truth.
 
     # 2. Apply Name Search (if manager is typing in the search box)
     if name:
