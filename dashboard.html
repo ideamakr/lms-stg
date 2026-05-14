@@ -3558,7 +3558,7 @@ div.swal2-container {
                     <div class="prof-card">
                         <div class="prof-card-header">
                             <h3 class="prof-card-title">Personal Information</h3>
-                            <button class="prof-btn-edit">
+                            <button class="prof-btn-edit" style="display: none;">
                                 Edit <i class="fas fa-pencil-alt"></i>
                             </button>
                         </div>
@@ -3580,7 +3580,7 @@ div.swal2-container {
                     <div class="prof-card">
                         <div class="prof-card-header">
                             <h3 class="prof-card-title">Contact & Logistics</h3>
-                            <button class="prof-btn-edit">
+                            <button class="prof-btn-edit" style="display: none;">
                                 Edit <i class="fas fa-pencil-alt"></i>
                             </button>
                         </div>
@@ -15578,8 +15578,15 @@ async function submitNewUser(event) {
         formData.append("joined_date", joinedDate);
         formData.append("job_title", safeGet("reg_job_title_new"));
         formData.append("department", safeGet("reg_dept_new"));
-        formData.append("line_manager", getJsonListFromCheckboxes("reg_mgr_container"));
-        formData.append("hod_name", getJsonListFromCheckboxes("reg_hod_container"));
+        
+        // 🚀 THE MERGED FIX: Safe Append for Managers
+        const lineMgrData = getJsonListFromCheckboxes("reg_mgr_container");
+        const hodData = getJsonListFromCheckboxes("reg_hod_container");
+
+        // Only append if data exists; otherwise, the backend ignores the update
+        if (lineMgrData) formData.append("line_manager", lineMgrData);
+        if (hodData) formData.append("hod_name", hodData);
+
         formData.append("contract_type", safeGet("reg_contract_type_new"));
         formData.append("business_unit", safeGet("reg_biz_unit_new"));
         formData.append("work_location", safeGet("reg_location_new"));
