@@ -10122,27 +10122,35 @@ async function refreshManagerBadges() {
     isBadgeRefreshing = true;
 
     try {
+        // 👑 SUPERUSER IDENTITY SENTRY
+        const masterRole = localStorage.getItem("userMasterRole") || "";
+        const loggedInUser = localStorage.getItem("username") || "";
+        const currentUserName = localStorage.getItem("currentUser") || "";
+        const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
+
         let bellCount = 0; // The total number for the red bell badge
-        const isApprover = userRoles.includes("manager") || userRoles.includes("hr_admin");
+        const isApprover = userRoles.includes("manager") || userRoles.includes("hr_admin") || isSuperuser;
 
         // ==========================================
         // 🚀 SECTION A: MANAGER TASKS (Smart Routing)
         // ==========================================
         if (isApprover) {
             // 1. Fetch Pending Leave Count (Stage-Aware)
-            // We increase page_size to 100 so we can filter accurately on the frontend
-            const leaveRes = await fetchWithAuth(
-                `${API_URL}/leaves/manager/pending?approver_name=${encodeURIComponent(currentUser)}&page_size=100`
-            );
+            // 🎯 THE BYPASS: Elevate params for Superusers to pull the complete company backlog
+            const leaveUrl = isSuperuser 
+                ? `${API_URL}/leaves/manager/pending?user_role=hr_admin&page_size=1000`
+                : `${API_URL}/leaves/manager/pending?approver_name=${encodeURIComponent(currentUser)}&page_size=100`;
+
+            const leaveRes = await fetchWithAuth(leaveUrl);
             if (leaveRes && leaveRes.ok) {
                 const data = await leaveRes.json();
                 const rawLeaves = data.requests || [];
                 
-                // 🚀 FIXED: Removed the global HR bypass. Tracks items explicitly assigned to the user or is their turn.
+                // 🚀 FIXED: Bypasses individual manager constraints if a Superuser session is active
                 const pendingLeaves = rawLeaves.filter(l => {
                     if (!l.status || !l.status.includes("Pending")) return false;
                     
-                    return l.is_my_turn === true || 
+                    return isSuperuser || l.is_my_turn === true || 
                            (l.status === "Pending L2 Approval" ? l.approver_l2 === currentUser : l.approver_name === currentUser);
                 });
                 
@@ -10165,16 +10173,21 @@ async function refreshManagerBadges() {
             await new Promise(r => setTimeout(r, 500)); // Small throttle to relieve server connection overhead
 
             // 2. Fetch Pending OT Count (Stage-Aware)
-            const otRes = await fetchWithAuth(`${API_URL}/overtime/manager-requests?approver_name=${encodeURIComponent(currentUser)}`);
+            // 🎯 THE BYPASS: Route Superusers to the comprehensive company-wide repository
+            const otUrl = isSuperuser 
+                ? `${API_URL}/overtime/all-requests`
+                : `${API_URL}/overtime/manager-requests?approver_name=${encodeURIComponent(currentUser)}`;
+
+            const otRes = await fetchWithAuth(otUrl);
             if (otRes && otRes.ok) {
                 const otData = await otRes.json();
                 const rawOT = Array.isArray(otData) ? otData : (otData.requests || []);
                 
-                // 🚀 FIXED: Removed the global HR bypass. Tracks items explicitly assigned to the user or is their turn.
+                // 🚀 FIXED: Bypasses individual manager constraints if a Superuser session is active
                 const pendingOT = rawOT.filter(o => {
                     if (!o.status || !o.status.includes("Pending")) return false;
                     
-                    return o.is_my_turn === true || 
+                    return isSuperuser || o.is_my_turn === true || 
                            (o.status === "Pending L2 Approval" ? o.approver_l2 === currentUser : (o.approver_name === currentUser || o.approver_l1 === currentUser));
                 });
                 
@@ -10224,8 +10237,8 @@ async function refreshManagerBadges() {
         const bellContainer = document.getElementById("nav_bell_container"); 
         
         if (bellBadge && bellContainer) {
-            // 1. Identify if the user is a Manager or HR
-            const isBoss = userRoles.includes("manager") || userRoles.includes("hr_admin");
+            // 1. Identify if the user is a Manager, HR, or Superuser
+            const isBoss = userRoles.includes("manager") || userRoles.includes("hr_admin") || isSuperuser;
 
             // 2. ROLE-BASED VISIBILITY FOR THE BELL ITSELF
             if (isBoss) {
@@ -12934,6 +12947,12 @@ async function loadManagerRequests() {
         </div>`;
 
     try {
+        // 👑 SUPERUSER IDENTITY SENTRY
+        const masterRole = localStorage.getItem("userMasterRole") || "";
+        const loggedInUser = localStorage.getItem("username") || "";
+        const currentUserName = localStorage.getItem("currentUser") || "";
+        const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
+
         const params = new URLSearchParams({
             approver_name: currentUser,
             page: mgrCurrentPage,
@@ -12944,6 +12963,11 @@ async function loadManagerRequests() {
             end_date: endDateVal,
             status: statusVal,
         });
+
+        // 🎯 THE BYPASS: Elevate permissions for the System Admin to pull all records company-wide
+        if (isSuperuser) {
+            params.set("user_role", "hr_admin");
+        }
 
         const res = await fetchWithAuth(`${API_URL}/leaves/manager/pending?${params.toString()}`);
         if (!res.ok) throw new Error("Server error");
@@ -19745,11 +19769,20 @@ function clearPolicySearch() {
         // Clear the global reference
         window.currentAdjustingUser = null;
       }
+
+
       async function loadHomeLeadershipInsights(signal) {
     // 1. Setup Role Access
     const isHR = userRoles.includes("hr_admin");
     const isManager = userRoles.includes("manager");
-    const isBoss = isHR || isManager; // Preserved to keep backend array unpack index alignment fully stable
+    
+    // 👑 SUPERUSER IDENTITY SENTRY
+    const masterRole = localStorage.getItem("userMasterRole") || "";
+    const loggedInUser = localStorage.getItem("username") || "";
+    const currentUserName = localStorage.getItem("currentUser") || "";
+    const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
+    
+    const isBoss = isHR || isManager || isSuperuser; // Preserved to keep backend array unpack index alignment fully stable
 
     // 2. Get DOM Elements
     const panel = document.getElementById("leadership_panel");
@@ -19761,10 +19794,10 @@ function clearPolicySearch() {
     const otInbox = document.getElementById("tile_ot_inbox");
 
     // 🚀 SECTION 3 FIXED: Instant personal layout rendering; let dynamic block handle the boss containers below
- // 🚀 Hide the schedule permanently if the user is a superadmin
-if (panel) {
-    panel.style.display = userRoles.includes("superuser") ? "none" : "block";
-}
+    // 🚀 Hide the schedule permanently if the user is a superadmin
+    if (panel) {
+        panel.style.display = isSuperuser ? "none" : "block";
+    }
 
     try {
         const now = new Date();
@@ -19781,9 +19814,17 @@ if (panel) {
         ];
 
         if (isBoss) {
-            const roleParam = isHR ? "hr_admin" : "manager";
-            fetchPromises.push(fetchWithAuth(`${API_URL}/leaves/manager/all?user_role=${roleParam}&approver_name=${encodeURIComponent(currentUser)}`, { signal })); // Index 4
-            fetchPromises.push(fetchWithAuth(`${API_URL}/overtime/manager-requests?approver_name=${encodeURIComponent(currentUser)}`, { signal })); // Index 5
+            // 🎯 THE BYPASS: Elevate parameters for Superusers to index all corporate accounts company-wide
+            const leaveUrl = isSuperuser 
+                ? `${API_URL}/leaves/manager/all?user_role=hr_admin&page_size=1000`
+                : `${API_URL}/leaves/manager/all?user_role=${isHR ? "hr_admin" : "manager"}&approver_name=${encodeURIComponent(currentUser)}`;
+                
+            const otUrl = isSuperuser
+                ? `${API_URL}/overtime/all-requests`
+                : `${API_URL}/overtime/manager-requests?approver_name=${encodeURIComponent(currentUser)}`;
+
+            fetchPromises.push(fetchWithAuth(leaveUrl, { signal })); // Index 4
+            fetchPromises.push(fetchWithAuth(otUrl, { signal }));    // Index 5
         }
 
         const responses = await Promise.all(fetchPromises);
@@ -19811,29 +19852,27 @@ if (panel) {
         }
         
         // ====================================================================
-        // UNIFIED SMART INBOX ROUTING (Strict Assignment View)
+        // UNIFIED SMART INBOX ROUTING (With Superuser Access Bypass Rules)
         // ====================================================================
         const pendingOT = safeOtData.filter(o => {
             if (!o.status || !o.status.includes("Pending")) return false;
-
-            return o.is_my_turn === true || 
+            return isSuperuser || o.is_my_turn === true || 
                    (o.status === "Pending L2 Approval" ? o.approver_l2 === currentUser : (o.approver_name === currentUser || o.approver_l1 === currentUser));
         });
 
         const pendingLeaves = mgrLeaves.filter(l => {
             if (!l.status || !l.status.includes("Pending")) return false;
-
-            return l.is_my_turn === true || 
+            return isSuperuser || l.is_my_turn === true || 
                    (l.status === "Pending L2 Approval" ? l.approver_l2 === currentUser : l.approver_name === currentUser);
         });
 
         // 🚀 DYNAMIC VISIBILITY CONFIGURATION: Consolidates layout switches to eliminate flickers
-        if (miniStats) miniStats.style.display = isManager ? "flex" : "none";
+        if (miniStats) miniStats.style.display = (isManager && !isSuperuser) ? "flex" : "none";
         
         let isActionCenterVisible = false;
         if (actionCenter) {
             const hasActiveTasks = pendingLeaves.length > 0 || pendingOT.length > 0;
-            isActionCenterVisible = (isManager || hasActiveTasks);
+            isActionCenterVisible = (!isSuperuser && (isManager || hasActiveTasks));
             actionCenter.style.display = isActionCenterVisible ? "block" : "none";
         }
 
@@ -19959,22 +19998,22 @@ if (panel) {
                 : `<div style="text-align:center; padding: 15px; opacity:0.5; font-style:italic; font-size:0.75rem;">All caught up!</div>`;
         }
 
-        // --- 🟢 5. WHO'S AWAY TODAY ---
+ // ====================================================================
+        // 🟢 5. WHO'S AWAY TODAY - HOLIDAY & WEEKEND INTELLIGENT GATING
+        // ====================================================================
         const awayToday = publicLeaves.filter(l => todayStr >= l.start_date && todayStr <= l.end_date);
         window.currentAwayToday = awayToday; 
 
-//         // 🧪 TEMPORARY SUNDAY SUITE INJECTION (Delete after testing)
-// awayToday.push({
-//     employee_name: "Wanda Maximoff",
-//     start_date: todayStr,
-//     end_date: todayStr,
-//     leave_type: "Annual Leave",
-//     profile_pic_url: "" // Triggers your crisp initials backup circle asset cleanly!
-// });
-
         const employeePill = document.getElementById("employee_away_pill");
 
-        // 🚀 THE CRITICAL ROUTING REPAIR: Linked strictly to the active visibility state of the embedded action grid
+        // 🧠 DETERMINE TODAY'S CORPORATE LAYOUT CONTEXT
+        const checkDate = new Date();
+        const currentDayOfWeek = checkDate.getDay(); // 0 = Sunday, 6 = Saturday
+        const isWeekend = (currentDayOfWeek === 0 || currentDayOfWeek === 6);
+        
+        // Cross-reference today's date string with your loaded holiday array cache
+        const activeHolidayToday = holidays.find(h => h.holiday_date === todayStr);
+
         if (!isActionCenterVisible) {
             // Pure HR Admins and standard Employees get the right-sidebar compact pill tracking frame
             if (employeePill) {
@@ -20010,23 +20049,22 @@ if (panel) {
                 const titleEl = document.getElementById("away_today_title");
                 if (titleEl) titleEl.innerText = `Who's Away Today (${awayToday.length})`;
                 
-                listEl.innerHTML = awayToday.length === 0 
-                    ? `<div style="font-size:0.75rem; color:#94a3b8; padding:10px 0; font-style:italic;">Everyone is present.</div>` 
-                    : awayToday.map(l => {
+                if (awayToday.length > 0) {
+                    // Render the active leave roster rows
+                    listEl.innerHTML = awayToday.map(l => {
                         const safeType = (l.leave_type || "Leave").split(' ')[0];
                         const initials = (l.employee_name || "??").split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase().slice(0, 2);
                         
-                        // 📸 FIXED: Added full window directory lookup cache matching to avoid missing portrait shifts
                         let rawPic = l.profile_pic_url;
-                        if (!rawPic || rawPic === "null" || rawPic === "") {
+                        if (!rawPic || rawPic === "null") {
                             const userMatch = (window.allUsersList || []).find(u => u.full_name === l.employee_name);
                             if (userMatch) rawPic = userMatch.profile_pic_url;
                         }
                         const photoUrl = getFullPath(rawPic);
                         const avatarHtml = photoUrl 
-    ? `<img src="${photoUrl}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid #e2e8f0;" onerror="this.style.display='none'; this.nextElementSibling.style.setProperty('display', 'flex', 'important');">`
-    : "";
-const fallbackHtml = `<div class="avatar-circle" style="width: 28px; height: 28px; font-size: 0.65rem; margin-right: 10px; display: ${photoUrl ? 'none !important' : 'flex !important'};">${initials}</div>`;
+                            ? `<img src="${photoUrl}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid #e2e8f0;" onerror="this.style.display='none'; this.nextElementSibling.style.setProperty('display', 'flex', 'important');">`
+                            : "";
+                        const fallbackHtml = `<div class="avatar-circle" style="width: 28px; height: 28px; font-size: 0.65rem; margin-right: 10px; display: ${photoUrl ? 'none !important' : 'flex !important'};">${initials}</div>`;
 
                         return `
                         <div class="pulse-row" style="background:#f8fafc; border-left: 3px solid #e57d70; padding: 8px 10px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #f1f5f9;">
@@ -20042,11 +20080,37 @@ const fallbackHtml = `<div class="avatar-circle" style="width: 28px; height: 28p
                             <span class="pulse-label" style="background:#fef2f2; color:#e57d70; font-size:0.6rem; padding: 2px 6px; border-radius: 4px; font-weight:800; text-transform: uppercase;">${safeType}</span>
                         </div>`;
                     }).join("");
+                } 
+                else if (activeHolidayToday) {
+                    // 🎯 CASE A: Today is an official Public Holiday
+                    listEl.innerHTML = `
+                        <div style="text-align: center; padding: 25px 15px; background: #fff7ed; border: 1px dashed #fed7aa; border-radius: 8px; margin: 10px 0; box-sizing: border-box;">
+                            <div style="font-size: 1.5rem; color: #f97316; margin-bottom: 6px;"><i class="fas fa-umbrella-beach"></i></div>
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #c2410c; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Office Closed</span>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #7c2d12;">Public Holiday: ${activeHolidayToday.name}</div>
+                        </div>`;
+                } 
+                else if (isWeekend) {
+                    // 🎯 CASE B: Today is a Saturday or Sunday
+                    listEl.innerHTML = `
+                        <div style="text-align: center; padding: 25px 15px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; margin: 10px 0; box-sizing: border-box;">
+                            <div style="font-size: 1.5rem; color: #64748b; margin-bottom: 6px;"><i class="fas fa-couch"></i></div>
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Office Closed</span>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">Weekend Rest Cycle</div>
+                        </div>`;
+                } 
+                else {
+                    // 🎯 CASE C: Active Weekday and nobody has an approved leave logged
+                    listEl.innerHTML = `
+                        <div style="text-align: center; padding: 25px 15px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; margin: 10px 0; box-sizing: border-box;">
+                            <span style="font-style: normal; font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: block;">Everyone is present.</span>
+                        </div>`;
+                }
             }
         }
 
         // --- 🟢 6. MINI STATS ---
-        if (isBoss && miniStats) {
+        if (isBoss && miniStats && !isSuperuser) {
             const approved = mgrLeaves.filter(l => (l.status || "").toLowerCase() === "approved");
             const medical = approved.filter(l => l.leave_type === "Medical Leave").length;
             if (document.getElementById("home_stat_total")) document.getElementById("home_stat_total").innerText = mgrLeaves.length;
@@ -22744,20 +22808,31 @@ async function loadManagerOTRequests() {
     </td></tr>`;
 
     try {
+        // 👑 SUPERUSER IDENTITY SENTRY
+        const masterRole = localStorage.getItem("userMasterRole") || "";
+        const loggedInUser = localStorage.getItem("username") || "";
+        const currentUserName = localStorage.getItem("currentUser") || "";
+        const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
+
         const params = new URLSearchParams({
             approver_name: currentUser,
             page: 1, // Fetching larger batch for client-side filtering efficiency
             page_size: 1000, 
         });
 
-        const res = await fetchWithAuth(`${API_URL}/overtime/manager-requests?${params.toString()}`);
+        // 🎯 THE ROUTING BYPASS: Direct superusers to the global company-wide endpoint
+        const endpoint = isSuperuser 
+            ? `${API_URL}/overtime/all-requests`
+            : `${API_URL}/overtime/manager-requests?${params.toString()}`;
+
+        const res = await fetchWithAuth(endpoint);
         if (!res) return;
 
         const data = await res.json();
         let requests = Array.isArray(data) ? data : data.requests || [];
 
-// 🔍 CLIENT-SIDE FILTERING (Strict Visibility Fix)
-requests = requests.filter(ot => {
+        // 🔍 CLIENT-SIDE FILTERING (With Superuser Access Bypass)
+        requests = requests.filter(ot => {
             const matchesName = !nameFilter || (ot.employee_name || "").toLowerCase().includes(nameFilter);
             const matchesType = !typeFilter || ot.ot_type === typeFilter;
             const matchesDate = !dateFilter || ot.ot_date === dateFilter;
@@ -22769,13 +22844,12 @@ requests = requests.filter(ot => {
             const isPendingState = otStatus.includes("Pending");
 
             if (statusFilter === "") {
-                // 1. Default "Needs Attention" Tab: Must be pending AND sitting on your desk
-                matchesStatus = isPendingState && ot.is_my_turn === true; 
+                // 1. Default "Needs Attention" Tab: Must be pending AND (sitting on your desk OR any company pending item if Superuser)
+                matchesStatus = isPendingState && (ot.is_my_turn === true || isSuperuser); 
                 
             } else if (statusFilter.includes("Pending")) {
-                // 2. Explicit "Pending" or "Final Approval" Dropdown:
-                // If they explicitly filter for a pending state, STRICTLY enforce ownership.
-                matchesStatus = (otStatus === statusFilter) && ot.is_my_turn === true;
+                // 2. Explicit "Pending" or "Final Approval" Dropdown: Enforce ownership unless Superuser
+                matchesStatus = (otStatus === statusFilter) && (ot.is_my_turn === true || isSuperuser);
                 
             } else {
                 // 3. Historical View ("Approved", "Rejected", "Cancelled"):
@@ -25976,20 +26050,41 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
- * ✅ GLOBAL PATH HELPER
- * Ensures profile pictures and attachments load correctly from the server.
+ * ✅ GLOBAL PATH HELPER (OMNI-ROUTED FOR API_URL & SUPABASE_URL)
+ * Ensures profile pictures and attachments load correctly from local storage or cloud buckets.
  */
-window.getFullPath = function(path) {
+ window.getFullPath = function(path) {
     if (!path || path === "NULL" || path === "" || path === "undefined" || path === "null") return null;
     
-    // 1. If it's already a full web link, use it
-    if (path.startsWith('http')) return path;
+    // 1. If it's already a full absolute web link or a local base64 preview URI, use it directly
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
 
-    // 2. Clean the incoming path
+    // 2. Clean the incoming path slash formatting
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+    // 3. 🚀 SUPABASE CLOUD ROUTING MATRIX
+    // If SUPABASE_URL is defined globally in the file, favor cloud bucket routing
+    if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) {
+        
+        // Exclude explicit local server exceptions (like system scripts or local legacy uploads)
+        if (cleanPath.startsWith('/uploads') || cleanPath.startsWith('/static')) {
+            return `${API_URL}${cleanPath}`;
+        }
+        
+        // If the path already has the Supabase public object API endpoint string pattern
+        if (cleanPath.startsWith('/storage/v1/object/public/')) {
+            return `${SUPABASE_URL}${cleanPath}`;
+        }
+        
+        // Default Supabase configuration: route raw relative paths (e.g., /avatars/user.jpg) to the public bucket endpoint
+        return `${SUPABASE_URL}/storage/v1/object/public${cleanPath}`;
+    }
+
+    // 4. 💻 LOCAL API_URL ROUTING FALLBACK
+    if (cleanPath.startsWith('/uploads') || cleanPath.startsWith('/storage') || cleanPath.startsWith('/static')) {
+        return `${API_URL}${cleanPath}`;
+    }
     
-    // 3. Default: Combine with the current API_URL
-    // Replace 'API_URL' with your actual backend URL if it's not defined globally
     return `${API_URL}/uploads${cleanPath}`;
 };
 
@@ -26015,12 +26110,14 @@ function openSelfEditModal(user, startAtStep = 1) {
     currentSelfStep = startAtStep; 
     updateSelfUI();
 
-    // 📸 Sync Avatar Preview
-    const avatarPreview = document.getElementById('self_avatar_preview');
+// ============================================================
+    // 👤 4. FILL STEP 2 & 3 DATA (Personal & Bank Logistics Node)
+    // ============================================================
+    const avatarPreview = document.getElementById('reg_avatar_preview');
     if (avatarPreview) {
-        const photoUrl = getFullPath(window.selfEditUserObj.profile_pic_url);
-        avatarPreview.src = photoUrl || 
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(window.selfEditUserObj.full_name || 'User')}&background=cbd5e1&color=fff`;
+        // 🎯 FIXED: Route the raw profile string through getFullPath to align absolute server/cloud paths
+        const photoUrl = typeof getFullPath === "function" ? getFullPath(user.profile_pic_url) : user.profile_pic_url;
+        avatarPreview.src = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=cbd5e1&color=fff`;
     }
 
     // 3. Populate Fields
