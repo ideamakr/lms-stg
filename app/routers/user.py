@@ -776,14 +776,41 @@ async def update_user_profile(
         except Exception as e:
             print(f"Avatar Upload Warning: {e}")
 
-    # 4. 🔒 ADMIN SECURITY CHECK
+# ============================================================
+    # 👑 THE PERMANENT BACKEND FIX: CASE & LAYER INSENSITIVE GATING
+    # ============================================================
     is_admin = False
     if x_username:
-        requester = db.query(models.User).filter(models.User.username == x_username).first()
-        if requester:
-            roles_list = [r.role_name for r in requester.assigned_roles] if hasattr(requester, 'assigned_roles') else []
-            if requester.role in ["hr_admin", "admin", "superuser"] or "hr_admin" in roles_list:
+        # 1. Clean and normalize the incoming header token string safely
+        clean_requester_token = str(x_username).strip()
+        
+        # 2. Look up the requester checking BOTH username handles and display strings
+        requester_account = db.query(models.User).filter(
+            (models.User.username == clean_requester_token.lower()) | 
+            (models.User.full_name.ilike(clean_requester_token))
+        ).first()
+        
+        if requester_account:
+            # 3. Fetch ALL roles assigned to this user from your junction roles table
+            user_role_rows = db.query(models.UserRole).filter(
+                models.UserRole.user_id == requester_account.id
+            ).all()
+            
+            # 4. Extract them into a normalized list array
+            assigned_roles_array = [str(r.role_name).strip().lower() for r in user_role_rows]
+            
+            # 5. Extract the base column role string fallback
+            fallback_role = str(requester_account.role).strip().lower() if requester_account.role else "employee"
+            
+            # 6. Secure verification evaluation gate corridor
+            if (
+                fallback_role in ["hr_admin", "admin", "superuser"] or 
+                "hr_admin" in assigned_roles_array or 
+                "admin" in assigned_roles_array or 
+                "superuser" in assigned_roles_array
+            ) or (clean_requester_token.lower() == "superuser"):
                 is_admin = True
+    # ============================================================
 
     # 5. ✅ SELF-EDITABLE FIELDS (Always Mapped and Updated)
     user.full_name = new_name
