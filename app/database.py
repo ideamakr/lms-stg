@@ -30,14 +30,14 @@ if is_sqlite:
         pool_recycle=1800      # ♻️ Refresh connections every 30 mins
     )
 else:
-    # ✅ Cloud PostgreSQL (Supabase) Settings
+    # ✅ Cloud PostgreSQL (Supabase/Render) Settings - RESILIENT CONFIG
     engine = create_engine(
         DATABASE_URL, 
-        pool_pre_ping=True,    # 🔄 Checks if connection is alive before using it
+        pool_pre_ping=True,    # 🔄 🔍 Pre-ping catches dropped connections before queries execute
         pool_size=30,          # 🪑 Base connection pool
         max_overflow=20,       # 📈 Extra connections during traffic spikes
         pool_timeout=60,       # ⏱️ Wait 60s before timing out
-        pool_recycle=1800      # ♻️ Refresh connections every 30 mins
+        pool_recycle=300       # ♻️ 🕒 Recycles connections every 5 minutes to beat cloud idle limits
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
