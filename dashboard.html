@@ -4969,7 +4969,7 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                                             Submit Application
                                         </button>
                                     
-                                        <button id="dash_ot_submit_btn" onclick="submitOTInDashboard(event)" style="display: none; height: 36px; border-radius: 6px; padding: 0 30px; background: #ea580c; color: white; border: none; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(234, 88, 12, 0.2); transition: 0.2s;" onmouseover="this.style.background='#c2410c'" onmouseout="this.style.background='#ea580c'">
+                                        <button id="dash_ot_submit_btn" onclick="submitOTInDashboard(event)" style="display: none; height: 36px; border-radius: 6px; padding: 0 30px; background: #ea580c; color: white; border: none; font-weight: 800; font-size: 0.85rem; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(234, 88, 12, 0.2); transition: 0.2s;" onmouseover="this.style.background='#c2410c'" onmouseout="this.style.background='#ea580c'">
                                             Submit OT Claim
                                         </button>
                                     </div> 
@@ -9686,20 +9686,8 @@ const menuLink = document.querySelector(`.menu-item[onclick*="${sectionId}"]`);
             const summaryBox = document.getElementById("apply_summary_box");
             if (summaryBox) summaryBox.style.display = "none";
 
-            // 🚀 THE FIX: Show "Apply on Behalf" tabs only for HR/Superusers
-            const contextTabs = document.getElementById("hr_context_tabs");
-            if (contextTabs) {
-                const isHR = userRoles.includes("hr_admin") || localStorage.getItem("userMasterRole") === "superuser";
-                contextTabs.style.display = isHR ? "block" : "none";
-            }
-
-            await loadApproverList();
-            if (signal.aborted) return; 
-            await prefetchBalances(signal);
-            if (typeof restoreLeaveDraft === "function") restoreLeaveDraft();
-
-            // 👑 THE BULLETPROOF ACTION BUTTON GAUNTLET
-            // Forces the correct button visibility layout to prevent display clashing
+            // 👑 THE BULLETPROOF ACTION BUTTON GAUNTLET (MOVED TO THE TOP)
+            // Forces the correct button visibility layout INSTANTLY to prevent staging flickers
             const savedMode = localStorage.getItem("current_apply_mode") || "leave";
             if (typeof switchApplyMode === "function") {
                 switchApplyMode(savedMode);
@@ -9716,6 +9704,19 @@ const menuLink = document.querySelector(`.menu-item[onclick*="${sectionId}"]`);
                     if (otBtn) otBtn.style.setProperty("display", "none", "important");
                 }
             }
+
+            // 🚀 Show "Apply on Behalf" tabs only for HR/Superusers
+            const contextTabs = document.getElementById("hr_context_tabs");
+            if (contextTabs) {
+                const isHR = userRoles.includes("hr_admin") || localStorage.getItem("userMasterRole") === "superuser";
+                contextTabs.style.display = isHR ? "block" : "none";
+            }
+
+            // 🌐 Asynchronous network data streams run safely down here now!
+            await loadApproverList();
+            if (signal.aborted) return; 
+            await prefetchBalances(signal);
+            if (typeof restoreLeaveDraft === "function") restoreLeaveDraft();
 
         } else if (sectionId === "history") {
             await loadHistory(1, 10);
