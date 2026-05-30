@@ -9974,8 +9974,8 @@ async function fetchWithAuth(url, options = {}) {
     options.headers["current-user-role"] = options.headers["current-user-role"] || localStorage.getItem("userMasterRole") || "employee";
     options.headers["x-user-role"] = options.headers["x-user-role"] || localStorage.getItem("userMasterRole") || "employee";
 
-    // 4. Handle URL Parameters safely
-    const separator = url.includes("?") ? "&" : "?";
+// 4. Handle URL Parameters safely
+const separator = url.includes("?") ? "&" : "?";
     let finalUrl = url;
 
     // 🎯 THE CORE COMPLIANCE FIX:
@@ -9983,7 +9983,6 @@ async function fetchWithAuth(url, options = {}) {
     if (!url.includes("employee_name=")) {
         finalUrl = `${url}${separator}employee_name=${encodeURIComponent(realUsernameToken)}`;
     }
-
     try {
         // The { signal } passed from options is automatically sent to the fetch API here!
         const response = await fetch(finalUrl, options);
