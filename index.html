@@ -9,120 +9,536 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <style>
-      /* Base Styles */
+      /* Base Canvas Setup */
       body {
-        margin: 0;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        font-family: -apple-system, system-ui, sans-serif;
-        /* Modern Gradient Mesh Background */
-        background: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.1) 0, transparent 50%), 
-                    radial-gradient(at 50% 0%, rgba(29, 78, 216, 0.05) 0, transparent 50%), 
-                    radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.1) 0, transparent 50%),
-                    #f8fafc;
-        overflow: hidden; /* Prevents scrollbars with particles */
-      }
-
-      .login-card {
-        background: white;
-        padding: 2.5rem;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        width: 350px;
-        text-align: center;
-        border-top: 4px solid #2563eb; /* Pro Brand Strip */
-        z-index: 10; /* Keeps card above particles */
-      }
-
-      h2 { color: #2563eb; margin-bottom: 0.5rem; }
-      .subtitle { color: #6b7280; font-size: 0.9rem; margin-bottom: 1.5rem; }
+              margin: 0;
+              height: 100vh;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              background: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.1) 0, transparent 50%), 
+                          radial-gradient(at 50% 0%, rgba(29, 78, 216, 0.05) 0, transparent 50%), 
+                          radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.1) 0, transparent 50%),
+                          #f8fafc;
+              overflow: hidden;
+            }
       
-      input {
-        width: 100%;
-        padding: 0.75rem;
-        margin-bottom: 1rem;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        box-sizing: border-box;
-      }
+ /* 🔲 CENTERING THE FLOATING COMPACT COMBINED SPLIT UNIT (Upsized & Tall Layout) */
+ .split-container {
+              display: flex;
+              width: 960px;       /* 🚀 Prominent enterprise desktop width constraint */
+              height: 750px;      /* 🚀 Increased from 580px to give the photo massive visibility */
+              background: white;
+              border-radius: 0px; /* Sharp Normal Edge */
+              box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.2);
+              overflow: hidden;
+              z-index: 10;
+              position: relative;
+              animation: cardEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+      
+/* LEFT PANEL: Compact Glassmorphic Widget Container */
+.panel-left {
+              width: 540px;       /* 🚀 Maintained your exact balanced canvas width */
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              padding: 3rem 2.2rem;   /* 🚀 Maintained your exact padding layout alignment */
+              box-sizing: border-box;
+              position: relative;
 
-      button {
-        background: #2563eb;
-        color: white;
-        padding: 0.75rem;
-        border: none;
-        border-radius: 6px;
-        width: 100%;
-        font-size: 1rem;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
+              /* 🔵 SAFE DEFAULT COLOR FALLBACK */
+              /* If your photo path returns a 404 or goes offline, this corporate gradient renders instantly */
+              background-color: #0f172a !important; 
+              background-image: linear-gradient(135deg, #1e3a8a, #0f172a 85%, #1e1b4b);
+                                
+              /* High-performance image scaling rules preventing stretching distortions */
+              background-size: cover !important;
+              background-position: center !important;
+              background-repeat: no-repeat !important;
+            }
+      
+            /* RIGHT PANEL: Form Input Gateway */
+            .panel-right {
+              flex: 1;            /* Automatically stretches to cleanly occupy the remaining form entry space (420px) */
+              background: white;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              align-items: center;
+              padding: 3rem 2.2rem;   /* 🚀 Maintained your exact matched layout dimensions */
+              box-sizing: border-box;
+              position: relative;
+            }
 
-      button:hover {
-        background: #1d4ed8;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-      }
+            /* 📱 Mobile Responsive Fallbacks */
+            @media (max-width: 860px) {
+              .split-container { width: 370px; height: auto; min-height: 500px; border-radius: 0px; }
+              .panel-left { display: none !important; }
+              .panel-right { padding: 2.5rem 1.5rem; }
+            }
+      
+            /* 🔒 SECURITY FORM CONTENT LAYOUT - GLASS UPGRADE */
+            .login-card {
+              width: 100%;
+              text-align: center;
+              box-sizing: border-box;
+              transition: opacity 0.4s ease, transform 0.4s ease;
+            }
+      
+            h2 { color: #0f172a; font-size: 1.5rem; font-weight: 800; margin: 0 0 0.3rem 0; letter-spacing: -0.5px; }
+            .subtitle { color: #64748b; font-size: 0.85rem; margin: 0 0 1.5rem 0; font-weight: 500; }
+            
+            /* Input Design Elements with Soft Opacity and Blue Accent Handshakes */
+            .input-wrapper {
+              position: relative;
+              margin-bottom: 1rem;
+              text-align: left;
+            }
+            .input-wrapper i {
+              position: absolute;
+              left: 12px;
+              top: 50%;
+              transform: translateY(-50%);
+              color: #94a3b8;
+              font-size: 0.95rem;
+              transition: color 0.2s;
+            }
+            input {
+              width: 100%;
+              padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+              border: 1px solid #e2e8f0;
+              border-radius: 0px; 
+              box-sizing: border-box;
+              font-size: 0.95rem;
+              color: #1e293b;
+              background: rgba(248, 250, 252, 0.8); /* Translucent bright foundation matches background tone */
+              backdrop-filter: blur(4px);
+              transition: all 0.25s ease;
+            }
+            input:focus {
+              outline: none;
+              border-color: #2563eb;
+              background: white;
+              box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+            }
+            input:focus + i { color: #2563eb; }
+      
+            /* Corporate Ocean Blue Gradient Action Button */
+            button {
+              background: linear-gradient(135deg, #2563eb, #1d4ed8);
+              color: white;
+              padding: 0.75rem;
+              border: none;
+              border-radius: 0px; 
+              width: 100%;
+              font-size: 0.95rem;
+              font-weight: 700;
+              cursor: pointer;
+              transition: all 0.2s ease;
+              box-shadow: 0 4px 10px rgba(37, 99, 235, 0.15);
+            }
+            button:hover {
+              background: linear-gradient(135deg, #1d4ed8, #1e40af);
+              transform: translateY(-1px);
+              box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
+            }
+      
+            .admin-note {
+              margin-top: 15px;
+              font-size: 0.75rem;
+              font-weight: 600;
+              color: #b91c1c;
+              background: #fef2f2;
+              padding: 8px 10px;
+              border-radius: 0px; 
+              border: 1px solid #fee2e2;
+              line-height: 1.3;
+            }
+      
+/* ⏱️ GLASSMORPHIC CLOCK & DATE TILES (Seamless Blend Modification) */
+.portal-brand {
+              color: rgba(255, 255, 255, 0.75) !important; /* Softened corporate brand text */
+              font-size: 1.25rem;
+              font-weight: 800;
+              letter-spacing: -0.5px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            .widgets-stack {
+              display: flex;
+              flex-direction: column;
+              gap: 1.2rem;
+              width: 100%;
+              margin-top: 1.5rem;
+              margin-bottom: auto;
+              position: relative; 
+            }
 
-      .admin-note {
-        margin-top: 20px;
-        font-size: 0.8rem;
-        color: #ef4444;
-        background: #fef2f2;
-        padding: 10px;
-        border-radius: 4px;
-      }
+            /* 🔮 SUPER SUBTLE AMBIENT BACKGROUND GLOWS */
+            .widgets-stack::before,
+            .widgets-stack::after {
+              content: "";
+              position: absolute;
+              pointer-events: none;
+              border-radius: 50%;
+              filter: blur(20px);
+              z-index: 1;
+            }
+            .widgets-stack::before {
+              background-color: #fab5701a; /* Toned down from 3b to 1a opacity to preserve photo visibility */
+              width: 7rem;
+              height: 7rem;
+              top: 10%;
+              right: -5%;
+            }
+            .widgets-stack::after {
+              background-color: rgba(37, 99, 235, 0.1); /* Toned down deep blue layer */
+              width: 6rem;
+              height: 6rem;
+              bottom: 15%;
+              left: -5%;
+            }
 
-      /* 🚀 MODAL ANIMATION */
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-    </style>
+            .glass-clock-card {
+              padding: 1.2rem;
+              border-radius: 0px; 
+              -webkit-backdrop-filter: blur(16px) !important;
+              backdrop-filter: blur(16px) !important;                      
+              background-color: rgba(255, 255, 255, 0.035) !important;    /* 🚀 Lowered density from 0.074 to 0.035 */
+              border: 1px solid rgba(255, 255, 255, 0.08) !important;     /* 🚀 Softened outline rim from 0.222 to 0.08 */
+              position: relative;
+              z-index: 2;
+              transition: all ease 0.3s;
+            }
+
+            .glass-clock-card:hover {
+              box-shadow: 0px 0px 20px 1px #ffbb7622 !important;          /* Softer ambient hover aura */
+              border: 1px solid rgba(255, 255, 255, 0.25) !important;    
+            }
+
+            .clock-time {
+              font-size: 2.2rem;
+              font-weight: 800;
+              color: rgba(255, 255, 255, 0.88) !important; /* 🚀 Shifted to soft off-white to eliminate harsh glare */
+              letter-spacing: -0.5px;
+              line-height: 1;
+            }
+            .clock-date {
+              font-size: 0.8rem;
+              color: rgba(255, 255, 255, 0.5) !important;  /* Elegant sub-label visibility ratio */
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-top: 6px;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            }
+      
+            /* 🌀 GLASSMORPHIC WEATHER CARD CONTAINER */
+            .cardContainer {
+              width: 100%;
+              position: relative;
+              z-index: 2;
+            }
+            .cardContainer::before {
+              width: 70px;
+              height: 70px;
+              content: "";
+              position: absolute;
+              background-color: #06b6d4;
+              filter: blur(20px);
+              z-index: 1; 
+              right: 15px;
+              top: 15px;
+              opacity: 0.15; /* Softened standalone glowing orb */
+              pointer-events: none; 
+              transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .cardContainer:hover::before {
+              transform: translate(-45px, 25px) scale(1.4);
+              background-color: #38bdf8;
+              opacity: 0.3;
+            }
+      
+            .weather-card {
+              position: relative;
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              padding: 1rem 1.2rem;
+              border-radius: 0px; 
+              -webkit-backdrop-filter: blur(16px) !important;
+              backdrop-filter: blur(16px) !important;                      
+              background-color: rgba(255, 255, 255, 0.035) !important;    /* 🚀 Synced perfectly with the clock card */
+              border: 1px solid rgba(255, 255, 255, 0.08) !important;     /* 🚀 Softened edge boundary tracking line */
+              box-sizing: border-box;
+              z-index: 2; 
+              cursor: pointer;
+              transition: all ease 0.3s;
+            }
+
+            .weather-card:hover {
+              box-shadow: 0px 0px 20px 1px #ffbb7622 !important;          
+              border: 1px solid rgba(255, 255, 255, 0.25) !important;    
+            }
+      
+            .weather-top { display: flex; justify-content: space-between; align-items: flex-start; }
+            .city { font-weight: 700; font-size: 0.9rem; color: rgba(255, 255, 255, 0.88) !important; } 
+            .weather-condition { font-weight: 500; font-size: 0.75rem; color: #cbd5e1cc !important; margin-top: 1px; }
+            
+            .weather-icon-box { 
+              font-size: 1.6rem; 
+              animation: floatIcon 4s ease-in-out infinite;
+              display: inline-block;
+              position: relative;
+              width: 2rem;
+              height: 1.6rem;
+              opacity: 0.8; /* Subtle icon dampening filter match */
+            }
+            .weather-icon-box .fa-stack {
+              font-size: 1em;
+              width: 100%;
+              height: 100%;
+              display: block;
+            }
+            
+            .temp { font-size: 1.8rem; font-weight: 800; color: rgba(255, 255, 255, 0.88) !important; margin: 4px 0; } 
+            .minmaxContainer {
+              width: 100%;
+              display: flex;
+              align-items: center;
+              border-top: 1px solid rgba(255, 255, 255, 0.08); /* Fainter inner divider rule path */
+              padding-top: 8px;
+              margin-top: 4px;
+            }
+            .min, .max { width: 50%; display: flex; flex-direction: column; }
+            .min { align-items: flex-start; }
+            .max { align-items: flex-end; }
+            .maxHeading, .minHeading { font-size: 0.6rem; font-weight: 700; color: rgba(255, 255, 255, 0.4) !important; text-transform: uppercase; }
+            .maxTemp, .minTemp { font-size: 0.75rem; font-weight: 600; color: rgba(255, 255, 255, 0.75) !important; }
+      
+            /* 🌀 LIQUID-WAVE PREMIUM LOADING ENGINE */
+            .loader-overlay {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: transparent; 
+              display: none;       
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              z-index: 100;
+              opacity: 0;
+              transition: opacity 0.5s ease-in-out;
+            }
+      
+            .loader-overlay.active {
+              display: flex;       
+              opacity: 1;
+            }
+      
+            .e-card {
+              background: #0f172a; 
+              box-shadow: 0px 8px 28px -9px rgba(0, 0, 0, 0.45);
+              position: relative;
+              width: 100%;
+              height: 100%;       
+              overflow: hidden;
+            }
+      
+            .wave {
+              position: absolute;
+              width: 600px;
+              height: 600px;
+              opacity: 0.85;       
+              left: 50%;
+              top: 40%;            
+              margin-left: -300px; 
+              margin-top: -300px;  
+              background: linear-gradient(744deg, #1d4ed8, #1e3a8a 60%, #2563eb);
+              border-radius: 42%;  
+              animation: wave 18s infinite linear;
+              z-index: 1;
+            }
+      
+            .wave:nth-child(2) {
+              animation-duration: 13s;
+              opacity: 0.6;
+              background: linear-gradient(744deg, #06b6d4, #3b82f6 70%, #00d2ff);
+              border-radius: 40%;
+            }
+      
+            .wave:nth-child(3) {
+              animation-duration: 9s;
+              opacity: 0.25;
+              background: linear-gradient(744deg, #ffffff, rgba(255, 255, 255, 0.4) 80%, #ffffff);
+              border-radius: 44%;
+            }
+      
+            .infotop {
+              text-align: center;
+              font-size: 1.15rem;
+              position: absolute;
+              top: 35%;            
+              left: 20px;
+              right: 20px;
+              color: rgb(255, 255, 255);
+              font-weight: 600;
+              z-index: 10;         
+            }
+      
+            .name {
+              font-size: 14px;
+              font-weight: 500;
+              display: block;
+              margin-top: 10px;
+              color: rgba(255, 255, 255, 0.85);
+              animation: pulseText 2s ease-in-out infinite;
+            }
+      
+            /* Core Motion Matrix Channels */
+            @keyframes wave {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            @keyframes cardEntrance { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes pulseText { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+            @keyframes floatIcon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+      
+            /* Base Canvas Setup */
+            html, body {
+              height: 100vh !important;
+              min-height: 100vh !important;
+            }
+      </style>
   </head>
   <body>
     <div id="particles-js" style="position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: 1;"></div>
 
-    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; z-index: 10;">
+    <div class="split-container">
       
-      <div class="login-card">
-        <h2>Employee Portal</h2>
-        <p class="subtitle">Please sign in to manage your leave</p>
-
-        <form onsubmit="handleLogin(event)">
-          <input type="text" id="username" placeholder="Username" required />
-          <input type="password" id="password" placeholder="Password" required />
-          <button type="submit">Sign In</button>
-        </form>
-
-        <div style="text-align: center; margin-top: 20px">
-          <a href="javascript:void(0)" onclick="handleForgotPassword()" style="font-size: 0.85rem; color: #64748b; text-decoration: none;">
-            Forgot username or password?
-          </a>
+      <div class="panel-left">
+        <div class="portal-brand">
+          <i class="fas fa-layer-group" style="color: #60a5fa;"></i>
+          <span>HR Enterprise Link</span>
         </div>
 
-        <div class="admin-note">
-          Authorized users only. Unauthorized access is prohibited.
+        <div class="widgets-stack">
+          
+          <div class="glass-clock-card">
+            <div id="portal-time" class="clock-time">00:00:00</div>
+            <div id="portal-date" class="clock-date">
+              <i class="far fa-calendar-alt"></i> Loading workspace calendar...
+            </div>
+          </div>
+
+          <div class="cardContainer">
+            <div class="weather-card">
+              <div class="weather-top">
+                <div>
+                  <div id="weather-city" class="city">Kuala Lumpur</div>
+                  <div id="weather-desc" class="weather-condition">Checking environment...</div>
+                </div>
+                <div id="weather-icon" class="weather-icon-box">
+                  <i class="fas fa-cloud-sun"></i>
+                </div>
+              </div>
+              <div id="weather-temp" class="temp">--°C</div>
+              <div class="minmaxContainer">
+                <div class="min">
+                  <span class="minHeading">Min</span>
+                  <span id="weather-min" class="minTemp">--°C</span>
+                </div>
+                <div class="max">
+                  <span class="maxHeading">Max</span>
+                  <span id="weather-max" class="maxTemp">--°C</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <div style="margin-top: 25px; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 15px;">
-          <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">
-              version <span id="login_version_display" style="color: #2563eb;">Checking...</span>
+        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.4); font-weight: 500;">
+          System Nodes Operational • Secure Gateway Active
+        </div>
+      </div>
+
+      <div class="panel-right">
+        
+        <div></div>
+
+        <div class="login-card" id="formWrapperCard">
+          <h2>Employee Portal</h2>
+          <p class="subtitle">Please sign in to manage your leave</p>
+
+          <form onsubmit="handleLogin(event)">
+            <div class="input-wrapper">
+              <input type="text" id="username" placeholder="Username" required />
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="input-wrapper" style="margin-bottom: 1.5rem;">
+              <input type="password" id="password" placeholder="Password" required />
+              <i class="fas fa-lock"></i>
+            </div>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #64748b; margin-top: -0.5rem; margin-bottom: 1.2rem; cursor: pointer; user-select: none; text-align: left;">
+              <input type="checkbox" id="remember_me" style="width: 14px; height: 14px; cursor: pointer; accent-color: #2563eb;">
+              <span>Remember me on this device</span>
+            </label>
+
+            <button type="submit">Sign In</button>
+          </form>
+
+          <div style="text-align: center; margin-top: 20px">
+            <a href="javascript:void(0)" onclick="handleForgotPassword()" style="font-size: 0.85rem; color: #64748b; text-decoration: none; font-weight: 500;">
+              Forgot username or password?
+            </a>
+          </div>
+
+          <!-- <div class="admin-note">
+            Authorized users only. Unauthorized access is prohibited.
+          </div> -->
+
+          <div style="margin-top: 25px; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 15px;">
+            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">
+                version <span id="login_version_display" style="color: #2563eb;">Checking...</span>
+            </div>
+          </div>
+        </div> 
+
+        <div class="loader-overlay" id="workspaceLoadingOverlay">
+          <div class="e-card playing">
+            <div class="wave"></div>
+            <div class="wave"></div>
+            <div class="wave"></div>
+            <div class="infotop">
+              <div style="font-size: 1.5rem; margin-bottom: 8px;"><i class="fas fa-circle-notch fa-spin"></i></div>
+              Preparing Workspace
+              <div id="loadingProgressMsg" class="name">Synchronizing account datasets...</div>
+            </div>
           </div>
         </div>
-      </div> 
 
-      <footer style="margin-top: 30px; text-align: center;">
-        <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; opacity: 0.8;">
-            © 2026 <span style="color: #2563eb; font-weight: 600;">IdeaMakr</span> 
-            • All rights reserved.
-        </p>
-      </footer>
+        <footer style="text-align: center;">
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; font-weight: 500;">
+              © 2026 <span style="color: #ED553B;">Idea</span><span style="color: #3b82f6;">Makr</span>
+              • All rights reserved.
+          </p>
+        </footer>
+
+      </div>
+
     </div>
 
-    <!-- Reusable Error Modal -->
     <div
       id="errorModal"
       style="
@@ -144,7 +560,7 @@
           background-color: #fefefe;
           margin: auto;
           padding: 30px;
-          border-radius: 12px;
+          border-radius: 0px; /* Aligned sharp normal edge fallback */
           text-align: center;
           width: 90%;
           max-width: 350px;
@@ -158,7 +574,7 @@
             height: 60px;
             background: #fee2e2;
             color: #ef4444;
-            border-radius: 50%;
+            border-radius: 50%; /* Maintained as structural icon bubble circle */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -197,7 +613,7 @@
             color: white;
             padding: 10px;
             border: none;
-            border-radius: 6px;
+            border-radius: 0px; /* Aligned sharp edge */
             width: 100%;
             font-weight: bold;
             cursor: pointer;
@@ -247,6 +663,132 @@
         }
       });
 
+      /**
+       * ⏱️ DYNAMIC CLOCK & CALENDAR ENGINE
+       * Updates the portal time and tracking metadata every second locally.
+       */
+      function startPortalClock() {
+          const clockTime = document.getElementById("portal-time");
+          const clockDate = document.getElementById("portal-date");
+          if (!clockTime || !clockDate) return;
+
+          setInterval(() => {
+              const now = new Date();
+              
+              // 1. Format Time strings (HH:MM:SS)
+              let hrs = String(now.getHours()).padStart(2, '0');
+              let mins = String(now.getMinutes()).padStart(2, '0');
+              let secs = String(now.getSeconds()).padStart(2, '0');
+              clockTime.innerText = `${hrs}:${mins}:${secs}`;
+
+              // 2. Format Beautiful Date strings (e.g., Saturday, May 23, 2026)
+              const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+              clockDate.innerHTML = `<i class="far fa-calendar-alt"></i> ${now.toLocaleDateString('en-US', options)}`;
+          }, 1000);
+      }
+
+ /**
+       * 🌀 GLASSMORPHIC OPEN-SOURCE WEATHER TRACKER (🌓 DAY/NIGHT AWARE)
+       * Fetches real-time environmental data and dynamically adjusts icons for dark hours.
+       */
+       async function fetchPortalWeather() {
+          const defaultCity = "Kuala Lumpur";
+          
+          try {
+              // Lightweight open-source public forecast api container
+              const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=3.1390&longitude=101.6869&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FKuala_Lumpur`);
+              if (!res.ok) throw new Error("Weather service offline");
+              
+              const data = await res.json();
+              const current = data.current_weather;
+              
+              // 🌓 DETECT NIGHT HOURS: Read from API or check current system clock as a backup
+              const isNight = current.is_day === 0 || (current.is_day === undefined && (new Date().getHours() >= 19 || new Date().getHours() < 6));
+              
+              // Map simple weather codes to human descriptions and layered multi-colored layouts
+              let condition = isNight ? "Clear Night" : "Clear Skies";
+              let iconHtml = isNight 
+                  ? `<i class="fas fa-moon" style="color: #cbd5e1; filter: drop-shadow(0 0 6px #3b82f6);"></i>`
+                  : `<i class="fas fa-sun" style="color: #f59e0b; filter: drop-shadow(0 0 4px #f59e0b);"></i>`;
+                  
+              const code = current.weathercode;
+
+              if (code >= 1 && code <= 3) {
+                  condition = "Partly Cloudy";
+                  if (isNight) {
+                      // 🌙 Silver moon glowing behind a slate-blue cloud layer
+                      iconHtml = `
+                        <span class="fa-stack" style="vertical-align: top;">
+                            <i class="fas fa-moon fa-stack-1x" style="color: #cbd5e1; position: absolute; top: -4px; left: -4px; font-size: 1.1rem; filter: drop-shadow(0 0 5px #2563eb);"></i>
+                            <i class="fas fa-cloud fa-stack-1x" style="color: #94a3b8; position: absolute; top: 4px; left: 4px; font-size: 1.2rem; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.3));"></i>
+                        </span>`;
+                  } else {
+                      // 🌤️ Yellow sun behind a slate-blue cloud layer
+                      iconHtml = `
+                        <span class="fa-stack" style="vertical-align: top;">
+                            <i class="fas fa-sun fa-stack-1x" style="color: #f59e0b; position: absolute; top: -6px; left: -6px; font-size: 1.25rem;"></i>
+                            <i class="fas fa-cloud fa-stack-1x" style="color: #94a3b8; position: absolute; top: 4px; left: 4px; font-size: 1.2rem; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.3));"></i>
+                        </span>`;
+                  }
+              } else if (code >= 45 && code <= 48) {
+                  condition = "Foggy Conditions";
+                  iconHtml = `<i class="fas fa-smog" style="color: #cbd5e1;"></i>`;
+              } else if (code >= 51 && code <= 67) {
+                  condition = "Light Drizzle";
+                  iconHtml = `
+                    <span class="fa-stack" style="vertical-align: top;">
+                        <i class="fas fa-cloud fa-stack-1x" style="color: #64748b; position: absolute; top: -2px; left: 0; font-size: 1.2rem;"></i>
+                        <i class="fas fa-cloud-showers-heavy fa-stack-1x" style="color: #60a5fa; position: absolute; top: 6px; left: 0; font-size: 1.1rem;"></i>
+                    </span>`;
+              } else if (code >= 71 && code <= 82) {
+                  condition = "Heavy Showers";
+                  iconHtml = `
+                    <span class="fa-stack" style="vertical-align: top;">
+                        <i class="fas fa-cloud fa-stack-1x" style="color: #475569; position: absolute; top: -2px; left: 0; font-size: 1.2rem;"></i>
+                        <i class="fas fa-cloud-showers-heavy fa-stack-1x" style="color: #3b82f6; position: absolute; top: 6px; left: 0; font-size: 1.1rem;"></i>
+                    </span>`;
+              } else if (code >= 95) {
+                  condition = "Thunderstorms";
+                  iconHtml = `
+                    <span class="fa-stack" style="vertical-align: top;">
+                        <i class="fas fa-cloud fa-stack-1x" style="color: #334155; position: absolute; top: -2px; left: 0; font-size: 1.2rem;"></i>
+                        <i class="fas fa-bolt fa-stack-1x" style="color: #eab308; position: absolute; top: 8px; left: 6px; font-size: 1.1rem; filter: drop-shadow(0 0 4px #eab308);"></i>
+                    </span>`;
+              }
+
+              // Inject components into widgets
+              document.getElementById("weather-city").innerText = defaultCity;
+              document.getElementById("weather-desc").innerText = condition;
+              document.getElementById("weather-icon").innerHTML = iconHtml;
+              document.getElementById("weather-temp").innerText = `${Math.round(current.temperature)}°C`;
+              document.getElementById("weather-min").innerText = `${Math.round(data.daily.temperature_2m_min[0])}°C`;
+              document.getElementById("weather-max").innerText = `${Math.round(data.daily.temperature_2m_max[0])}°C`;
+
+          } catch (e) {
+              console.warn("Weather sync failed, using static environment data:", e);
+              
+              // Smart fallbacks matching current local time frame
+              const localHr = new Date().getHours();
+              const isFallbackNight = localHr >= 19 || localHr < 6;
+              
+              let fallbackIconHtml = isFallbackNight 
+                ? `<span class="fa-stack" style="vertical-align: top;">
+                    <i class="fas fa-moon fa-stack-1x" style="color: #cbd5e1; position: absolute; top: -4px; left: -4px; font-size: 1.1rem; filter: drop-shadow(0 0 5px #2563eb);"></i>
+                    <i class="fas fa-cloud fa-stack-1x" style="color: #94a3b8; position: absolute; top: 4px; left: 4px; font-size: 1.2rem;"></i>
+                   </span>`
+                : `<span class="fa-stack" style="vertical-align: top;">
+                    <i class="fas fa-sun fa-stack-1x" style="color: #f59e0b; position: absolute; top: -6px; left: -6px; font-size: 1.25rem;"></i>
+                    <i class="fas fa-cloud fa-stack-1x" style="color: #94a3b8; position: absolute; top: 4px; left: 4px; font-size: 1.2rem;"></i>
+                   </span>`;
+              
+              document.getElementById("weather-city").innerText = defaultCity;
+              document.getElementById("weather-desc").innerText = isFallbackNight ? "Muted Night Clouds" : "Sunny Intervals";
+              document.getElementById("weather-icon").innerHTML = fallbackIconHtml;
+              document.getElementById("weather-temp").innerText = "27°C";
+              document.getElementById("weather-min").innerText = "24°C";
+              document.getElementById("weather-max").innerText = "32°C";
+          }
+      }
       /**
        * 🛡️ MAINTENANCE GATEKEEPER
        * Checks backend for broadcast messages or maintenance locks.
@@ -339,17 +881,25 @@
         if (event.target == modal) closeErrorModal();
       };
 
-      /**
-       * 🔐 LOGIN HANDLER
+/**
+       * 🔐 UPGRADED LOGIN HANDLER WITH 2.5s WORKSPACE LOADING TRANSITION
+       * (🔒 FIXED: Prevented layout jump on 503 alert popups via heightAuto: false)
        */
-      async function handleLogin(event) {
+       async function handleLogin(event) {
         event.preventDefault(); 
+        
+        // Wipe pre-existing session states from both scopes on entry to ensure clean slate transitions
         localStorage.clear(); 
+        sessionStorage.clear();
     
         const usernameInput = document.getElementById("username").value.trim().toLowerCase();
         const passwordInput = document.getElementById("password").value;
+        const submitBtn = event.target.querySelector("button[type='submit']");
     
         try {
+            // Disable actions to prevent multi-click form submissions
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "Verifying..."; }
+
             const loginData = {
                 username: usernameInput,
                 password: passwordInput
@@ -364,34 +914,74 @@
             if (res.ok) {
                 const data = await res.json();
                 
-                // Persistence
-                localStorage.setItem("currentUser", data.full_name); 
-                localStorage.setItem("username", usernameInput);       
-                localStorage.setItem("userRoles", JSON.stringify(data.roles));
+                // 💾 HYBRID STORAGE ENGINE: Evaluate "Remember Me" checkbox state to target correct memory bank
+                const isRemembered = document.getElementById("remember_me")?.checked;
+                const secureStorage = isRemembered ? localStorage : sessionStorage;
+
+                // Absolute State Isolation: Clear data references again to avoid cross-container leaks
+                localStorage.clear();
+                sessionStorage.clear();
+
+                // Commit user signatures into the selected persistent or session-only memory store
+                secureStorage.setItem("currentUser", data.full_name); 
+                secureStorage.setItem("username", usernameInput);       
+                secureStorage.setItem("userRoles", JSON.stringify(data.roles));
                 
                 if (data.session_id) {
-                    localStorage.setItem("sessionId", data.session_id);
+                    secureStorage.setItem("sessionId", data.session_id);
                 } else {
-                    localStorage.setItem("sessionId", "session-" + new Date().getTime());
+                    secureStorage.setItem("sessionId", "session-" + new Date().getTime());
                 }
 
                 if (data.roles && data.roles.length > 0) {
-                     localStorage.setItem("userMasterRole", data.roles[0]); 
-                     localStorage.setItem("role", data.roles[0]); 
+                     secureStorage.setItem("userMasterRole", data.roles[0]); 
+                     secureStorage.setItem("role", data.roles[0]); 
                 } else {
-                     localStorage.setItem("userMasterRole", "employee");
-                     localStorage.setItem("role", "employee");
+                     secureStorage.setItem("userMasterRole", "employee");
+                     secureStorage.setItem("role", "employee");
                 }
+
+                // Explicit tracker tag used by the workspace dashboard to maintain configuration awareness
+                secureStorage.setItem("session_type", isRemembered ? "persistent" : "session_only");
+
+                // 🌀 FIRE THE ENTERPRISE OVERLAY LOADING SEQUENCE
+                const overlay = document.getElementById("workspaceLoadingOverlay");
+                const progressMsg = document.getElementById("loadingProgressMsg");
+                const formCard = document.getElementById("formWrapperCard");
+
+                if (overlay && formCard) {
+                    // 1. Softly fade out and lower the original credentials input card
+                    formCard.style.opacity = "0";
+                    formCard.style.transform = "translateY(10px)";
+                    
+                    // 2. Wait for the form fade-out to finish, then smoothly swap screens
+                    setTimeout(() => { 
+                        formCard.style.display = "none"; 
+                        
+                        // 🚀 Reveal the premium workspace loader natively by toggling the active class
+                        overlay.classList.add("active");
+                    }, 400);
+
+                    // 3. Dynamic progress diagnostics typewriter simulation tracking loops
+                    setTimeout(() => { if(progressMsg) progressMsg.innerText = "Caching employee directories and rosters..."; }, 800);
+                    setTimeout(() => { if(progressMsg) progressMsg.innerText = "Securing core leave entitlement channels..."; }, 1600);
+                }
+                // ⏱️ Execute 5 second data load sleep delay
+                await new Promise(resolve => setTimeout(resolve, 5000));
 
                 window.location.replace("dashboard.html");
             } else {
+                // Re-enable actions on rejection
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "Sign In"; }
+
                 const errorData = await res.json();
                 if (res.status === 503) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'System Locked',
                         text: errorData.detail || "Maintenance Mode active.",
-                        confirmButtonColor: '#f59e0b'
+                        confirmButtonColor: '#f59e0b',
+                        heightAuto: false // 🚀 ROOT FIX: Directs SweetAlert to leave root document dimensions alone
                     });
                 } else {
                     showError(errorData.detail || "Invalid credentials");
@@ -399,14 +989,15 @@
             }
         } catch (e) {
             console.error("Login attempt failed:", e);
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "Sign In"; }
             showError("System Error: Cannot connect to server.");
         }
       }
     
-      /**
-       * 🔑 FORGOT PASSWORD HANDLER
+/**
+       * 🔑 FORGOT PASSWORD HANDLER (🔒 FIXED: Locked to dead center using heightAuto: false)
        */
-      async function handleForgotPassword() {
+       async function handleForgotPassword() {
         const { value: email } = await Swal.fire({
           title: "Account Recovery",
           text: "Enter your email and we will send your username and a temporary password.",
@@ -416,6 +1007,7 @@
           confirmButtonColor: "#2563eb",
           cancelButtonColor: "#94a3b8",
           confirmButtonText: "Recover My Account",
+          heightAuto: false, // 🚀 Direct Fix: Stops SweetAlert from injecting height properties into root tags
           footer: '<span style="font-size: 0.75rem; color: #64748b;">Note: This will reset your password for security.</span>',
         });
     
@@ -424,6 +1016,7 @@
             title: "Processing...",
             html: "Verifying email and generating credentials...",
             allowOutsideClick: false,
+            heightAuto: false, // 🚀 Keeps layout locked behind loader screen
             didOpen: () => {
               Swal.showLoading();
             },
@@ -443,13 +1036,26 @@
                 title: "Check Your Inbox",
                 text: "If an account exists, your username and new password have been sent.",
                 confirmButtonColor: "#2563eb",
+                heightAuto: false, // 🚀 Anchors success modal
               });
             } else {
               const err = await res.json();
-              Swal.fire("Request Failed", err.detail || "Could not process account recovery.", "error");
+              Swal.fire({
+                icon: "error",
+                title: "Request Failed",
+                text: err.detail || "Could not process account recovery.",
+                confirmButtonColor: "#ef4444",
+                heightAuto: false, // 🚀 Anchors failure modal
+              });
             }
           } catch (error) {
-            Swal.fire("Connection Error", "Check your internet or server status.", "error");
+            Swal.fire({
+              icon: "error",
+              title: "Connection Error",
+              text: "Check your internet or server status.",
+              confirmButtonColor: "#ef4444",
+              heightAuto: false, // 🚀 Anchors error connection modal
+            });
           }
         }
       }
@@ -463,11 +1069,48 @@
         }
       }
 
-      // Start services on load
+
+      // 🚀 SYSTEM INITIALIZATION LAYER & MULTI-ROUTE IMAGE AUTO-DISCOVERY ENGINE
       document.addEventListener('DOMContentLoaded', () => {
+          // 1. Fire standard system monitoring micro-services
           runMaintenanceCheck();
           loadLoginVersion();
+          startPortalClock();    
+          fetchPortalWeather();   
+
+          // 🖼️ AUTO-DISCOVERY VISUAL BACKDROP TRACKER
+          const panelLeft = document.querySelector('.panel-left');
+          if (panelLeft) {
+              // Try loading from the backend static mount folder path first
+              const primaryBackendUrl = `${API_URL}/static/images/KL_midnight_blue_LoginImage.jpg`;
+              
+              // Fallback route option if the frontend is hosted inside the parent project path
+              const fallbackLocalPath = `app/static/images/KL_midnight_blue_LoginImage.jpg`;
+
+              const imgTester = new Image();
+              
+              // Route 1 Success: Backend image is verified online
+              imgTester.onload = function() {
+                console.log("🎯 Image verified via active API backend server:", primaryBackendUrl);
+                  
+                  /* 🚀 BRIGHTENED OVERLAY: Changed from 0.65/0.85 to 0.35/0.55 
+                     This makes the background skyline image beautifully visible! */
+                  panelLeft.style.backgroundImage = `linear-gradient(rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0.55)), url('${primaryBackendUrl}')`;
+              };
+              
+              // Route 1 Fails: Fallback to local project folder paths
+              imgTester.onerror = function() {
+                  console.warn("⚠️ Backend image route returned 404. Attempting relative file system fallback look...");
+                  
+                  /* 🚀 BRIGHTENED OVERLAY FALLBACK: Synced to the exact same visibility ratio */
+                  panelLeft.style.backgroundImage = `linear-gradient(rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0.55)), url('${fallbackLocalPath}')`;
+              };
+
+              // Launch the validation stream
+              imgTester.src = primaryBackendUrl;
+          }
       });
+
     </script>
   </body>
 </html>

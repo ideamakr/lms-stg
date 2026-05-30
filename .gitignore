@@ -28,4 +28,18 @@ Thumbs.db
 
 # Local Uploads (Since we are now using Supabase Cloud)
 uploads/
-app/static/uploads/
+app/static/uploads/# Python bytecode cache
+__pycache__/
+*.pyc
+
+# macOS system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Local system configuration scripts
+fix_db.py
+upgrade_db.py
+inspect_db.py

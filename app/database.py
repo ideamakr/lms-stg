@@ -19,10 +19,15 @@ if DATABASE_URL.startswith("postgres://"):
 is_sqlite = DATABASE_URL.startswith("sqlite")
 
 if is_sqlite:
-    # ✅ Local SQLite Settings
+    # ✅ Local SQLite Settings - UPGRADED POOL HEADROOM
     engine = create_engine(
         DATABASE_URL, 
-        connect_args={"check_same_thread": False} 
+        connect_args={"check_same_thread": False},
+        pool_pre_ping=True,    # 🔄 Checks if connection is alive before using it
+        pool_size=30,          # 🪑 Expanded base pool for simultaneous dashboard requests
+        max_overflow=20,       # 📈 Extra temporary burst connections headroom
+        pool_timeout=60,       # ⏱️ Wait 60s before timing out
+        pool_recycle=1800      # ♻️ Refresh connections every 30 mins
     )
 else:
     # ✅ Cloud PostgreSQL (Supabase) Settings

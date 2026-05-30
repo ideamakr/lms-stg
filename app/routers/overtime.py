@@ -193,19 +193,27 @@ def get_manager_ot_requests(
     approver_name: str = Query(None),
     page: int = 1,
     page_size: int = 1000,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
+    # Check if the requester has authoritative Superuser privileges
+    user = db.query(models.User).filter(models.User.username == x_username).first()
+    is_super = user and user.role == "superuser"
+
     query = db.query(models.Overtime)
-    if approver_name:
-        query = query.filter(
-            or_(
-                models.Overtime.approver_name.ilike(approver_name.strip()),
-                models.Overtime.approver_l2.ilike(approver_name.strip()),
-                models.Overtime.status_history.ilike(f"%{approver_name.strip()}%") 
+    
+    # If the user is NOT a superuser, apply strict manager assignment constraints
+    if not is_super:
+        if approver_name:
+            query = query.filter(
+                or_(
+                    models.Overtime.approver_name.ilike(approver_name.strip()),
+                    models.Overtime.approver_l2.ilike(approver_name.strip()),
+                    models.Overtime.status_history.ilike(f"%{approver_name.strip()}%") 
+                )
             )
-        )
-    else:
-        return []
+        else:
+            return []
         
     results = query.order_by(models.Overtime.id.desc()).all()
     
@@ -235,10 +243,12 @@ def get_manager_ot_requests(
             "manager_remarks": o.manager_remarks or "",
             "status_history": o.status_history or "Pending",
             
-            # 🚀 THE FIX: This tells the frontend if the logged-in user is STILL the active approver
-            "is_my_turn": o.approver_name == approver_name.strip() if approver_name else False
+            # 👑 CRITICAL MATRIX INTERLOCK: Force 'is_my_turn' to True for Superusers 
+            # This ensures they bypass frontend layout button-hiding filters completely!
+            "is_my_turn": True if is_super else (o.approver_name == approver_name.strip() if approver_name else False)
         })
     return formatted_results
+
 
 # 4. PROCESS MANAGER ACTION
 @router.post("/manager-action/{ot_id}")
@@ -249,7 +259,8 @@ async def process_ot_action(
     remarks: str = "", 
     approver_name: str = "", 
     l2_name: str = Query(None), 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
     try:
         from app.routers.leave import log_activity
@@ -259,6 +270,10 @@ async def process_ot_action(
     ot = db.query(models.Overtime).filter(models.Overtime.id == ot_id).first()
     if not ot:
         raise HTTPException(status_code=404, detail="OT record not found")
+
+    # 👑 Identify if an authoritative Superuser is executing this action
+    acting_user = db.query(models.User).filter(models.User.username == x_username).first()
+    is_superuser_override = acting_user and acting_user.role == "superuser"
 
     acting_mgr = db.query(models.User).filter(models.User.full_name == approver_name).first()
     is_senior = getattr(acting_mgr, 'is_senior_manager', False)
@@ -270,6 +285,9 @@ async def process_ot_action(
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
     current_status = ot.status
     
+    # 🛡️ THE AUDIT FIX: Pre-compile clean remarks tracking string to append into histories
+    note_str = f" | Note: {remarks.strip()}" if remarks and remarks.strip() else ""
+    
     user_record = db.query(models.User).filter(models.User.full_name == ot.employee_name).first()
 
     is_cancellation_journey = (
@@ -277,16 +295,22 @@ async def process_ot_action(
         "Cancellation" in (ot.status_history or "")
     )
 
+    # 👑 Set audit trail naming context based on authority level
+    if is_superuser_override:
+        display_approver = f"System Administrator (Override on behalf of {ot.approver_name or 'Manager'})"
+    else:
+        display_approver = approver_name
+
     # =========================================================
     # A. CANCELLATION LOGIC
     # =========================================================
     if is_cancellation_journey:
         if status == "Approved":
-            if current_status == "Pending Cancel" and l2_active and is_l1 and not is_senior and ot.approver_l2:
+            # 👑 Superuser overrides bypass standard multi-stage routing loops to force instant resolution
+            if current_status == "Pending Cancel" and l2_active and is_l1 and not is_senior and ot.approver_l2 and not is_superuser_override:
                 ot.status = "Pending L2 Approval"
-                ot.status_history += f" > L1 Approved Cancellation. Routed to {ot.approver_l2} ({timestamp})"
+                ot.status_history += f" > L1 Approved Cancellation. Routed to {ot.approver_l2} ({timestamp}){note_str}"
                 db.commit()
-                # If you want L2 notification, it would go here
                 return {"message": "Cancellation approved by L1. Routed to L2."}
             
             if user_record:
@@ -294,51 +318,48 @@ async def process_ot_action(
                 user_record.overtime_bank = max(0, current_bank - float(ot.total_value or 0.0))
 
             ot.status = "Cancelled"
-            ot.status_history += f" > Cancellation FINALIZED by {approver_name} ({timestamp})"
+            ot.status_history += f" > Cancellation FINALIZED by {display_approver} ({timestamp}){note_str}"
 
         else:
             ot.status = "Approved"
-            ot.status_history += f" > Cancellation REJECTED by {approver_name} ({timestamp})"
+            ot.status_history += f" > Cancellation REJECTED by {display_approver} ({timestamp}){note_str}"
 
-# =========================================================
+    # =========================================================
     # B. NORMAL APPROVAL LOGIC
     # =========================================================
     else:
         if status == "Approved":
-            if l2_active and current_status == "Pending" and not is_senior:
+            # 👑 Superuser overrides bypass the standard L2 routing step to allow instant clearance
+            if l2_active and current_status == "Pending" and not is_senior and not is_superuser_override:
                 if not l2_name:
                     raise HTTPException(status_code=400, detail="L2 Manager must be selected.")
                 
-                # 🚀 THE FIX: Pass the 'active' baton to the L2 Manager
-                # Handover the primary responsibility to Tony Stark
                 ot.approver_name = l2_name 
                 ot.approver_l2 = l2_name
-                
                 ot.status = "Pending L2 Approval"
-                ot.status_history += f" > L1 Approved by {approver_name}. Routed to L2: {l2_name} ({timestamp})"
+                ot.status_history += f" > L1 Approved by {approver_name}. Routed to L2: {l2_name} ({timestamp}){note_str}"
             else:
-                # Final Approval Path (No L2 needed or Senior Manager acting)
+                # Final Approval Path (No L2 needed, Senior Manager acting, or Admin Override)
                 if user_record:
                     current_bank = float(user_record.overtime_bank or 0.0)
                     user_record.overtime_bank = current_bank + float(ot.total_value or 0.0)
 
                 ot.status = "Approved"
-                ot.status_history += f" > Final Approval by {approver_name} ({timestamp})"
+                ot.status_history += f" > Final Approval by {display_approver} ({timestamp}){note_str}"
 
         elif status == "Rejected":
             ot.status = "Rejected"
-            ot.status_history += f" > Rejected by {approver_name} ({timestamp})"
+            ot.status_history += f" > Rejected by {display_approver} ({timestamp}){note_str}"
 
     ot.manager_remarks = remarks
     db.commit() # 💾 Commit changes to the OT record
 
-    # 📧 --- 🚀 NEW: NOTIFY EMPLOYEE OF THE DECISION (The Merged Fix) ---
+    # 📧 --- 🚀 NOTIFY EMPLOYEE OF THE DECISION ---
     if user_record and user_record.email:
         try:
             status_icon = "✅" if status == "Approved" else "❌"
             display_status = status
             
-            # Labeling for cancellations
             if is_cancellation_journey:
                 display_status = f"Cancellation {status}"
                 status_icon = "✅" if status == "Approved" else "⚠️"
@@ -347,7 +368,7 @@ async def process_ot_action(
             
             body = template_ot_decision(
                 employee_name=ot.employee_name,
-                manager_name=approver_name,
+                manager_name=display_approver,
                 status=display_status,
                 ot_type=ot.ot_type,
                 ot_date=str(ot.ot_date),
@@ -359,16 +380,20 @@ async def process_ot_action(
             print(f"⚠️ OT Decision Email Error: {e}")
 
     # 🚀 Activity Log Sync
-    if log_activity and acting_mgr:
+    if log_activity:
         try:
             act_type = "APPROVAL" if status == "Approved" else "REJECTION"
             msg_mgr = f"You {status.upper()} {ot.employee_name}'s OT Claim"
-            log_activity(db=db, user_id=acting_mgr.id, action_type=act_type, category="OT Claim", message=msg_mgr, reference_id=ot.id)
+            
+            # Map activity ownership correctly if executed via admin bypass
+            actor_id = acting_user.id if is_superuser_override else (acting_mgr.id if acting_mgr else None)
+            if actor_id:
+                log_activity(db=db, user_id=actor_id, action_type=act_type, category="OT Claim", message=msg_mgr, reference_id=ot.id)
             
             if user_record:
-                msg_emp = f"Your OT Claim was {status.upper()}"
-                log_activity(db=db, user_id=user_record.id, action_type=act_type, category="OT Claim", message=msg_emp, reference_id=ot.id, actor_id=acting_mgr.id)
-            db.commit() # Save the logs
+                msg_emp = f"Your OT Claim was approved via administrative override" if is_superuser_override else f"Your OT Claim was {status.upper()}"
+                log_activity(db=db, user_id=user_record.id, action_type=act_type, category="OT Claim", message=msg_emp, reference_id=ot.id, actor_id=actor_id)
+            db.commit() 
         except Exception as e:
             print(f"⚠️ Activity Logging Failed: {e}")
 
@@ -497,12 +522,17 @@ def get_my_overtime_requests(employee_name: str, db: Session = Depends(get_db)):
 def get_all_manager_overtime(
     user_role: str = "",         
     approver_name: str = None, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
     query = db.query(models.Overtime)
     
-    # 1. RBAC: Managers only see what they touched. Admins see all.
-    if "hr_admin" not in user_role.lower():
+    # Check if the requester has authoritative Superuser privileges via identity token match
+    user = db.query(models.User).filter(models.User.username == x_username).first()
+    is_admin_or_super = "hr_admin" in user_role.lower() or (user and user.role == "superuser")
+    
+    # 1. RBAC: Managers only see what they touched. Admins and Superusers see all.
+    if not is_admin_or_super:
         if approver_name:
             query = query.filter(
                 or_(

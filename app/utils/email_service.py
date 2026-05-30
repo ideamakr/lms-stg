@@ -23,17 +23,23 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
 def send_email(to_email: str, subject: str, body: str):
     """
     Sends a professional HTML email using Brevo HTTP API.
-    Bypasses Render's SMTP port restrictions (Port 587/465).
+    Bypasses cloud provider SMTP port restrictions (Port 587/465) for Staging/Production.
     """
     # 🛡️ Safety Guard
     if not to_email or to_email == "---" or "@" not in str(to_email):
         print(f"⚠️ Skipping email: Invalid recipient address '{to_email}'")
         return False
 
-    # 🔑 CONFIGURATION SYNC
-    current_api_key = os.getenv("BREVO_API_KEY") 
+    # 🔑 CONFIGURATION SYNC WITH SMART FALLBACK
+    # 🎯 FIX: Looks for BREVO_API_KEY first; if empty, automatically grabs BREVO_SMTP_PASS!
+    current_api_key = os.getenv("BREVO_API_KEY") or os.getenv("BREVO_SMTP_PASS")
     current_sender = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
     SYSTEM_URL = "https://ideamakr.github.io/lms-stg/"
+
+    # 🛑 Crash Prevention Guard
+    if not current_api_key:
+        print("❌ API ERROR: Could not find any Brevo Key in your .env file (Checked BREVO_API_KEY and BREVO_SMTP_PASS)")
+        return False
 
     if USE_MOCK_EMAIL:
         print("\n" + "="*60)
@@ -81,7 +87,7 @@ def send_email(to_email: str, subject: str, body: str):
             "https://api.brevo.com/v3/smtp/email",
             data=json.dumps(payload).encode("utf-8"),
             headers={
-                "api-key": current_api_key,
+                "api-key": str(current_api_key),  # Safeguarded string conversion
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
@@ -90,7 +96,7 @@ def send_email(to_email: str, subject: str, body: str):
 
         with urllib.request.urlopen(req) as response:
             if response.getcode() in [200, 201, 202]:
-                print(f"✅ Real Email sent successfully to {to_email} via API")
+                print(f"✅ Real Email sent successfully to {to_email} via HTTP API Web Request")
                 return True
             
     except Exception as e:
@@ -98,8 +104,9 @@ def send_email(to_email: str, subject: str, body: str):
             error_detail = e.read().decode('utf-8')
             print(f"❌ Brevo API Error: {error_detail}")
         except:
-            print(f"❌ Failed to send real email: {e}")
+            print(f"❌ Failed to send real email via HTTP API: {e}")
         return False
+    
 
 # ---------------------------------------------------------
 # 📝 TEMPLATE HELPERS (Keep your existing templates below)
@@ -466,4 +473,28 @@ If you did not request this recovery, please contact the HR department immediate
 
 Best regards,
 System Admin
+"""
+
+
+def template_new_incident(ticket_id: str, reporter_name: str, issue_type: str, urgency: str, description: str):
+    """
+    Template for logging new IT service desk tickets.
+    Integrates with the existing HTML formatting replacement pipeline.
+    """
+    return f"""
+Hi there,
+
+A new IT support incident has been registered in the system tracking index.
+
+--------------------------------
+Ticket ID:   {ticket_id}
+Reporter:    {reporter_name}
+Category:    {issue_type}
+Urgency:     {urgency}
+--------------------------------
+
+Issue Details:
+{description}
+
+Please log in to the system workspace to track progress or add updates.
 """

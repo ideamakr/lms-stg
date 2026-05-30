@@ -182,20 +182,29 @@ def get_branding(db: Session = Depends(database.get_db)):
 @router.post("/branding")
 def save_branding(config: BrandingConfig, db: Session = Depends(database.get_db)):
     """
-    Saves Branding and Broadcast config.
+    Saves Branding, Favicon, and Broadcast config with an explicit omission sentry.
     """
     try:
         def update_setting(key: str, value: str):
             setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
             if setting:
-                setting.value = str(value) 
+                setting.value = str(value) if value is not None else ""
             else:
-                new_setting = models.SystemSetting(key=key, value=str(value))
+                new_setting = models.SystemSetting(key=key, value=str(value) if value is not None else "")
                 db.add(new_setting)
 
         update_setting("company_name", config.company_name[:20])
         update_setting("company_sub_info", config.company_sub_info[:35])
         update_setting("company_logo", config.company_logo)
+        
+        # 🛡️ OMISSION GUARD: Check if company_favicon was explicitly passed in the JSON payload.
+        # This stops partial updates (like broadcast changes) from wiping out your tab icon.
+        fields_set = getattr(config, "model_fields_set", getattr(config, "__fields_set__", set()))
+        
+        if "company_favicon" in fields_set:
+            update_setting("company_favicon", config.company_favicon)
+        elif getattr(config, "company_favicon", None) is not None:
+            update_setting("company_favicon", config.company_favicon)
         
         update_setting("broadcast_enabled", str(config.broadcast_enabled).lower())
         update_setting("broadcast_message", config.broadcast_message)
@@ -211,4 +220,26 @@ def save_branding(config: BrandingConfig, db: Session = Depends(database.get_db)
         print(f"❌ Error saving branding: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
+@router.get("/branding")
+def get_branding(db: Session = Depends(database.get_db)):
+    """
+    Pulls your settings from the key-value database tables.
+    """
+    settings = db.query(models.SystemSetting).all()
+    settings_dict = {s.key: s.value for s in settings}
     
+    return {
+        "company_name": settings_dict.get("company_name", "IdeaMakr"),
+        "company_sub_info": settings_dict.get("company_sub_info", "Software Studio"),
+        "company_logo": settings_dict.get("company_logo", ""),
+        
+        # 🚀 THE REFRESH FIX: Unpack the favicon securely out to the client browser
+        "company_favicon": settings_dict.get("company_favicon", ""),
+        
+        "broadcast_enabled": settings_dict.get("broadcast_enabled", "false") == "true",
+        "broadcast_message": settings_dict.get("broadcast_message", ""),
+        "broadcast_start": settings_dict.get("broadcast_start", ""),
+        "broadcast_end": settings_dict.get("broadcast_end", ""),
+        "maintenance_mode": settings_dict.get("maintenance_mode", "false") == "true",
+        "system_version": "v1.4.15"
+    }

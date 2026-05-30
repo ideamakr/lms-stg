@@ -20,7 +20,8 @@ from dotenv import load_dotenv
 # 👇 LOCAL APPLICATION IMPORTS
 from app.database import engine, Base, get_db
 from app import models, schemas
-from app.routers import leave, user, overtime, system_settings 
+# 🚀 ADDED 'incidents' to the router imports below:
+from app.routers import leave, user, overtime, system_settings, incidents 
 from fastapi.responses import RedirectResponse, FileResponse
 from sqlalchemy import text
 
@@ -214,6 +215,7 @@ app.include_router(leave.router)
 app.include_router(user.router)
 app.include_router(overtime.router)
 app.include_router(system_settings.router)
+app.include_router(incidents.router)  # 🚀 ADDED THIS LINE PROPERLY
 
 @app.get("/")
 def read_root():
@@ -226,7 +228,7 @@ async def favicon():
 @app.get("/api/system/version")
 async def get_version(db: Session = Depends(get_db)):
     try:
-        # 👈 2. Wrap the raw SQL string inside text()
+        # Wrap the raw SQL string inside text()
         query = text("SELECT value FROM system_settings WHERE key = 'system_version'")
         version_setting = db.execute(query).fetchone()
         
@@ -236,6 +238,6 @@ async def get_version(db: Session = Depends(get_db)):
         return {"version": "v1.0.0-fallback"}
         
     except Exception as e:
-        # 👈 3. Catch any DB errors (like missing tables) so it doesn't cause a 500 crash
+        # Catch any DB errors (like missing tables) so it doesn't cause a 500 crash
         print(f"⚠️ Version Sync Error: {e}")
         return {"version": "v1.0.0-fallback"}

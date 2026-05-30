@@ -1,21 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException, Form, Body, Header, BackgroundTasks, File, UploadFile, Query # 🚀 Added Query
-from sqlalchemy.orm import Session
-from app import models, database  
+import csv
+import io
 import json
-from datetime import datetime
-import secrets
-from pydantic import BaseModel
-from typing import Optional, List
+import os
 import re
+import shutil
+import time
+import secrets
+from datetime import datetime
+from typing import Optional, List
+
+from fastapi import APIRouter, Depends, HTTPException, Form, Body, Header, BackgroundTasks, File, UploadFile, Query
+from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-# 🚀 Added these 3 imports for saving files locally!
-import os      
-import shutil  
-import time
-from sqlalchemy import func
+from app import models, database  
+from app.database import get_db
 
-# 🚀 ADDED: Email Service Imports for Admin Actions
+# 🚀 THE ONLY ROUTER DECLARATION WE NEED
+# Using "/users" ensures your existing frontend user & profile features keep working perfectly!
+router = APIRouter(prefix="/users", tags=["Users"])
+
+# 🚀 Email Service Imports for Admin Actions
 try:
     from app.utils.email_service import (
         send_email, 
@@ -36,12 +43,10 @@ except ImportError:
 class AdminResetRequest(BaseModel):
     new_password: str
 
-# 🚀 NEW: Schema for the "Change Password" tab
+# 🚀 Schema for the "Change Password" tab
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
-
-router = APIRouter(prefix="/users", tags=["Users"])
 
 def get_db():
     db = database.SessionLocal()
@@ -49,7 +54,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
 @router.get("/all")
 def get_all_users(
     search: str = "", 
@@ -122,6 +126,43 @@ def get_all_users(
             "job_title": getattr(u, 'job_title', ""),
             "business_unit": getattr(u, 'business_unit', ""),
             "department": getattr(u, 'department', ""),
+            
+            # ============================================================
+            # 🚀 NEW FIELD SERIALIZATION ADDITIONS (Item 3 Mapping Loop)
+            # ============================================================
+            "employee_no_old": getattr(u, 'employee_no_old', ""),
+            "common_name": getattr(u, 'common_name', ""),
+            "employee_status": getattr(u, 'employee_status', ""),
+            "organization_o": getattr(u, 'organization_o', ""),
+            "organization_ou1": getattr(u, 'organization_ou1', ""),
+            "organization_ou2": getattr(u, 'organization_ou2', ""),
+            "lotus_notes_id": getattr(u, 'lotus_notes_id', ""),
+            "document_status": getattr(u, 'document_status', ""),
+            "company": getattr(u, 'company', ""),
+            "location": getattr(u, 'location', ""),
+            "position_grade": getattr(u, 'position_grade', ""),
+            "contract_expiry_date": str(u.contract_expiry_date) if getattr(u, 'contract_expiry_date', None) else "",
+            "expat_type": getattr(u, 'expat_type', ""),
+            "category": getattr(u, 'category', ""),
+            "ranking": getattr(u, 'ranking', ""),
+            "highest_qualification": getattr(u, 'highest_qualification', ""),
+            "level_0": getattr(u, 'level_0', ""),
+            "level_1": getattr(u, 'level_1', ""),
+            "level_2": getattr(u, 'level_2', ""),
+            "place_of_birth": getattr(u, 'place_of_birth', ""),
+            "date_ict_removal": str(u.date_ict_removal) if getattr(u, 'date_ict_removal', None) else "",
+            "date_resigned": str(u.date_resigned) if getattr(u, 'date_resigned', None) else "",
+            "last_working_day": str(u.last_working_day) if getattr(u, 'last_working_day', None) else "",
+            "last_day_of_service": str(u.last_day_of_service) if getattr(u, 'last_day_of_service', None) else "",
+            "shift_employee": getattr(u, 'shift_employee', "No"),
+            "compensation_leave_entitled": getattr(u, 'compensation_leave_entitled', "No"),
+            "commissioning_engineer": getattr(u, 'commissioning_engineer', "No"),
+            "scholar": getattr(u, 'scholar', "No"),
+            "bank_holder_name": getattr(u, 'bank_holder_name', ""),
+            "bank_name": getattr(u, 'bank_name', ""),
+            "bank_account_number": getattr(u, 'bank_account_number', ""),
+            "bank_account_status": getattr(u, 'bank_account_status', "Active"),
+            # ============================================================
             
             # PHASE 2 UPDATE: Preserved
             "line_manager": u.line_manager if isinstance(u.line_manager, list) else [],
@@ -613,11 +654,10 @@ async def toggle_user_status( # 🚀 Async execution for background tasks
         raise HTTPException(status_code=500, detail="Database error toggling user status.")
 
 
-
 @router.put("/{user_id}/profile-update")
 async def update_user_profile(
     user_id: int,
-    # 📋 STEP 1 (Required)
+    # 📋 STEP 1 (Required Core Basics)
     full_name: str = Form(...), 
     first_name: str = Form(...),
     last_name: str = Form(...),
@@ -625,7 +665,7 @@ async def update_user_profile(
     joined_date: str = Form(...),
     mobile: str = Form(...), 
 
-    # 📋 OPTIONALS (Admins only)
+    # 📋 OPTIONALS / ADMIN MANAGEMENT LOGS (Extended Corporate Structural Layers)
     middle_name: Optional[str] = Form(None),
     job_title: Optional[str] = Form(None),
     department: Optional[str] = Form(None),
@@ -634,24 +674,66 @@ async def update_user_profile(
     contract_type: Optional[str] = Form(None),
     business_unit: Optional[str] = Form(None),
     work_location: Optional[str] = Form(None),
+    
+    # New Corporate/Enterprise Fields Parameters
+    common_name: Optional[str] = Form(None),
+    employee_no_old: Optional[str] = Form(None),
+    lotus_notes_id: Optional[str] = Form(None),
+    company: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
+    position_grade: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    ranking: Optional[str] = Form(None),
+    expat_type: Optional[str] = Form(None),
+    employee_status: Optional[str] = Form(None),
+    document_status: Optional[str] = Form(None),
+    highest_qualification: Optional[str] = Form(None),
+    
+    # Hierarchy Structural Routing Mappings
+    organization_o: Optional[str] = Form(None),
+    organization_ou1: Optional[str] = Form(None),
+    organization_ou2: Optional[str] = Form(None),
+    level_0: Optional[str] = Form(None),
+    level_1: Optional[str] = Form(None),
+    level_2: Optional[str] = Form(None),
+    
+    # Milestone Lifecycle Offboarding Dates 
+    contract_expiry_date: Optional[str] = Form(None),
+    date_resigned: Optional[str] = Form(None),
+    last_working_day: Optional[str] = Form(None),
+    last_day_of_service: Optional[str] = Form(None),
+    date_ict_removal: Optional[str] = Form(None),
+    
+    # Operational Dropdown Options Flags
+    shift_employee: Optional[str] = Form(None),
+    compensation_leave_entitled: Optional[str] = Form(None),
+    commissioning_engineer: Optional[str] = Form(None),
+    scholar: Optional[str] = Form(None),
 
-    # 👤 STEP 2 (Personal Info)
+    # 👤 STEP 2 (Personal Specifications Node)
     preferred_name: Optional[str] = Form(None),
     gender: Optional[str] = Form(None),
     marital_status: Optional[str] = Form(None),
     ic_no: Optional[str] = Form(None),
     nationality: Optional[str] = Form(None),
+    place_of_birth: Optional[str] = Form(None),
     dob: Optional[str] = Form(None),
     race: Optional[str] = Form(None),
     religion: Optional[str] = Form(None),
 
-    # 📞 STEP 3 (Contact Info)
+    # 📞 STEP 3 (Contact Registry & Salary Bank Nodes)
     personal_email: Optional[str] = Form(None),
     home_address: Optional[str] = Form(None),
     current_address: Optional[str] = Form(None),
     emergency_contact_name: Optional[str] = Form(None),
     emergency_contact_rel: Optional[str] = Form(None),
     emergency_contact_mobile: Optional[str] = Form(None),
+    
+    # Salary Disbursal Parameters
+    bank_name: Optional[str] = Form(None),
+    bank_account_number: Optional[str] = Form(None),
+    bank_holder_name: Optional[str] = Form(None),
+    bank_account_status: Optional[str] = Form(None),
     
     profile_pic: Optional[UploadFile] = File(None),
     x_username: Optional[str] = Header(None), 
@@ -703,7 +785,7 @@ async def update_user_profile(
             if requester.role in ["hr_admin", "admin", "superuser"] or "hr_admin" in roles_list:
                 is_admin = True
 
-    # 5. ✅ SELF-EDITABLE FIELDS (Always Updated)
+    # 5. ✅ SELF-EDITABLE FIELDS (Always Mapped and Updated)
     user.full_name = new_name
     user.first_name = first_name.strip()
     user.middle_name = middle_name.strip() if middle_name else None
@@ -711,13 +793,19 @@ async def update_user_profile(
     user.preferred_name = preferred_name.strip() if preferred_name else None
     user.email = email.strip().lower()
     user.mobile = mobile.strip()
+    
+    # Step 2 & 3 Identity Metrics Data Overwrites
     user.gender = gender
     user.marital_status = marital_status
-    user.ic_number = ic_no.strip() if ic_no else None # 🎯 Mapping ic_no to ic_number
+    user.ic_number = ic_no.strip() if ic_no else None 
     user.nationality = nationality.strip() if nationality else None
+    user.place_of_birth = place_of_birth.strip() if place_of_birth else None
     user.dob = dob
     user.race = race.strip() if race else None
     user.religion = religion.strip() if religion else None
+    user.highest_qualification = highest_qualification.strip() if highest_qualification else None
+    
+    # Logistics Coordinates
     user.personal_email = personal_email.strip() if personal_email else None
     user.home_address = home_address.strip() if home_address else None
     user.current_address = current_address.strip() if current_address else None
@@ -725,11 +813,17 @@ async def update_user_profile(
     user.emergency_contact_rel = emergency_contact_rel.strip() if emergency_contact_rel else None
     user.emergency_contact_mobile = emergency_contact_mobile.strip() if emergency_contact_mobile else None
 
-    # 6. 🔓 ADMIN LOCKDOWN ZONE (Safe Update)
+    # 💸 Disbursal Salary Bank Parameters Row Assignments
+    user.bank_name = bank_name.strip() if bank_name else None
+    user.bank_account_number = bank_account_number.strip() if bank_account_number else None
+    user.bank_holder_name = bank_holder_name.strip() if bank_holder_name else None
+    user.bank_account_status = bank_account_status if bank_account_status else "Active"
+
+    # 6. 🔓 ADMIN LOCKDOWN ZONE (Safe Update Protected Tier)
     if is_admin:
         print(f"🔓 [SECURITY] Admin {x_username} updating official employment fields.")
         
-        # 🚀 THE FIX: Only update if the field is not empty/None
+        # Guarded String Blocks
         if job_title and job_title.strip(): 
             user.job_title = job_title.strip()
         if department and department.strip(): 
@@ -743,11 +837,44 @@ async def update_user_profile(
         if work_location and work_location.strip(): 
             user.work_location = work_location.strip()
 
-        # 🚀 PROTECT MANAGERS: Only overwrite if the new list is not empty
-        if final_line_managers and len(final_line_managers) > 0:
-            user.line_manager = final_line_managers
+        # Extended Employment Field Configurations
+        user.common_name = common_name.strip() if common_name else None
+        user.employee_no_old = employee_no_old.strip() if employee_no_old else None
+        user.lotus_notes_id = lotus_notes_id.strip() if lotus_notes_id else None
+        user.company = company.strip() if company else None
+        user.location = location.strip() if location else None
+        user.position_grade = position_grade.strip() if position_grade else None
+        user.category = category.strip() if category else None
+        user.ranking = ranking.strip() if ranking else None
+        user.expat_type = expat_type.strip() if expat_type else None
+        user.employee_status = employee_status.strip() if employee_status else None
+        user.document_status = document_status.strip() if document_status else None
         
-        if final_hod_names and len(final_hod_names) > 0:
+        # Enterprise Organizational Routing Hierarchy Structures
+        user.organization_o = organization_o.strip() if organization_o else None
+        user.organization_ou1 = organization_ou1.strip() if organization_ou1 else None
+        user.organization_ou2 = organization_ou2.strip() if organization_ou2 else None
+        user.level_0 = level_0.strip() if level_0 else None
+        user.level_1 = level_1.strip() if level_1 else None
+        user.level_2 = level_2.strip() if level_2 else None
+        
+        # Offboarding Lifecycle Date Milestones
+        user.contract_expiry_date = contract_expiry_date if contract_expiry_date else None
+        user.date_resigned = date_resigned if date_resigned else None
+        user.last_working_day = last_working_day if last_working_day else None
+        user.last_day_of_service = last_day_of_service if last_day_of_service else None
+        user.date_ict_removal = date_ict_removal if date_ict_removal else None
+        
+        # Operational Indicators Flags
+        user.shift_employee = shift_employee if shift_employee else "No"
+        user.compensation_leave_entitled = compensation_leave_entitled if compensation_leave_entitled else "No"
+        user.commissioning_engineer = commissioning_engineer if commissioning_engineer else "No"
+        user.scholar = scholar if scholar else "No"
+
+        # 🚀 PROTECT MANAGERS: Corrected logic to ensure empty selections clear properly
+        if line_manager is not None:
+            user.line_manager = final_line_managers
+        if hod_name is not None:
             user.hod_name = final_hod_names
     else:
         print(f"🔒 [SECURITY] Ignored employment fields for {user.username}. Requester is not an admin.")
@@ -977,16 +1104,30 @@ def get_next_employee_id(db: Session = Depends(get_db)):
     # 1. Get current year
     current_year = datetime.now().year
     
-    # 2. Find the highest existing ID to prevent duplicates
-    # We look for the user with the largest primary key ID
-    last_user = db.query(models.User).order_by(models.User.id.desc()).first()
+    # 2. Find the highest existing Employee ID pattern (Ignoring technical Row IDs)
+    # We look specifically for the highest string starting with "EMP-[Year]"
+    last_user = db.query(models.User)\
+        .filter(models.User.employee_id.like(f"EMP-{current_year}-%"))\
+        .order_by(models.User.employee_id.desc())\
+        .first()
     
     next_num = 1
-    if last_user:
-        next_num = last_user.id + 1
+    if last_user and last_user.employee_id:
+        try:
+            # We extract the number from the string "EMP-2026-008" -> 8
+            # This ensures that even if Row ID is 15, we only care that the last Emp is 008
+            last_id_number = int(last_user.employee_id.split("-")[-1])
+            next_num = last_id_number + 1
+        except (ValueError, IndexError):
+            # Safe fallback: if we can't parse the text, count the total employees instead
+            next_num = db.query(models.User).filter(models.User.role == "employee").count() + 1
+    else:
+        # If no employees exist yet, check the total employee count as a baseline
+        next_num = db.query(models.User).filter(models.User.role == "employee").count() + 1
     
-    # 3. Format: EMP-2026-0001
-    next_id = f"EMP-{current_year}-{next_num:04d}"
+    # 3. Format: EMP-2026-009 (Strict 3-digit padding)
+    # This turns 9 into 009 and 10 into 010 (Correcting the 0010 issue)
+    next_id = f"EMP-{current_year}-{next_num:03d}"
     
     return {"next_id": next_id}
 
@@ -998,8 +1139,13 @@ def get_global_policy(db: Session = Depends(get_db)):
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     if not policy:
         # Fallback if seed hasn't run
-        return {"l2_approval_enabled": False}
-    return {"l2_approval_enabled": policy.l2_approval_enabled}
+        return {"l2_approval_enabled": False, "max_seats": 0, "registration_lock": False}
+    
+    return {
+        "l2_approval_enabled": policy.l2_approval_enabled,
+        "max_seats": policy.max_seats if policy.max_seats else 0,
+        "registration_lock": policy.registration_lock if policy.registration_lock else False
+    }
 
 @router.put("/policy/update-l2")
 def update_l2_toggle(enabled: bool = Form(...), db: Session = Depends(get_db)):
@@ -1101,28 +1247,37 @@ def get_global_stats(db: Session = Depends(get_db), current_user_role: str = Hea
         total_users = db.query(models.User).count()
         active_users = db.query(models.User).filter(models.User.is_active == True).count()
         
-        # We will hardcode 200 for now, later we'll pull this from System Settings
-        max_seats = 200 
+        # 🚀 NEW: Fetch actual max_seats and registration_lock from GlobalPolicy
+        policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
+        max_seats = policy.max_seats if policy and policy.max_seats else 0
+        registration_lock = policy.registration_lock if policy else False
+
+        # Calculate percentage safely to avoid division by zero errors
+        percent_used = (total_users / max_seats * 100) if max_seats > 0 else 0
 
         # 2. Global Leave & OT Bottlenecks (Total Pending across company)
-        # Note: Replace 'LeaveRequest' and 'OTRequest' with your actual model names
-        pending_leaves = db.query(models.LeaveRequest).filter(models.LeaveRequest.status == "Pending").count()
-        pending_ot = db.query(models.OTRequest).filter(models.OTRequest.status == "Pending").count()
+        # 🚀 FIX: Updated to use your actual database models (Leave and Overtime)
+        pending_leaves = db.query(models.Leave).filter(models.Leave.status == "Pending").count()
+        pending_ot = db.query(models.Overtime).filter(models.Overtime.status == "Pending").count()
 
         # 3. Incident Triage (Coming soon in next step)
         # For now, we return 0 until we build the Incident table
         open_incidents = 0 
 
         # 4. System Health
-        # Check if any global broadcast is currently active
-        active_broadcast = db.query(models.SystemSettings).first().is_broadcast_active if db.query(models.SystemSettings).first() else False
+        # 🚀 FIX: Safely checks the SystemSetting key/value structure
+        active_broadcast = False
+        broadcast_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "broadcast_enabled").first()
+        if broadcast_setting and broadcast_setting.value == "true":
+            active_broadcast = True
 
         return {
             "headcount": {
                 "total": total_users,
                 "active": active_users,
                 "max_seats": max_seats,
-                "percent_used": (total_users / max_seats) * 100
+                "percent_used": min(100, percent_used), # Cap at 100% for the UI gauge
+                "registration_lock": registration_lock
             },
             "bottlenecks": {
                 "leaves": pending_leaves,
@@ -1140,3 +1295,483 @@ def get_global_stats(db: Session = Depends(get_db), current_user_role: str = Hea
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch global stats: {str(e)}")
+    
+# 🎯 Ensure this regex rule is defined above the endpoint in user.py
+USERNAME_REGEX = re.compile(r"^[a-z0-9-]{1,10}$")
+
+# ============================================================
+# 🔍 PHASE 1: IN-MEMORY DATA INTEGRITY DIAGNOSTICS
+# ============================================================
+@router.post("/bulk-onboard/validate")
+async def bulk_onboard_validate(
+    file: UploadFile = File(...),
+    x_username: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    if not x_username:
+        raise HTTPException(status_code=401, detail="Authentication missing.")
+    requester = db.query(models.User).filter(models.User.username == x_username).first()
+    if not requester or requester.role != "superuser":
+        raise HTTPException(status_code=403, detail="Access denied. Superuser only.")
+
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Invalid format. Must be a CSV.")
+
+    contents = await file.read()
+    try:
+        decoded_text = contents.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        decoded_text = contents.decode('latin-1')
+        
+    buffer = io.StringIO(decoded_text)
+    reader = csv.DictReader(buffer)
+
+    mandatory_fields = {'full_name', 'first_name', 'last_name', 'email', 'joined_date', 'mobile'}
+    if not mandatory_fields.issubset(set(reader.fieldnames or [])):
+        missing = mandatory_fields - set(reader.fieldnames or [])
+        raise HTTPException(status_code=400, detail=f"Missing columns: {list(missing)}")
+
+    validation_results = []
+    is_entire_file_valid = True
+    existing_usernames = {u.username for u in db.query(models.User.username).all()}
+    existing_emp_ids = {u.employee_id for u in db.query(models.User.employee_id).filter(models.User.employee_id != None).all()}
+
+    # 🛡️ SAFE UPGRADE: Build look-up cache for existing full names (handles soft-warnings)
+    existing_full_names = {u.full_name.strip().lower() for u in db.query(models.User.full_name).filter(models.User.full_name != None).all()}
+
+    # ⚡ PRESERVED EXACTLY: Your active sequencing numbers to keep '009' alignment
+    next_sim_num = 1001 
+    last_user = db.query(models.User).filter(models.User.employee_id.like("EMP-%")).order_by(models.User.id.desc()).first()
+    if last_user and last_user.employee_id:
+        try:
+            next_sim_num = int(last_user.employee_id.split("-")[-1]) + 1
+        except: pass
+
+    for idx, row in enumerate(reader, start=2):
+        row_errors = []
+        f_name, first_n, last_n = row.get('full_name','').strip(), row.get('first_name','').strip(), row.get('last_name','').strip()
+        email_addr, emp_id, uname = row.get('email','').strip().lower(), row.get('employee_id','').strip(), row.get('username','').strip().lower()
+
+        if not f_name or not email_addr: row_errors.append("Missing mandatory fields.")
+        
+        sim_id = emp_id if emp_id else f"EMP-2026-{next_sim_num:03d}"
+        if not emp_id: next_sim_num += 1
+        elif sim_id in existing_emp_ids: row_errors.append(f"ID Conflict: {sim_id}")
+
+        if not uname:
+            base = first_n.lower().replace(" ", "")[:10] or "emp"
+            sim_uname = base
+            count = 1
+            while sim_uname in existing_usernames:
+                suffix = str(count)
+                sim_uname = f"{base[:10-len(suffix)]}{suffix}"
+                count += 1
+        else:
+            sim_uname = uname
+            if not USERNAME_REGEX.match(sim_uname): row_errors.append("Invalid username format.")
+            elif sim_uname in existing_usernames: row_errors.append(f"Username taken: {sim_uname}")
+
+        # 🛡️ SAFE UPGRADE: Flag same-name records without throwing a blocking validation error
+        is_name_duplicate = f_name.lower().strip() in existing_full_names if f_name else False
+
+        status = "Valid" if not row_errors else "Error"
+        if status == "Error": is_entire_file_valid = False
+        
+        validation_results.append({
+            "row": idx, 
+            "employee_id": sim_id, 
+            "username": sim_uname,
+            "full_name": f_name or "Unknown", 
+            "email": email_addr or "Unknown",
+            "status": status, 
+            "is_name_duplicate": is_name_duplicate,  # Added safely
+            "notes": "Ready" if status == "Valid" else " | ".join(row_errors)
+        })
+
+    # 🛡️ ROLE FILTER UPGRADE: Fetch only qualified Line Managers (Managers + Senior Managers)
+    db_managers = db.query(models.User.id, models.User.full_name, models.User.employee_id).filter(
+        (models.User.role == "manager") | (models.User.is_senior_manager == True)
+    ).all()
+    
+    # 🛡️ ROLE FILTER UPGRADE: Fetch only qualified HODs (Senior Managers)
+    db_hods = db.query(models.User.id, models.User.full_name, models.User.employee_id).filter(
+        models.User.is_senior_manager == True
+    ).all()
+
+    managers_list = [
+        {"id": m.id, "full_name": m.full_name or "Unknown", "employee_id": m.employee_id or ""}
+        for m in db_managers
+    ]
+    
+    hods_list = [
+        {"id": h.id, "full_name": h.full_name or "Unknown", "employee_id": h.employee_id or ""}
+        for h in db_hods
+    ]
+
+    return {
+        "can_proceed": is_entire_file_valid, 
+        "total_rows": len(validation_results), 
+        "rows": validation_results,
+        "available_managers": managers_list,  # Segregated Line Managers list
+        "available_hods": hods_list           # Segregated HODs list
+    }
+
+# ============================================================
+# 📧 BACKGROUND WORKER: EMAIL DISPATCH
+# ============================================================
+def bulk_onboard_email_worker(log_id, raw_password, session_factory):
+    db = session_factory()
+    try:
+        log = db.query(models.BulkOnboardLog).filter(models.BulkOnboardLog.id == log_id).first()
+        if not log: return
+        log.email_status = "Processing"
+        db.commit()
+
+        from app.utils.email_service import template_new_user, send_email
+        body = template_new_user(name=log.full_name, username=log.username, password=raw_password)
+        send_email(log.email, "🎉 Welcome to the Team", body)
+        
+        log.email_status = "Sent"
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        log = db.query(models.BulkOnboardLog).filter(models.BulkOnboardLog.id == log_id).first()
+        if log:
+            log.email_status = "Failed"
+            log.failure_reason = str(e)
+            db.commit()
+    finally: db.close()
+
+
+# ============================================================
+# 🚀 PHASE 2: ATOMIC DATABASE COMMIT (ALL PROFILE FIELDS MERGED)
+# ============================================================
+@router.post("/bulk-onboard/commit")
+async def bulk_onboard_commit(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    hierarchy_mappings: Optional[str] = Form(None), # 🛡️ UPGRADE: Safely capture browser mapping collection strings
+    x_username: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    if not x_username: 
+        raise HTTPException(status_code=401, detail="Authentication missing.")
+    req = db.query(models.User).filter(models.User.username == x_username).first()
+    if not req or req.role != "superuser": 
+        raise HTTPException(status_code=403, detail="Access denied. Superuser only.")
+
+    contents = await file.read()
+    try:
+        decoded = contents.decode('utf-8-sig')
+    except:
+        decoded = contents.decode('latin-1')
+    reader = csv.DictReader(io.StringIO(decoded))
+
+    batch_token = f"BATCH-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    policy = db.query(models.GlobalPolicy).first()
+    
+    # 🛡️ UPGRADE: Decode string stream parameter array dictionary safely
+    mappings_dict = {}
+    if hierarchy_mappings:
+        try:
+            mappings_dict = json.loads(hierarchy_mappings)
+        except Exception:
+            pass # Keep dict empty if parsing fails to avoid dropping the batch execution
+
+    # Auto-numbering logic (Preserved exactly to match your tracking codes)
+    next_num = 1001
+    last = db.query(models.User).filter(models.User.employee_id.like("EMP-%")).order_by(models.User.id.desc()).first()
+    if last:
+        try: 
+            next_num = int(last.employee_id.split("-")[-1]) + 1
+        except: 
+            pass
+
+    existing_usernames = {u.username for u in db.query(models.User.username).all()}
+    committed_logs = []
+
+    for idx, row in enumerate(reader, start=2):
+        f_name, first_n, last_n = row.get('full_name','').strip(), row.get('first_name','').strip(), row.get('last_name','').strip()
+        email, emp_id, uname = row.get('email','').strip().lower(), row.get('employee_id','').strip(), row.get('username','').strip().lower()
+
+        final_id = emp_id if emp_id else f"EMP-2026-{next_num:03d}"
+        if not emp_id: next_num += 1
+
+        if not uname:
+            base = first_n.lower().replace(" ", "")[:10] or "emp"
+            final_uname = base
+            c = 1
+            while final_uname in existing_usernames:
+                s = str(c)
+                final_uname = f"{base[:10-len(s)]}{s}"
+                c += 1
+        else: 
+            final_uname = uname
+        existing_usernames.add(final_uname)
+
+        # 🛡️ UPGRADE: Match current spreadsheet index against browser hierarchy allocations
+        row_key = str(idx)
+        chosen_manager = []
+        chosen_hod = []
+        
+        if row_key in mappings_dict:
+            mgr_val = mappings_dict[row_key].get("line_manager", "").strip()
+            hod_val = mappings_dict[row_key].get("hod_name", "").strip()
+            if mgr_val: 
+                chosen_manager = [mgr_val]  # Encapsulated cleanly as JSON list arrays
+            if hod_val: 
+                chosen_hod = [hod_val]     # Encapsulated cleanly as JSON list arrays
+
+        try:
+            pw = "Welcome@2026"
+            
+            # 🎯 INTERNAL CLEANING UTILITY: Trims whitespace and converts empty values to None
+            def get_optional(key: str, default_val=None):
+                val = row.get(key)
+                if val is None:
+                    return default_val
+                return val.strip() if val.strip() else default_val
+
+            new_user = models.User(
+                # Core Account Data (Preserved Existing Attributes)
+                username=final_uname, 
+                full_name=f_name, 
+                first_name=first_n, 
+                last_name=last_n,
+                email=email, 
+                employee_id=final_id, 
+                role="employee", 
+                password=pw, 
+                is_active=True,
+                
+                # Core Employment Details (Preserved Existing Attributes)
+                joined_date=row.get('joined_date','').strip(), 
+                job_title=row.get('job_title','Admin').strip(),
+                department=row.get('department','HR').strip(), 
+                line_manager=chosen_manager, # 🛡️ Saved safely from manual frontend selection dropdowns
+                hod_name=chosen_hod,         # 🛡️ Saved safely from manual frontend selection dropdowns
+                
+                # 🏢 Corporate Identity & Contract Spec Variables
+                middle_name=get_optional('middle_name'),
+                preferred_name=get_optional('preferred_name'),
+                contract_type=get_optional('contract_type'),
+                business_unit=get_optional('business_unit'),
+                work_location=get_optional('work_location'),
+                
+                # 🏷️ Extended Enterprise Profile Identifiers 
+                common_name=get_optional('common_name'),
+                employee_no_old=get_optional('employee_no_old'),
+                lotus_notes_id=get_optional('lotus_notes_id'),
+                company=get_optional('company'),
+                location=get_optional('location'),
+                position_grade=get_optional('position_grade'),
+                category=get_optional('category'),
+                ranking=get_optional('ranking'),
+                expat_type=get_optional('expat_type'),
+                employee_status=get_optional('employee_status'),
+                document_status=get_optional('document_status'),
+                highest_qualification=get_optional('highest_qualification'),
+                
+                # 🗂️ Department Hierarchy Structural Matrix
+                organization_o=get_optional('organization_o'),
+                organization_ou1=get_optional('organization_ou1'),
+                organization_ou2=get_optional('organization_ou2'),
+                level_0=get_optional('level_0'),
+                level_1=get_optional('level_1'),
+                level_2=get_optional('level_2'),
+                
+                # 📅 Account Milestones & Departure Date Safeties
+                contract_expiry_date=get_optional('contract_expiry_date'),
+                date_resigned=get_optional('date_resigned'),
+                last_working_day=get_optional('last_working_day'),
+                last_day_of_service=get_optional('last_day_of_service'),
+                date_ict_removal=get_optional('date_ict_removal'),
+                
+                # ⚙️ Operational Workflow Configurations (Fallbacks cleanly to 'No')
+                shift_employee=get_optional('shift_employee', 'No'),
+                compensation_leave_entitled=get_optional('compensation_leave_entitled', 'No'),
+                commissioning_engineer=get_optional('commissioning_engineer', 'No'),
+                scholar=get_optional('scholar', 'No'),
+                
+                # 👤 Personal Information Identity Specifications
+                gender=get_optional('gender'),
+                marital_status=get_optional('marital_status'),
+                ic_number=get_optional('ic_no') or get_optional('ic_number'), # Securely catches either common spreadsheet header name variant
+                nationality=get_optional('nationality'),
+                place_of_birth=get_optional('place_of_birth'),
+                dob=get_optional('dob'),
+                race=get_optional('race'),
+                religion=get_optional('religion'),
+                
+                # 📞 Emergency Contact & Communication Registries
+                mobile=row.get('mobile','').strip() or None,
+                personal_email=get_optional('personal_email'),
+                home_address=get_optional('home_address'),
+                current_address=get_optional('current_address'),
+                emergency_contact_name=get_optional('emergency_contact_name'),
+                emergency_contact_rel=get_optional('emergency_contact_rel'),
+                emergency_contact_mobile=get_optional('emergency_contact_mobile'),
+                
+                # 💳 Salary Disbursal Financial Mappings
+                bank_name=get_optional('bank_name'),
+                bank_account_number=get_optional('bank_account_number'),
+                bank_holder_name=get_optional('bank_holder_name'),
+                bank_account_status=get_optional('bank_account_status', 'Active')
+            )
+            db.add(new_user)
+            db.flush()
+            db.add(models.UserRole(user_id=new_user.id, role_name="employee"))
+
+            # Seed Balances
+            balances = [("Annual Leave", policy.annual_days if policy else 14), 
+                        ("Medical Leave", policy.medical_days if policy else 14),
+                        ("Emergency Leave", 2), ("Compassionate Leave", 3)]
+            for lt, val in balances:
+                db.add(models.LeaveBalance(employee_name=f_name, year=datetime.now().year, leave_type=lt, entitlement=val, remaining=val))
+
+            log = models.BulkOnboardLog(batch_id=batch_token, row_number=idx, employee_id=final_id, username=final_uname, full_name=f_name, email=email, account_status="Created", email_status="Pending")
+            db.add(log)
+            db.flush()
+            committed_logs.append((log.id, pw))
+        except Exception as e:
+            db.rollback()
+            db.add(models.BulkOnboardLog(batch_id=batch_token, row_number=idx, full_name=f_name, account_status="Skipped", email_status="N/A", failure_reason=str(e)))
+            db.commit()
+        db.commit() # Final commit block for individual record assurance updates
+
+    # 🛫 DISPATCH BACKGROUND WORKERS (Sends the emails while you watch the progress)
+    from app.database import SessionLocal
+    for log_id, raw_pw in committed_logs:
+        background_tasks.add_task(bulk_onboard_email_worker, log_id, raw_pw, SessionLocal)
+
+    return {"message": "Batch processed successfully.", "batch_id": batch_token}
+
+# ============================================================
+# 🔄 EXTRA STEP: INDIVIDUAL EMAIL RETRY CIRCUIT FOR FAILED ROWS
+# ============================================================
+@router.post("/bulk-onboard/retry/{log_id}")
+async def bulk_onboard_retry_email(
+    log_id: int,
+    background_tasks: BackgroundTasks,
+    x_username: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    # 🔒 1. SUPERUSER SECURITY GUARD
+    if not x_username:
+        raise HTTPException(status_code=401, detail="Authentication credentials missing.")
+    requester = db.query(models.User).filter(models.User.username == x_username).first()
+    if not requester or requester.role != "superuser":
+        raise HTTPException(status_code=403, detail="Access denied. Superuser only.")
+
+    # 🔍 2. LOOKUP TARGET LOG RECORD
+    log_row = db.query(models.BulkOnboardLog).filter(models.BulkOnboardLog.id == log_id).first()
+    if not log_row:
+        raise HTTPException(status_code=404, detail="Onboarding transaction log row not found.")
+
+    if log_row.email_status == "Sent":
+        return {"status": "info", "message": f"Email for {log_row.full_name} has already been sent successfully."}
+
+    # ⚙️ 3. RE-ARM QUEUE STATE
+    log_row.email_status = "Pending"
+    log_row.failure_reason = None
+    db.commit()
+
+    # Re-dispatch execution back into the out-of-band background task thread
+    from app.database import SessionLocal
+    background_tasks.add_task(
+        bulk_onboard_email_worker,
+        log_row.id,
+        "Welcome@2026",  # Dispatched with default account baseline access keys
+        SessionLocal
+    )
+
+    return {
+        "status": "success",
+        "message": f"Welcome email delivery re-queued for {log_row.full_name}."
+    }
+
+
+# ============================================================
+# 📊 PROGRESS ENGINE: FETCH LIVE PROGRESS METRICS FOR A BATCH
+# ============================================================
+@router.get("/bulk-onboard/batch/{batch_id}")
+def bulk_onboard_get_batch_status(
+    batch_id: str,
+    x_username: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    # 🔒 Superuser Gatekeeper Check
+    if not x_username:
+        raise HTTPException(status_code=401, detail="Authentication missing.")
+    requester = db.query(models.User).filter(models.User.username == x_username).first()
+    if not requester or requester.role != "superuser":
+        raise HTTPException(status_code=403, detail="Access denied. Superuser only.")
+
+    # 🔍 Pull matching log rows for this specific batch transaction window
+    logs = db.query(models.BulkOnboardLog)\
+             .filter(models.BulkOnboardLog.batch_id == batch_id)\
+             .order_by(models.BulkOnboardLog.row_number.asc())\
+             .all()
+
+    serialized_rows = []
+    for log in logs:
+        # 🕵️‍♂️ DYNAMIC LOOKUP: Fetch successfully mapped supervisors from user profiles
+        user_rec = db.query(models.User).filter(models.User.employee_id == log.employee_id).first()
+        mgr_str = ", ".join(user_rec.line_manager) if user_rec and user_rec.line_manager else "—"
+        hod_str = ", ".join(user_rec.hod_name) if user_rec and user_rec.hod_name else "—"
+
+        serialized_rows.append({
+            "id": log.id,
+            "row": log.row_number,
+            "employee_id": log.employee_id,
+            "username": log.username,
+            "full_name": log.full_name,
+            "email": log.email,
+            "line_manager": mgr_str,  # 🚀 FIXED: Added to serialization payload
+            "hod_name": hod_str,      # 🚀 FIXED: Added to serialization payload
+            "account_status": log.account_status,
+            "email_status": log.email_status,
+            "notes": log.failure_reason or ("Delivered successfully" if log.email_status == "Sent" else "Processing pipeline...")
+        })
+
+    return {
+        "batch_id": batch_id,
+        "rows": serialized_rows
+    }
+
+
+# ============================================================
+# 🔒 SYSTEM COMMAND CENTER: HEADCOUNT LIMITS
+# ============================================================
+@router.post("/headcount-limits")
+def update_headcount_limits(
+    payload: models.HeadcountLimitsRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Saves the Max Capacity and Registration Lock constraints to the master policy.
+    """
+    try:
+        # Fetch the master policy record (ID=1)
+        policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
+        
+        if not policy:
+            # If it doesn't exist for some reason, create it
+            policy = models.GlobalPolicy(
+                id=1, 
+                max_seats=payload.max_seats, 
+                registration_lock=payload.registration_lock
+            )
+            db.add(policy)
+        else:
+            # Update the existing record safely
+            policy.max_seats = payload.max_seats
+            policy.registration_lock = payload.registration_lock
+            
+        db.commit()
+        return {"message": "Provisioning constraints updated successfully."}
+    
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Limits Save Error: {e}")
+        raise HTTPException(status_code=500, detail="Database transaction failed while saving limits.")

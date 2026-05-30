@@ -623,10 +623,6 @@ async def cancel_leave_request(
 
 # 🚀 Ensure these are imported at the top
 
-# ============================================================
-# 7. MANAGER & ADMIN VIEWS
-# ============================================================
-
 @router.get("/manager/pending")
 def get_manager_pending(
     approver_name: str, 
@@ -638,14 +634,24 @@ def get_manager_pending(
     end_date: str = "",     
     leave_type: str = "",   
     status: str = "",
+    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
-    # 1. Base Query: Matches Lane 1 (L1) and Lane 2 (L2) logic
-    query = db.query(models.Leave).filter(
-        or_(
-            and_(models.Leave.approver_name == approver_name, models.Leave.status.in_(["Pending", "Pending Cancel"])),
-            and_(models.Leave.approver_l2 == approver_name, models.Leave.status == "Pending L2 Approval")
+    # Check if the requester has authoritative Superuser privileges
+    user = db.query(models.User).filter(models.User.username == x_username).first()
+    
+    if user and user.role == "superuser":
+        # 👑 God Mode Base Query: Expose all active workflow lines company-wide
+        query = db.query(models.Leave).filter(
+            models.Leave.status.in_(["Pending", "Pending Cancel", "Pending L2 Approval"])
         )
-    )
+    else:
+        # 1. Base Query: Matches Lane 1 (L1) and Lane 2 (L2) logic
+        query = db.query(models.Leave).filter(
+            or_(
+                and_(models.Leave.approver_name == approver_name, models.Leave.status.in_(["Pending", "Pending Cancel"])),
+                and_(models.Leave.approver_l2 == approver_name, models.Leave.status == "Pending L2 Approval")
+            )
+        )
 
     # 2. Filters
     if name: query = query.filter(models.Leave.employee_name.ilike(f"%{name}%"))
@@ -717,16 +723,16 @@ def fix_db_schema(db: Session = Depends(get_db)):
 
 
 
-# app/routers/leave.py
 @router.post("/manager/action/{leave_id}")
 async def approve_leave( 
     leave_id: int, 
     background_tasks: BackgroundTasks, 
     status: str = Query(...),       
     remarks: str = Query(""),       
-    approver_name: str = Query(""), # We will clean this below
+    approver_name: str = Query(""), 
     l2_name: str = Query(None), 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
     # --- 🛡️ 1. SANITIZE NAMES (The Fix for Sarah Connor's empty feed) ---
     approver_name = approver_name.strip()
@@ -735,6 +741,10 @@ async def approve_leave(
     leave = db.query(models.Leave).filter(models.Leave.id == leave_id).first()
     if not leave:
         raise HTTPException(status_code=404, detail="Leave request not found")
+
+    # 👑 Identify if an authoritative Superuser is executing this action
+    acting_user = db.query(models.User).filter(models.User.username == x_username).first()
+    is_superuser_override = acting_user and acting_user.role == "superuser"
 
     # --- 2. Identity & Permission Checks ---
     acting_mgr = db.query(models.User).filter(models.User.full_name == approver_name).first()
@@ -751,17 +761,23 @@ async def approve_leave(
     history_log = leave.status_history or ""
     is_cancellation_journey = (leave.status == "Pending Cancel" or "Cancellation" in history_log)
 
+    # 👑 Set audit trail naming context based on authority level
+    if is_superuser_override:
+        display_approver = f"System Administrator (Override on behalf of {leave.approver_name or 'Manager'})"
+    else:
+        display_approver = approver_name
+
     final_response_message = "Request processed successfully"
 
-# =========================================================================
+    # =========================================================================
     # 3. HANDLE CANCELLATION LOGIC
     # =========================================================================
     if is_cancellation_journey:
         if status == "Approved":
             is_hr_admin = acting_mgr and (acting_mgr.role == "hr_admin" or any(r.role_name == "hr_admin" for r in acting_mgr.assigned_roles))
 
-            # 🔶 Scenario A: L1 Approves -> Route to L2
-            if leave.status == "Pending Cancel" and not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2:
+            # 🔶 Scenario A: L1 Approves -> Route to L2 (Bypassed entirely if Superuser forces it through)
+            if leave.status == "Pending Cancel" and not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2 and not is_superuser_override:
                 l2_user = db.query(models.User).filter(models.User.full_name == leave.approver_l2).first()
                 if l2_user and l2_user.is_active:
                     leave.status = "Pending L2 Approval"
@@ -780,17 +796,15 @@ async def approve_leave(
             # 🟢 Scenario B: Final Cancellation
             else:
                 leave.status = "Cancelled"
-                leave.status_history += f" > Cancellation FINALIZED by {approver_name} ({timestamp}){note_str}"
+                leave.status_history += f" > Cancellation FINALIZED by {display_approver} ({timestamp}){note_str}"
                 
                 # 🚀 THE FIX: Change 'return' to 'final_response_message'
                 final_response_message = "Cancellation finalized"
-                
-                # (Keep your email logic here...)
 
         else:
             # 🔴 Scenario C: Cancellation Rejected
             leave.status = "Approved" 
-            leave.status_history += f" > Cancellation REJECTED by {approver_name} ({timestamp}){note_str}"
+            leave.status_history += f" > Cancellation REJECTED by {display_approver} ({timestamp}){note_str}"
             
             # 🚀 THE FIX: Change 'return' to 'final_response_message'
             final_response_message = "Cancellation rejected"
@@ -799,27 +813,29 @@ async def approve_leave(
     # 4. HANDLE NORMAL LEAVE REQUESTS
     # =========================================================================
     else:
-        # ... (Keep your normal leave logic exactly as it is)
-        # Just ensure that inside 'else', you also use final_response_message instead of return
         if status == "Approved":
-            if l2_name: 
-                leave.status = "Pending L2 Approval"
-                leave.approver_l2 = l2_name
-                leave.status_history += f" > L1 Approved. Routed to {l2_name} ({timestamp}){note_str}"
-                final_response_message = f"L1 Approved. Routed to {l2_name}"
+            # 👑 Superuser overrides bypass the standard L2 routing step to allow instant clearance
+            if l2_active and leave.status == "Pending" and not is_senior and not is_superuser_override: 
+                if l2_name: 
+                    leave.status = "Pending L2 Approval"
+                    leave.approver_l2 = l2_name
+                    leave.status_history += f" > L1 Approved. Routed to {l2_name} ({timestamp}){note_str}"
+                    final_response_message = f"L1 Approved. Routed to {l2_name}"
             else: 
                 leave.status = "Approved"
                 leave.approved_at = datetime.now()
-                leave.status_history += f" > Fully Approved by {approver_name} ({timestamp}){note_str}"
+                leave.status_history += f" > Fully Approved by {display_approver} ({timestamp}){note_str}"
+                final_response_message = "Request fully approved"
         else: 
             leave.status = "Rejected"
             leave.rejected_at = datetime.now()
-            leave.status_history += f" > Rejected by {approver_name} ({timestamp}){note_str}"
+            leave.status_history += f" > Rejected by {display_approver} ({timestamp}){note_str}"
+            final_response_message = "Request rejected"
 
- # --- 💾 COMMIT CHANGES (Saves the Leave Status first - Safe!) ---
+    # --- 💾 COMMIT CHANGES (Saves the Leave Status first - Safe!) ---
     db.commit()
 
-# ============================================================
+    # ============================================================
     # 🚀 5. RECORD TO ACTIVITY LOG (MANAGER & EMPLOYEE)
     # ============================================================
     try:
@@ -835,11 +851,11 @@ async def approve_leave(
         # Prepare log strings
         if status == "Approved":
             suffix = " (Pending L2)" if "Pending L2" in leave.status else ""
-            log_msg_emp = f"Your {l_type_str} request was APPROVED{suffix}"
+            log_msg_emp = f"Your {l_type_str} request was approved via administrative override" if is_superuser_override else f"Your {l_type_str} request was APPROVED{suffix}"
             log_msg_mgr = f"You APPROVED {leave.employee_name}'s {l_type_str}{suffix}"
             act_type = "APPROVAL"
         else:
-            log_msg_emp = f"Your {l_type_str} request was REJECTED"
+            log_msg_emp = f"Your {l_type_str} request was rejected via administrative override" if is_superuser_override else f"Your {l_type_str} request was REJECTED"
             log_msg_mgr = f"You REJECTED {leave.employee_name}'s {l_type_str}"
             act_type = "REJECTION"
 
@@ -849,14 +865,14 @@ async def approve_leave(
                 log_activity(
                     db=db, user_id=emp_record.id, action_type=act_type, 
                     category=l_type_str, message=log_msg_emp, 
-                    reference_id=leave.id, actor_id=mgr_record.id if mgr_record else None
+                    reference_id=leave.id, actor_id=acting_user.id if acting_user else (mgr_record.id if mgr_record else None)
                 )
                 db.commit() 
             except Exception as e:
                 print(f"⚠️ Employee Log Hint: {e}")
 
-        # 🅱️ LOG FOR MANAGER (Ned Stark)
-        if mgr_record:
+        # 🅱️ LOG FOR MANAGER (Ned Stark - Skipped on Superuser administrative overrides)
+        if mgr_record and not is_superuser_override:
             try:
                 log_activity(
                     db=db, user_id=mgr_record.id, action_type=act_type, 
@@ -868,27 +884,23 @@ async def approve_leave(
                 print(f"⚠️ Manager Log Hint: {e}")
 
         # 📧 --- STEP 2: NOTIFY EMPLOYEE VIA EMAIL ---
-        # We trigger this now that the logs are saved
         if emp_record and emp_record.email:
             try:
-                # Determine if we are notifying about a request or a cancellation
                 if status == "Approved":
                     if is_cancellation_journey:
                         subject = f"✅ Leave Cancellation Approved - {l_type_str}"
-                        body = template_cancellation_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                        body = template_cancellation_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
                     else:
                         subject = f"✅ Leave Request Approved - {l_type_str}"
-                        body = template_request_approved(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                        body = template_request_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
                 else:
-                    # Rejection path
                     if is_cancellation_journey:
                         subject = f"⚠️ Leave Cancellation Denied - {l_type_str}"
-                        body = template_cancellation_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "No remarks provided.")
+                        body = template_cancellation_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
                     else:
                         subject = f"❌ Leave Request Rejected - {l_type_str}"
-                        body = template_request_rejected(leave.employee_name, approver_name, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "No remarks provided.")
+                        body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
                 
-                # Queue the background email task
                 background_tasks.add_task(send_email, emp_record.email, subject, body)
                 print(f"📧 Decision email queued for Julian: {emp_record.email}")
 
@@ -907,12 +919,17 @@ def get_all_manager_leaves(
     name: str = "", 
     status: str = Query("", alias="status"), 
     date_str: str = Query(None), 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
     query = db.query(models.Leave)
     
-    # 1. RBAC: Managers only see what they touched. Admins see all.
-    if "hr_admin" not in user_role.lower():
+    # Check if the requester has authoritative Superuser privileges
+    user = db.query(models.User).filter(models.User.username == x_username).first()
+    is_admin_or_super = "hr_admin" in user_role.lower() or (user and user.role == "superuser")
+    
+    # 1. RBAC: Managers only see what they touched. Admins and Superusers see all.
+    if not is_admin_or_super:
         if approver_name:
             query = query.filter(
                 or_(
@@ -1023,7 +1040,8 @@ def get_team_entitlements(
     user_role: str,          
     approver_name: str,      
     db: Session = Depends(get_db), 
-    name: str = ""
+    name: str = "",
+    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
     current_year = datetime.now().year
     
@@ -1031,11 +1049,18 @@ def get_team_entitlements(
     role_clean = user_role.lower().strip()
     approver_clean = approver_name.strip()
 
-    # 2. 🔍 DATABASE OVERRIDE: Check if user is actually an Admin
-    requester = db.query(models.User).filter(models.User.full_name == approver_clean).first()
+    # 2. 🔍 DATABASE OVERRIDE: Check if user is an Admin or Superuser
+    # Look up by unique username first via header context, fallback to full_name matching
+    requester = None
+    if x_username:
+        requester = db.query(models.User).filter(models.User.username == x_username).first()
+    if not requester:
+        requester = db.query(models.User).filter(models.User.full_name == approver_clean).first()
+        
     if requester:
         user_roles_list = [r.role_name for r in requester.assigned_roles] if hasattr(requester, 'assigned_roles') else []
-        if requester.role == "hr_admin" or "hr_admin" in user_roles_list:
+        # 👑 God Mode: Elevate superuser to hr_admin clearance level to drop team filters
+        if requester.role in ["hr_admin", "superuser"] or "hr_admin" in user_roles_list:
             role_clean = "hr_admin"
 
     # 3. RBAC Check
@@ -1043,7 +1068,7 @@ def get_team_entitlements(
     if role_clean not in allowed_roles:
         return []
 
-# ============================================================
+    # ============================================================
     # 📊 SECTION 4: SMART ROUTING QUERY (LM vs HOD vs HR) (FIXED)
     # ============================================================
     # 1. Base query (Always hide superuser from balances)
@@ -1146,7 +1171,6 @@ def get_team_entitlements(
                     "cf_rem": max(0, cf_banked - spent_cf), 
                     "rem": ent - spent_annual
                 }
-
 
             ann = get_bucket("Annual Leave")
             med = get_bucket("Medical Leave")
@@ -1757,3 +1781,4 @@ def get_activity_feed(employee_name: str, db: Session = Depends(get_db)):
         })
 
     return formatted_logs
+
