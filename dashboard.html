@@ -9941,48 +9941,77 @@ async function fetchWithAuth(url, options = {}) {
         return null;
     }
 
-    // 3. Inject Security Headers
-    options.headers = options.headers || {};
+ // 3. Inject Security Headers
+ options.headers = options.headers || {};
     
-    // 👑 FORENSIC USERNAME RECOVERY ENGINE
-    // Extracts the verified system identifier, parsing the cached object directory if memory strings are unpopulated.
+    // 👑 DYNAMIC IDENTITY & ROLE EXTRACTION (Zero Hardcoded Names)
     let realUsernameToken = localStorage.getItem("username") || "";
-    if (!realUsernameToken || realUsernameToken === "admin" || realUsernameToken === "user" || realUsernameToken === "null") {
-        try {
-            const masterObj = JSON.parse(localStorage.getItem("currentUser_obj") || sessionStorage.getItem("currentUser_obj") || "{}");
+    let systemObjectRole = "";
+    
+    try {
+        const masterObj = JSON.parse(localStorage.getItem("currentUser_obj") || sessionStorage.getItem("currentUser_obj") || "{}");
+        if (!realUsernameToken || realUsernameToken === "admin" || realUsernameToken === "user" || realUsernameToken === "null") {
             realUsernameToken = masterObj.username || masterObj.user_name || "";
-        } catch(e) {
-            realUsernameToken = "";
+        }
+        // Extract the true database-verified privilege string
+        systemObjectRole = masterObj.role || "";
+    } catch(e) {
+        console.error("🚫 Security Sentry: Local cache object parsing failed:", e);
+    }
+
+    // 🛡️ EMERGENCY CORRIDOR SENTRY: Map display identifiers if storage strings are laggy
+    if ((!realUsernameToken || realUsernameToken === "null") && CURRENT_USER) {
+        if (CURRENT_USER === "System Administrator") {
+            realUsernameToken = "superuser";
+        } else {
+            // Converts "Jack Jalos" -> "jack", "Natasha Romanoff" -> "natasha", etc.
+            realUsernameToken = CURRENT_USER.trim().split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
         }
     }
 
-    // 🛡️ EMERGENCY CORRIDOR SENTRY: Map hard display identifiers directly if caching vectors are completely missing
-    if (!realUsernameToken && CURRENT_USER) {
-        if (CURRENT_USER === "Natasha Romanoff") realUsernameToken = "natasha";
-        else if (CURRENT_USER === "System Administrator") realUsernameToken = "superuser";
-        else realUsernameToken = CURRENT_USER.split(" ")[0].toLowerCase();
-    }
+    // Baseline structural fallback if absolute extraction loops are missing
+    if (!realUsernameToken) realUsernameToken = "employee";
 
-    // Baseline fallback if all lookup and recovery paths fail
-    if (!realUsernameToken) realUsernameToken = "natasha";
+    // 👑 DYNAMIC ROLE COMPLIANCE SENTRY
+    // Dynamically checks roles list arrays, master object attributes, and master strings
+    // to shield the transaction from stale browser data or missing roles_list schemas.
+    let enforcementRole = localStorage.getItem("userMasterRole") || "employee";
+    const rawRolesArrayString = localStorage.getItem("userRoles") || "[]";
+    
+    if (
+        enforcementRole === "hr_admin" || 
+        systemObjectRole === "hr_admin" || 
+        rawRolesArrayString.includes("hr_admin") || 
+        rawRolesArrayString.includes("admin")
+    ) {
+        enforcementRole = "hr_admin";
+    } else if (
+        enforcementRole === "superuser" || 
+        systemObjectRole === "superuser" || 
+        rawRolesArrayString.includes("superuser")
+    ) {
+        enforcementRole = "superuser";
+    }
     
     // 🛡️ SECURITY OVERRIDE PROTECTION WORKER:
-    // Only apply defaults if the calling function hasn't already provided explicit administrative overrides.
+    // Dynamic fallbacks strictly apply only if the caller hasn't passed intentional header values.
     options.headers["X-Session-ID"] = options.headers["X-Session-ID"] || SESSION_ID;
     options.headers["X-Requester-Name"] = options.headers["X-Requester-Name"] || CURRENT_USER;
     options.headers["x-username"] = options.headers["x-username"] || realUsernameToken; 
-    options.headers["current-user-role"] = options.headers["current-user-role"] || localStorage.getItem("userMasterRole") || "employee";
-    options.headers["x-user-role"] = options.headers["x-user-role"] || localStorage.getItem("userMasterRole") || "employee";
+    options.headers["current-user-role"] = options.headers["current-user-role"] || enforcementRole;
+    options.headers["x-user-role"] = options.headers["x-user-role"] || enforcementRole;
 
-// 4. Handle URL Parameters safely
-const separator = url.includes("?") ? "&" : "?";
+    // 4. Handle URL Parameters safely
+    const separator = url.includes("?") ? "&" : "?";
     let finalUrl = url;
 
-    // 🎯 THE CORE COMPLIANCE FIX:
+    // 🎯 THE COMPLIANCE PARAMETER GATE:
     // Scan exclusively for the presence of the structural 'employee_name=' parameter key boundary.
     if (!url.includes("employee_name=")) {
         finalUrl = `${url}${separator}employee_name=${encodeURIComponent(realUsernameToken)}`;
     }
+
+    
     try {
         // The { signal } passed from options is automatically sent to the fetch API here!
         const response = await fetch(finalUrl, options);
@@ -10030,7 +10059,6 @@ const separator = url.includes("?") ? "&" : "?";
         return response;
     } catch (error) {
         // 🚀 THE FIX: Intercept the "AbortError" and re-throw it!
-        // This stops the background process from jumping the screen back to Home.
         if (error.name === 'AbortError') {
             throw error; 
         }
@@ -18742,32 +18770,52 @@ async function submitNewUser(event) {
         }
 
 
- const isEdit = window.isEditingUser === true;
+        const isEdit = window.isEditingUser === true;
         const endpoint = isEdit ? `${API_URL}/users/${window.editingUserId}/profile-update` : `${API_URL}/users/register`;
         const methodType = isEdit ? "PUT" : "POST";
 
         try {
-            // 👑 SECURITY IDENTITY ASSURANCE (Forensic Recovery Gauntlet)
-            // Safely extracts the active username, parsing the master dictionary object if strings are blank
+            // 👑 SECURITY IDENTITY ASSURANCE (Dynamic Recovery Gauntlet)
             let activeUsername = localStorage.getItem("username") || "";
-            if (!activeUsername || activeUsername === "admin" || activeUsername === "user" || activeUsername === "null") {
-                try {
-                    const masterObj = JSON.parse(localStorage.getItem("currentUser_obj") || sessionStorage.getItem("currentUser_obj") || "{}");
+            let systemObjectRole = "";
+
+            try {
+                const masterObj = JSON.parse(localStorage.getItem("currentUser_obj") || sessionStorage.getItem("currentUser_obj") || "{}");
+                if (!activeUsername || activeUsername === "admin" || activeUsername === "user" || activeUsername === "null") {
                     activeUsername = masterObj.username || masterObj.user_name || "";
-                } catch(e) {
-                    activeUsername = "";
+                }
+                // Extract true database privilege flag directly from the active session dictionary
+                systemObjectRole = masterObj.role || "";
+            } catch(e) {
+                console.error("🚫 Wizard Identity Sync: Object parse warning:", e);
+            }
+
+            // Emergency dynamic baseline corridor if storage strings are laggy
+            if ((!activeUsername || activeUsername === "null") && CURRENT_USER) {
+                if (CURRENT_USER === "System Administrator") {
+                    activeUsername = "superuser";
+                } else {
+                    // Converts display names (e.g., "Jack Jalos" -> "jack", "Natasha Romanoff" -> "natasha") safely
+                    activeUsername = CURRENT_USER.trim().split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
                 }
             }
+            if (!activeUsername) activeUsername = "employee";
 
-            // Emergency baseline safety corridor if storage states are missing
-            if (!activeUsername && CURRENT_USER === "Natasha Romanoff") {
-                activeUsername = "natasha";
-            }
-            if (!activeUsername) {
-                activeUsername = "natasha"; // Ultimate fail-safe for your targeted testing session
-            }
+            // 👑 DYNAMIC ROLE PROTECTION
+            // Scans full array structures and object attributes to enforce "hr_admin" rights 
+            // even if the user's primary string token has decayed or is temporarily mismatched.
+            let activeUserRole = localStorage.getItem("userMasterRole") || "employee";
+            const rawRolesArrayString = localStorage.getItem("userRoles") || "[]";
 
-            const activeUserRole = localStorage.getItem("userMasterRole") || "hr_admin";
+            if (
+                systemObjectRole === "hr_admin" || 
+                rawRolesArrayString.includes("hr_admin") || 
+                rawRolesArrayString.includes("admin")
+            ) {
+                activeUserRole = "hr_admin";
+            } else if (systemObjectRole === "superuser" || rawRolesArrayString.includes("superuser")) {
+                activeUserRole = "superuser";
+            }
 
             // 🎯 THE HEADERS FIX: Explicit options wrapper passing identical security context
             const customFetchOptions = { 
@@ -18813,6 +18861,7 @@ async function submitNewUser(event) {
                     }
                     window.CURRENT_USER = fullName;
                 }
+
                 // 🧹 CLEAR CONTEXT
                 sessionStorage.removeItem("registration_context");
                 sessionStorage.removeItem("editing_user_data");
