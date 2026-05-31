@@ -9854,7 +9854,7 @@ const menuLink = document.querySelector(`.menu-item[onclick*="${sectionId}"]`);
             const summaryBox = document.getElementById("apply_summary_box");
             if (summaryBox) summaryBox.style.display = "none";
 
-            // 👑 THE BULLETPROOF ACTION BUTTON GAUNTLET (MOVED TO THE TOP)
+ // 👑 THE BULLETPROOF ACTION BUTTON GAUNTLET (MOVED TO THE TOP)
             // Forces the correct button visibility layout INSTANTLY to prevent staging flickers
             const savedMode = localStorage.getItem("current_apply_mode") || "leave";
             if (typeof switchApplyMode === "function") {
@@ -9876,8 +9876,14 @@ const menuLink = document.querySelector(`.menu-item[onclick*="${sectionId}"]`);
             // 🚀 Show "Apply on Behalf" tabs only for HR/Superusers
             const contextTabs = document.getElementById("hr_context_tabs");
             if (contextTabs) {
-                const isHR = userRoles.includes("hr_admin") || localStorage.getItem("userMasterRole") === "superuser";
-                contextTabs.style.display = isHR ? "block" : "none";
+                // ✅ FIXED: Using the standardized identity validation tree to include "System Administrator"
+                const masterRole = localStorage.getItem("userMasterRole") || "";
+                const loggedInUser = localStorage.getItem("username") || "";
+                const currentUserName = typeof currentUser !== 'undefined' ? currentUser : (localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "");
+                const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
+                
+                const isAuthorized = userRoles.includes("hr_admin") || isSuperuser;
+                contextTabs.style.display = isAuthorized ? "block" : "none";
             }
 
             // 🌐 Asynchronous network data streams run safely down here now!
@@ -21232,16 +21238,14 @@ window.onload = async () => {
         }
     }
 
-    // ==========================================================
+// ==========================================================
     // 🚀 ROUTING & REHYDRATION ENGINE
     // ==========================================================
     let finalTabToLoad = sessionStorage.getItem("activeTab") || "home";
     const isAdminAccount = (localStorage.getItem("username") === "superuser" || currentUser === "System Administrator");
     
-    // Superuser Auto-Redirect
-    if (isAdminAccount && finalTabToLoad === "home") {
-        finalTabToLoad = "hr_audit"; 
-    }
+    // ✅ FIXED: Removed the forced 'hr_audit' redirect block for admin accounts 
+    // to allow the Superuser to land directly on the main dashboard workspace view.
 
     const activeContext = sessionStorage.getItem("registration_context");
 
