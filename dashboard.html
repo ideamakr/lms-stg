@@ -1791,6 +1791,7 @@ div.swal2-container {
     flex-direction: column;
     overflow: hidden;
     height: 100vh;
+    min-height: 0; /* 🚀 Anchor layout sizing */
 }
 
 .content {
@@ -1800,6 +1801,35 @@ div.swal2-container {
     width: 100%;
     position: relative;
     padding: 0;
+}
+
+/* ====================================================================
+   🎯 THE SUB-FORM OVERRIDE: FORCES INNER SCROLLBAR ON WIZARD STEPS
+   ==================================================================== */
+/* This targets the form block in your screenshot and forces a scrollbar */
+#registration .saas-card,
+#self_edit_section .saas-card,
+#apply .saas-card {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: calc(100vh - 220px) !important; /* 🚀 Hard stops card from leaking off view screen */
+    overflow: hidden !important; /* Locks header and action buttons in position */
+}
+
+/* This forces the scrollbar specifically on the form fields container area */
+#registration .scrollable-step-container,
+#self_edit_section .saas-card-body,
+#apply .saas-card-body {
+    flex: 1 !important;
+    overflow-y: auto !important; /* 🚀 ENFORCES SCROLLBAR ON FIELD BLOCKS Only */
+    overflow-x: hidden !important;
+    padding: 25px 30px !important;
+}
+
+/* Keeps step segments unified inside the scroll layer */
+.reg-step-content {
+    width: 100% !important;
+    min-height: 0 !important;
 }
 
 /* 🚀 SAAS-STYLE THIN SCROLLBAR (Cross-Browser Safe) */
@@ -10457,53 +10487,58 @@ document.addEventListener("DOMContentLoaded", async () => {
  async function rehydrateEditSession() {
     const activeTab = sessionStorage.getItem("activeTab");
     const context = sessionStorage.getItem("registration_context");
+    const savedDataRaw = sessionStorage.getItem("editing_user_data");
+
+    console.log(`💧 [Rehydration Check] Tab: ${activeTab} | Context: ${context} | Data Exists: ${!!savedDataRaw}`);
 
     // ---------------------------------------------------------
     // 🚩 BRANCH A: Restore Admin/HR Form (Natasha's 3-Step)
     // ---------------------------------------------------------
-    if (activeTab === 'registration' && context === "SELF_EDIT") {
-        const savedDataRaw = sessionStorage.getItem("editing_user_data");
+    if (activeTab === 'registration' && context === "HR_EDIT") {
+        console.log("💧 [Rehydration] Match! Restoring HR_EDIT session...");
+        
         if (savedDataRaw) {
             try {
                 const userData = JSON.parse(savedDataRaw);
                 window.isEditMode = true;
                 window.isEditingUser = true;
                 window.editingUserId = userData.id;
+                
+                // Restore the navigation redirect hook safely so 'Cancel' works
+                window.returnTabAfterEdit = sessionStorage.getItem("returnTabAfterEdit") || 'hr_users';
+
                 setTimeout(() => { 
-                    openFullProfileEditModal(userData, currentRegStep || 1); 
-                }, 100);
-            } catch (e) { triggerRefreshSafetyError(); }
+                    console.log("💧 [Rehydration] Injecting user data into the form...");
+                    // 🚀 THE FIX: Hardcoded to '1' to prevent ReferenceError crashes!
+                    openFullProfileEditModal(userData, 1); 
+                }, 150);
+            } catch (e) { 
+                console.error("❌ [Rehydration] Failed in HR_EDIT:", e);
+            }
+        } else {
+            console.warn("⚠️ [Rehydration] No user data found in session storage!");
         }
     } 
     
- // ---------------------------------------------------------
+    // ---------------------------------------------------------
     // 🚀 BRANCH B: Restore Dedicated Self-Edit Form (User's 2-Step)
     // ---------------------------------------------------------
     else if (activeTab === 'self_edit_section' && context === "SELF_EDIT") {
         console.log("🔄 Rehydration Triggered: Restoring Employee Self-Edit Session...");
         
-        // 1. Retrieve the backups we saved in openSelfEditModal
         const selfEditDataRaw = sessionStorage.getItem("self_edit_user_data");
-        const savedStep = sessionStorage.getItem("self_edit_current_step"); // 🚀 NEW: Get the saved step
+        const savedStep = sessionStorage.getItem("self_edit_current_step"); 
         
         if (selfEditDataRaw) {
             try {
                 const userData = JSON.parse(selfEditDataRaw);
-                
-                // 2. We wait 150ms to ensure the dashboard is fully loaded
                 setTimeout(() => {
-                    // 3. Re-open the modal at the EXACT step the user left off (1 or 2)
-                    // We parse the string from storage back into a number
                     const targetStep = parseInt(savedStep) || 1;
                     openSelfEditModal(userData, targetStep); 
                 }, 150);
-
             } catch (e) {
                 console.error("❌ Self-Edit Rehydration failed:", e);
-                triggerRefreshSafetyError();
             }
-        } else {
-            triggerRefreshSafetyError();
         }
     }
 }
@@ -18865,6 +18900,11 @@ async function submitNewUser(event) {
                 // 🧹 CLEAR CONTEXT
                 sessionStorage.removeItem("registration_context");
                 sessionStorage.removeItem("editing_user_data");
+                
+                // 🎯 PERSISTENCE UPGRADE: Purge the temporary routing destination token
+                // This ensures your next fresh onboarding session won't inherit an old redirect target.
+                sessionStorage.removeItem("returnTabAfterEdit"); 
+                
                 localStorage.removeItem('hr_onboarding_draft');
                 window.isEditingUser = false;
                 window.isEditMode = false;
@@ -20859,8 +20899,49 @@ async function clearBrandingFavicon() {
     }
 }
 
- // 🚀 FINAL ROBUST STARTUP SEQUENCE
- window.onload = async () => {
+ // ==========================================================
+// 🛡️ BROWSER REFRESH GUARDRAILS (F5, Ctrl+R, Native Reload)
+// ==========================================================
+
+// 1. THE KEYBOARD REFRESH BLOCKER
+document.addEventListener('keydown', function(e) {
+    if (window.isEditMode) {
+        // Block F5
+        if (e.key === 'F5') {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Refresh Blocked',
+                text: 'Please Save or Cancel your current edit session before refreshing the page.',
+                confirmButtonColor: '#f59e0b'
+            });
+        }
+        // Block Ctrl+R (Windows) or Cmd+R (Mac)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Refresh Blocked',
+                text: 'Please Save or Cancel your current edit session before refreshing the page.',
+                confirmButtonColor: '#f59e0b'
+            });
+        }
+    }
+});
+
+// 2. THE NATIVE BROWSER RELOAD INTERCEPTOR
+window.addEventListener('beforeunload', function (e) {
+    if (window.isEditMode) {
+        e.preventDefault();
+        e.returnValue = ''; // Triggers the native browser warning dialog
+    }
+});
+
+
+// ==========================================================
+// 🚀 FINAL ROBUST STARTUP SEQUENCE (Seamless Rehydration)
+// ==========================================================
+window.onload = async () => {
     console.log("🚀 System Startup Initiated...");
 
     // 1. Initialize browser history protection
@@ -20898,7 +20979,6 @@ async function clearBrandingFavicon() {
     } catch (e) { console.error("L2 Sync Error:", e); }
 
     // 🚀 4.5. ACTIVATE AVAILABILITY SENTRY (Phase 3)
-    // We start listening NOW so we can catch the auto-select event later
     if (typeof initApproverStatusListeners === "function") {
         initApproverStatusListeners();
     }
@@ -20913,7 +20993,7 @@ async function clearBrandingFavicon() {
     }
 
     // ==========================================================
-    // 🚀 THE RACE CONDITION FIX: READ THE TAB *AFTER* INITIALIZATION
+    // 🚀 ROUTING & REHYDRATION ENGINE
     // ==========================================================
     let finalTabToLoad = sessionStorage.getItem("activeTab") || "home";
     const isAdminAccount = (localStorage.getItem("username") === "superuser" || currentUser === "System Administrator");
@@ -20923,41 +21003,51 @@ async function clearBrandingFavicon() {
         finalTabToLoad = "hr_audit"; 
     }
 
-    // ==========================================================
-    // 🚀 NEW: THE REFRESH SENTRY (Fixes Blank ID on Refresh)
-    // ==========================================================
-    if (finalTabToLoad === 'registration') {
-        console.log("🔍 Refresh detected on Registration tab. Securing ID...");
+    const activeContext = sessionStorage.getItem("registration_context");
+
+    // 🔵 SCENARIO A: User was in an HR Edit session
+    if (finalTabToLoad === 'registration' && activeContext === "HR_EDIT") {
+        console.log("🔍 HR Edit session detected. Silently restoring form...");
+        window.isEditingUser = true; 
+        window.isEditMode = true;
+        
+        await showSection(finalTabToLoad);
+        if (typeof rehydrateEditSession === "function") await rehydrateEditSession();
+    } 
+    // 🔵 SCENARIO B: User was in a Self-Edit session
+    else if (finalTabToLoad === 'self_edit_section' && activeContext === "SELF_EDIT") {
+        console.log("🔍 Self-Edit session detected. Silently restoring form...");
+        window.isEditingUser = true; 
+        window.isEditMode = true;
+        
+        await showSection(finalTabToLoad);
+        if (typeof rehydrateEditSession === "function") await rehydrateEditSession();
+    } 
+    // 🟢 SCENARIO C: User was doing a NEW Onboarding
+    else if (finalTabToLoad === 'registration') {
         const draft = localStorage.getItem('hr_onboarding_draft');
         if (draft) {
             checkAndOpenRegistration();
         } else {
             generateNextEmpID();
         }
-    }
-
-    console.log(`🔐 Session Verified. User: ${currentUser} | Tab: ${finalTabToLoad}`);
-
-// 6. 🟢 LAUNCH THE UI (This triggers loadApproverList)
-try {
-        const finalTabToLoad = sessionStorage.getItem("activeTab") || "home";
         await showSection(finalTabToLoad);
+    } 
+    // ⚪ SCENARIO D: Standard Tab Load (Home, Settings, etc.)
+    else {
+        try {
+            await showSection(finalTabToLoad);
 
-        // 🚀 THE CRITICAL TRIGGER:
-        // This checks if you were in the middle of an edit and restores the data/modal.
-        if (typeof rehydrateEditSession === "function") {
-            await rehydrateEditSession();
-        }
-
-        if (finalTabToLoad === 'apply') {
-            const savedMode = localStorage.getItem("current_apply_mode") || "leave";
-            if (typeof switchApplyMode === "function") {
-                switchApplyMode(savedMode);
+            if (finalTabToLoad === 'apply') {
+                const savedMode = localStorage.getItem("current_apply_mode") || "leave";
+                if (typeof switchApplyMode === "function") {
+                    switchApplyMode(savedMode);
+                }
             }
+        } catch (err) {
+            console.error("❌ UI Launch Error:", err);
+            if (finalTabToLoad !== "home") showSection("home");
         }
-    } catch (err) {
-        console.error("❌ UI Launch Error:", err);
-        if (finalTabToLoad !== "home") showSection("home");
     }
 
     // 7. START DRAFT WATCHERS
@@ -20966,9 +21056,8 @@ try {
         if (typeof initOTDraftListeners === "function") initOTDraftListeners();
     } catch (e) { console.error("Draft Listener Error:", e); }
     
-    console.log("✅ Dashboard Fully Synchronized with Availability Sentry.");
+    console.log("✅ Dashboard Fully Synchronized with Seamless Rehydration.");
 };
-
 // ... keep your initLeaveDraftListeners function exactly as you wrote it ...
 function initLeaveDraftListeners() {
     const fields = [
@@ -21217,10 +21306,14 @@ otsToday.forEach((o) => {
     // 2. Set the routing context: When they click 'Cancel', go back to User Management
     window.returnTabAfterEdit = 'hr_users';
     
-    // 3. 🛡️ CRITICAL: Clear the "Self-Edit" flag
-    // This ensures Natasha sees Step 1 (Employment) when editing other people, 
-    // even if she just finished editing her own personal profile.
-    sessionStorage.removeItem("registration_context");
+    // 🎯 PERSISTENCE UPGRADE: Back up the routing flag inside session memory to defeat refresh-wipes
+    sessionStorage.setItem("returnTabAfterEdit", "hr_users"); // Saves destination safely
+    
+    // 3. 🛡️ CRITICAL: Explicitly lock the "HR_EDIT" context flag into storage
+    // This tells the rehydration lifecycle engine that this is NOT a self-edit.
+    // It prevents it from collapsing into a 2-step view on a browser refresh.
+    sessionStorage.setItem("registration_context", "HR_EDIT"); // Enforces 3-Step Admin View
+    sessionStorage.setItem("editing_user_data", JSON.stringify(user));
 
     // 4. Fire up the modal starting at Step 1 (Employment)
     // The main function will see that targetId !== myId and show all 3 steps.
@@ -21237,7 +21330,12 @@ otsToday.forEach((o) => {
     const user = typeof userJsonRaw === 'string' ? JSON.parse(userJsonRaw) : userJsonRaw;
     window.originalUserDataSnapshot = JSON.stringify(user); 
 
-    sessionStorage.setItem("registration_context", "SELF_EDIT");
+    // 🛡️ FORENSIC FIX: Do NOT hardcode "SELF_EDIT" here! 
+    // We only set HR_EDIT if the caller hasn't explicitly set a context yet.
+    if (!sessionStorage.getItem("registration_context")) {
+        sessionStorage.setItem("registration_context", "HR_EDIT"); 
+    }
+    
     sessionStorage.setItem("editing_user_data", JSON.stringify(user));
     
     window.isEditingUser = true; 
@@ -21254,13 +21352,19 @@ otsToday.forEach((o) => {
     const title = document.querySelector("#reg_step_1 h3");
     if (title) title.innerHTML = `<i class="fas fa-user-edit" style="color:#3b82f6;"></i> Editing: ${user.full_name}`;
 
+    // 🎯 PERSISTENCE UPGRADE: Dynamically resolve redirection routing path safely
+    const currentDestinationTab = sessionStorage.getItem("returnTabAfterEdit") || window.returnTabAfterEdit || 'hr_users';
+
     const cancelBtn = document.querySelector("#registration button[onclick*=\"showSection('hr_users')\"]");
     if (cancelBtn) {
         cancelBtn.onclick = () => {
             sessionStorage.removeItem("registration_context");
             sessionStorage.removeItem("editing_user_data");
+            sessionStorage.removeItem("returnTabAfterEdit");
             window.originalUserDataSnapshot = null; 
-            showSection(window.returnTabAfterEdit || 'hr_users');
+            
+            // 🚀 FORENSIC FIX: Route cleanly back to the persistent destination tab
+            showSection(currentDestinationTab); 
         };
     }
 
@@ -21287,7 +21391,6 @@ otsToday.forEach((o) => {
         if (!dateString) return "";
         const d = new Date(dateString);
         if (!isNaN(d.getTime())) {
-            // Subtract offset to prevent timezone drift before splitting
             const offsetDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
             return offsetDate.toISOString().split('T')[0];
         }
@@ -21310,10 +21413,7 @@ otsToday.forEach((o) => {
     safeSet("reg_middle_name", user.middle_name);
     safeSet("reg_last_name", lName);
     safeSet("reg_common_name", user.common_name);
-    
-    // 🚀 FIX: Ensure username populates (fallback to email prefix if DB is empty)
     safeSet("reg_username_new", user.username || (user.email ? user.email.split('@')[0] : ""));
-    
     safeSet("reg_office_email_new", user.email);
     safeSet("reg_lotus_notes_id", user.lotus_notes_id);
     safeSet("reg_employee_no_old", user.employee_no_old);
@@ -21327,7 +21427,6 @@ otsToday.forEach((o) => {
     safeSet("reg_ranking", user.ranking);
     safeSet("reg_expat_type", user.expat_type);
     
-    // Core Organizational Hierarchy Structs
     safeSet("reg_organization_o", user.organization_o);
     safeSet("reg_organization_ou1", user.organization_ou1);
     safeSet("reg_organization_ou2", user.organization_ou2);
@@ -21339,26 +21438,19 @@ otsToday.forEach((o) => {
     safeSet("reg_contract_type_new", user.contract_type);
     safeSet("reg_document_status", user.document_status);
     
-    // 📆 Lifecycle Dates (Joined & Expiry & Corporate Milestones)
     const joinedInput = document.getElementById("reg_joined_new");
     if (joinedInput) joinedInput.value = formatForDateInput(user.joined_date);
-    
     const expiryInput = document.getElementById("reg_contract_expiry_date");
     if (expiryInput) expiryInput.value = formatForDateInput(user.contract_expiry_date);
-    
     const resignInput = document.getElementById("reg_date_resigned");
     if (resignInput) resignInput.value = formatForDateInput(user.date_resigned);
-    
     const workInput = document.getElementById("reg_last_working_day");
     if (workInput) workInput.value = formatForDateInput(user.last_working_day);
-    
     const serviceInput = document.getElementById("reg_last_day_of_service");
     if (serviceInput) serviceInput.value = formatForDateInput(user.last_day_of_service);
-    
     const ictInput = document.getElementById("reg_date_ict_removal");
     if (ictInput) ictInput.value = formatForDateInput(user.date_ict_removal);
 
-    // 🔘 Dropdown Option Selects (Safely defaulting to 'No')
     safeSetDropdown("reg_shift_employee", user.shift_employee, "No");
     safeSetDropdown("reg_compensation_leave_entitled", user.compensation_leave_entitled, "No");
     safeSetDropdown("reg_commissioning_engineer", user.commissioning_engineer, "No");
@@ -21390,10 +21482,7 @@ otsToday.forEach((o) => {
     safeSet("reg_pref_name_new", user.preferred_name);
     safeSet("reg_gender_new", user.gender);
     safeSet("reg_marital_new", user.marital_status);
-    
-    // Handle the database naming discrepancy mapping for IC details securely
     safeSet("reg_ic_new", user.ic_no || user.ic_number);
-    
     safeSet("reg_nat_new", user.nationality);
     safeSet("reg_place_of_birth", user.place_of_birth);
     safeSet("reg_race_new", user.race);
@@ -21411,7 +21500,6 @@ otsToday.forEach((o) => {
     safeSet("reg_em_rel", user.emergency_contact_rel);
     safeSet("reg_em_mobile", user.emergency_contact_mobile);
 
-    // 💸 Disbursal Salary Bank Parameters Mapping
     safeSet("reg_bank_name", user.bank_name);
     safeSet("reg_bank_account_number", user.bank_account_number);
     safeSet("reg_bank_holder_name", user.bank_holder_name);
@@ -21421,7 +21509,6 @@ otsToday.forEach((o) => {
     // 🛡️ 5. THE STRICT STRUCTURAL REMOVAL FIX + UI BEAUTIFICATION
     // ============================================================
     
-    // 🚀 EXPLICIT LOCK: ID and Username are NEVER editable!
     const empIdField = document.getElementById("reg_emp_id_new");
     const userField = document.getElementById("reg_username_new");
     [empIdField, userField].forEach(el => {
@@ -21433,8 +21520,12 @@ otsToday.forEach((o) => {
         }
     });
 
-    // 🚀 THE "TWO HATS" LOGIC
-    const isFromMyProfile = (window.returnTabAfterEdit === 'profile');
+    // 🚀 FORENSIC FIX: De-duplicated & Restored Context Flag Check
+    const activeContextFlag = sessionStorage.getItem("registration_context");
+    
+    // Only lock down the form if the session explicitly flags it as a self-edit,
+    // or if the user is bound to their personal profile tab.
+    const isFromMyProfile = (activeContextFlag === "SELF_EDIT" || currentDestinationTab === 'profile');
     const applyLockdown = isFromMyProfile;
 
     const step1Icon = document.getElementById('reg_step_icon_1');
@@ -21443,7 +21534,7 @@ otsToday.forEach((o) => {
     const stepperWrapper = step1Icon ? step1Icon.closest('.stepper-wrapper') : null;
 
     if (applyLockdown) {
-        // 🔒 MY PROFILE HAT: Lock down Step 1
+        // 🔒 MY PROFILE HAT: Lock down Step 1 completely
         const fieldsToDisable = [
             "reg_first_name", "reg_middle_name", "reg_last_name", "reg_common_name",
             "reg_office_email_new", "reg_lotus_notes_id", "reg_employee_no_old",
@@ -21458,15 +21549,9 @@ otsToday.forEach((o) => {
         ];
         fieldsToDisable.forEach(id => {
             const el = document.getElementById(id);
-            if (el) {
-                el.disabled = true;
-                el.readOnly = true;
-                el.style.background = "#f1f5f9";
-            }
+            if (el) { el.disabled = true; el.readOnly = true; el.style.background = "#f1f5f9"; }
         });
-        document.querySelectorAll('#reg_mgr_container input[type="checkbox"], #reg_hod_container input[type="checkbox"]').forEach(cb => {
-            cb.disabled = true;
-        });
+        document.querySelectorAll('#reg_mgr_container input[type="checkbox"], #reg_hod_container input[type="checkbox"]').forEach(cb => { cb.disabled = true; });
 
         if (step1Icon) {
             step1Icon.style.setProperty('display', 'none', 'important');
@@ -21488,14 +21573,8 @@ otsToday.forEach((o) => {
 
         const icon2 = document.getElementById('reg_step_icon_2');
         const icon3 = document.getElementById('reg_step_icon_3');
-        if (icon2) {
-            icon2.classList.remove('active-step', 'completed-step');
-            icon2.classList.add(activeStartStep === 2 ? 'active-step' : 'completed-step');
-        }
-        if (icon3) {
-            icon3.classList.remove('active-step', 'completed-step');
-            if (activeStartStep === 3) icon3.classList.add('active-step');
-        }
+        if (icon2) { icon2.classList.remove('active-step', 'completed-step'); icon2.classList.add(activeStartStep === 2 ? 'active-step' : 'completed-step'); }
+        if (icon3) { icon3.classList.remove('active-step', 'completed-step'); if (activeStartStep === 3) icon3.classList.add('active-step'); }
 
         if (prevBtn) {
             prevBtn.removeAttribute("onclick");
@@ -21509,10 +21588,7 @@ otsToday.forEach((o) => {
                     if (icon2) icon2.classList.add('active-step');
                     currentRegStep = 2;
                     prevBtn.style.display = 'none'; 
-                    if (nextBtn) {
-                        nextBtn.innerHTML = 'Next Step <i class="fas fa-arrow-right"></i>';
-                        nextBtn.style.background = '#2563eb';
-                    }
+                    if (nextBtn) { nextBtn.innerHTML = 'Next Step <i class="fas fa-arrow-right"></i>'; nextBtn.style.background = '#2563eb'; }
                 }
             };
         }
@@ -21532,23 +21608,18 @@ otsToday.forEach((o) => {
                     document.getElementById('reg_step_3').style.display = 'block';
                     if (icon2) { icon2.classList.remove('active-step'); icon2.classList.add('completed-step'); }
                     if (icon3) icon3.classList.add('active-step');
-                    currentRegStep = 2; // Keep tracker real
                     currentRegStep = 3;
                     if (prevBtn) prevBtn.style.display = 'block';
-                    
                     nextBtn.innerHTML = '<i class="fas fa-save" style="margin-right: 8px;"></i> Save Changes';
                 } else if (currentRegStep === 3) {
-                    if (!hasUserMadeChanges()) {
-                        Swal.fire({ icon: 'info', title: 'No Update Needed', text: 'No changes were made.', confirmButtonColor: '#64748b' });
-                        return;
-                    }
+                    if (!hasUserMadeChanges()) { Swal.fire({ icon: 'info', title: 'No Update Needed', text: 'No changes were made.', confirmButtonColor: '#64748b' }); return; }
                     submitNewUser(e);
                 }
             };
         }
 
     } else {
-        // 🔓 USER MANAGEMENT HAT: Unlock Step 1
+        // 🔓 ADMIN MANAGEMENT HAT: Unlock Full 3-Step Operations View Context
         const fieldsToEnable = [
             "reg_first_name", "reg_middle_name", "reg_last_name", "reg_common_name",
             "reg_office_email_new", "reg_lotus_notes_id", "reg_employee_no_old",
@@ -21562,16 +21633,9 @@ otsToday.forEach((o) => {
             "reg_compensation_leave_entitled", "reg_commissioning_engineer", "reg_scholar"
         ];
         fieldsToEnable.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.disabled = false;
-                el.readOnly = false;
-                el.style.background = "#fff";
-            }
+            const el = document.getElementById(id); if (el) { el.disabled = false; el.readOnly = false; el.style.background = "#fff"; }
         });
-        document.querySelectorAll('#reg_mgr_container input[type="checkbox"], #reg_hod_container input[type="checkbox"]').forEach(cb => {
-            cb.disabled = false;
-        });
+        document.querySelectorAll('#reg_mgr_container input[type="checkbox"], #reg_hod_container input[type="checkbox"]').forEach(cb => { cb.disabled = false; });
 
         if (step1Icon) {
             step1Icon.style.setProperty('display', 'flex', 'important');
@@ -21609,15 +21673,7 @@ otsToday.forEach((o) => {
             nextBtn.onclick = (e) => {
                 e.preventDefault();
                 if (currentRegStep === 3) {
-                    if (!hasUserMadeChanges()) {
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'No Update Needed',
-                            text: 'No changes were made.',
-                            confirmButtonColor: '#64748b'
-                        });
-                        return;
-                    }
+                    if (!hasUserMadeChanges()) { Swal.fire({ icon: 'info', title: 'No Update Needed', text: 'No changes were made.', confirmButtonColor: '#64748b' }); return; }
                     submitNewUser(e);
                 } else {
                     if (typeof navRegStep === 'function') navRegStep(1); 
@@ -21634,7 +21690,6 @@ otsToday.forEach((o) => {
         }
     }
 }
-
 /**
  * 🔍 THE COMPARISON ENGINE (Unified Form)
  * Returns true if the user has actually modified any field OR uploaded a photo.
@@ -26122,21 +26177,22 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // 🛡️ 2. GHOST CONTEXT GUARD
-    // This part is CRITICAL. It ensures that after Step 1 saves your profile, 
+    // 🛡️ 2. GHOST CONTEXT GUARD (Updated to protect both Edit Modes)
+    // This part is CRITICAL. It ensures that after an edit finishes, 
     // the system doesn't try to "re-edit" you on the reload.
     const regContext = sessionStorage.getItem("registration_context");
     
-    if (regContext === "SELF_EDIT") {
-        // Only re-open the wizard if an edit was actually in progress (not finished)
-        await rehydrateEditSession();
-    } else {
+    // Only wipe the memory if they are NOT in any active edit session
+    if (regContext !== "SELF_EDIT" && regContext !== "HR_EDIT") {
         // Edit is finished or never happened: Clean the slate to prevent UI crashes
         sessionStorage.removeItem("editing_user_data");
+        sessionStorage.removeItem("self_edit_user_data"); // Added to keep things completely clean
         window.isEditingUser = false;
         window.isEditMode = false;
         window.isUsernameAutoGenerated = true; // Reset username logic to default
     }
+    // 🚀 NOTE: We removed `await rehydrateEditSession()` from here! 
+    // It is now safely and perfectly handled by the window.onload sequence.
 
     // 3. UI Sync: Ensure the dashboard knows who you are from the updated localStorage
     const savedUser = localStorage.getItem("currentUser");
