@@ -26228,7 +26228,7 @@ async function resumeDraft() {
 
 
 /**
- * 👥 MANAGER & HOD LOADER (Checkbox Edition)
+ * 👥 MANAGER & HOD LOADER (Checkbox Edition - Ultra Fast)
  * Fetches the directory and populates the scrollable checkbox boxes.
  */
  async function populateOnboardingManagers() {
@@ -26246,11 +26246,20 @@ async function resumeDraft() {
     hodContainer.style.cursor = "wait";
 
     try {
-        const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
-        if (!res || !res.ok) throw new Error("Failed to reach server");
+        let users = [];
 
-        const responseData = await res.json();
-        const users = responseData.users || [];
+        // ⚡ THE SPEED UPGRADE: Instant RAM Cache Lookup
+        if (window.allUsersList && window.allUsersList.length > 0) {
+            users = window.allUsersList;
+        } else {
+            // Fallback to Network only if the cache is empty
+            const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
+            if (!res || !res.ok) throw new Error("Failed to reach server");
+
+            const responseData = await res.json();
+            users = responseData.users || [];
+            window.allUsersList = users; // Cache it for next time
+        }
 
         // 🛡️ THE IRONCLAD FILTER LOGIC
         const eligible = users.filter(u => {

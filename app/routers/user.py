@@ -84,35 +84,48 @@ def get_all_users(
     users = query.offset(offset).limit(page_size).all()
     
     # ==============================================================
-    # 🚀 ANTI N+1 BOTTLENECK FIX: BULK LEAVE LOOKUP
+    # 🚀 ANTI N+1 BOTTLENECK FIX: BULK LEAVE & ROLE LOOKUP
     # ==============================================================
-    # Extract all user full names from this current batch
     user_full_names = [u.full_name for u in users if u.full_name]
+    user_ids = [u.id for u in users]
     
     leave_dict = {}
+    roles_dict = {}
+
     if user_full_names:
-        # Ask the database ONCE for all active leaves matching these users
+        # Ask the database ONCE for all active leaves
         active_leaves = db.query(models.Leave).filter(
             models.Leave.employee_name.in_(user_full_names),
             models.Leave.status == 'Approved',
             models.Leave.start_date <= today,
             models.Leave.end_date >= today
         ).all()
-        
-        # Build a lightning-fast memory dictionary: {"Sarah Connor": "2026-05-10"}
         for leave in active_leaves:
             leave_dict[leave.employee_name] = str(leave.end_date)
+
+    if user_ids:
+        # Ask the database ONCE for all assigned roles for this entire batch
+        bulk_roles = db.query(models.UserRole).filter(
+            models.UserRole.user_id.in_(user_ids)
+        ).all()
+        for r in bulk_roles:
+            if r.user_id not in roles_dict:
+                roles_dict[r.user_id] = []
+            roles_dict[r.user_id].append(r.role_name)
     # ==============================================================
 
     result = []
     
     # Safely map every user to a dictionary
     for u in users:
-        # --- Existing Roles Logic ---
+        # --- 🚀 THE SPEED UPGRADE: Instant memory lookup for roles! ---
         roles_list = ["employee"]
-        for r in u.assigned_roles:
-            if r.role_name.lower() != "employee" and r.role_name not in roles_list:
-                roles_list.append(r.role_name)
+        user_specific_roles = roles_dict.get(u.id, [])
+        
+        for r_name in user_specific_roles:
+            if r_name.lower() != "employee" and r_name not in roles_list:
+                roles_list.append(r_name)
+                
         if u.role and u.role not in roles_list:
             roles_list.append(u.role)
 
