@@ -26252,15 +26252,21 @@ async function resumeDraft() {
         const responseData = await res.json();
         const users = responseData.users || [];
 
-        // 3. Filter for eligible approvers (Managers or Seniors ONLY)
+        // 🛡️ THE IRONCLAD FILTER LOGIC
         const eligible = users.filter(u => {
+            // 1. Must be an active employee
             const isActive = u.is_active !== false; 
-            const roles = (u.roles_list || []).map(r => r.toLowerCase());
             
-            // 🛑 THE FIX: Removed "hr_admin" so pure HR staff don't accidentally become Line Managers!
-            const hasPower = roles.includes("manager") || u.is_senior_manager === true;
-            
-            return isActive && hasPower;
+            // 2. Safely gather all role data (Checks both 'roles_list' array AND 'role' string)
+            const roles = (u.roles_list || []).map(r => String(r).toLowerCase());
+            if (u.role) roles.push(String(u.role).toLowerCase());
+
+            // 3. STRICT CHECK: Do they possess actual managerial power?
+            const isManager = roles.includes("manager");
+            const isSenior = u.is_senior_manager === true;
+
+            // ⛔ If they are only an HR Admin (and not a Manager/Senior), this evaluates to FALSE
+            return isActive && (isManager || isSenior);
         });
 
         // 🛠️ Updated "buildRows": Now includes the Phase 3 Away Status Logic
