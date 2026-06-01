@@ -4854,7 +4854,7 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                                                             <div class="saas-form-group" style="margin: 0;">
                                                                 <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Select Approver</label>
                                                                 <select id="dash_approver" class="saas-form-control" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
-                                                                    <option value="" disabled selected hidden>-- Select Manager --</option>
+                                                                    <option value="" disabled selected hidden>⏳ Synchronizing approvers...</option>
                                                                 </select>
                                                                 <div id="dash_approver_alert" style="display: none; margin-top: 10px;"></div>
                                                             </div>
@@ -4933,7 +4933,7 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                                                         <div class="saas-form-group" style="margin: 0;">
                                                             <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Approver</label>
                                                             <select id="dash_approver_ot" class="saas-form-control" required style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
-                                                                <option value="" disabled selected hidden>-- Select Manager --</option>
+                                                                <option value="" disabled selected hidden>⏳ Synchronizing approvers...</option>
                                                             </select>
                                                             <div id="dash_approver_ot_alert" style="display: none; margin-top: 6px;"></div>
                                                         </div>
@@ -15726,6 +15726,7 @@ async function loadApproverList() {
         selects.forEach((sel) => {
             if (sel.value && sel.value !== "") return;
 
+            // ✅ FIXED: Wipes out the initial "⏳ Synchronizing approvers..." placeholder
             sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
             
             if (assignedManagers.length === 0) {
@@ -15767,7 +15768,15 @@ async function loadApproverList() {
     // 🚀 STEP 2: NETWORK FALLBACK
     try {
         const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
-        if (!res || !res.ok) return;
+        if (!res || !res.ok) {
+            // Safety: Revert selection string if API responds with a failure code
+            selects.forEach(sel => {
+                if (!sel.value || sel.value === "") {
+                    sel.innerHTML = '<option value="" disabled selected hidden>❌ Failed to load managers</option>';
+                }
+            });
+            return;
+        }
 
         const responseData = await res.json();
         const allUsers = responseData.users || [];
@@ -15778,6 +15787,7 @@ async function loadApproverList() {
         selects.forEach((sel) => {
             if (sel.value && sel.value !== "") return;
 
+            // ✅ FIXED: Wipes out the initial "⏳ Synchronizing approvers..." placeholder
             sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
             
             if (assignedManagers.length === 0) {
@@ -15806,6 +15816,12 @@ async function loadApproverList() {
         });
     } catch (e) {
         console.error("Smart Approver Load Error:", e);
+        // Safety: Prevent permanent loading loop state if user is completely offline
+        selects.forEach(sel => {
+            if (!sel.value || sel.value === "") {
+                sel.innerHTML = '<option value="" disabled selected hidden>❌ Network error. Re-try...</option>';
+            }
+        });
     }
 }
 
