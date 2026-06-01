@@ -4304,77 +4304,93 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                                 </div>
                                 
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; box-sizing: border-box;">
-                                    
+    
+                                    <!-- 📊 CARD 1: TOTAL FLEET -->
                                     <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; height: 160px; padding: 20px 24px; box-sizing: border-box; margin-bottom: 0;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div style="display: flex; align-items: center; min-width: 0; flex: 1;">
                                                 <span style="background-color: #ecfdf5; width: 2.2rem; height: 2.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-users" style="color: #10b981; font-size: 1rem;"></i></span>
                                                 <p style="margin: 0 0 0 0.75rem; font-weight: 700; font-size: 1.05rem; color: #475569;">Total Fleet</p>
                                             </div>
-                                            <p id="metric_fleet_total_pct" style="color: #10b981; font-weight: 700; font-size: 0.9rem; margin: 0; flex-shrink: 0; transition: color 0.3s ease;">0% Cap</p>
+                                            <p id="metric_fleet_total_pct" style="color: #10b981; font-weight: 700; font-size: 0.9rem; margin: 0; flex-shrink: 0; transition: color 0.3s ease;">--% Cap</p>
                                         </div>
                                         <div style="display: flex; flex-direction: column; justify-content: flex-start; margin-top: auto;">
-                                            <p id="metric_fleet_total_home" style="margin: 5px 0 8px 0; color: #111827; font-size: 2.25rem; line-height: 1; font-weight: 800; text-align: left;">0</p>
+                                            <!-- ✅ FIXED: Swapped hardcoded text for the animated skeleton pulse loader -->
+                                            <p id="metric_fleet_total_home" style="margin: 5px 0 8px 0; color: #111827; font-size: 2.25rem; line-height: 1; font-weight: 800; text-align: left;">
+                                                <span class="loading-pulse" style="display: inline-block; margin: 0; width: 80px; height: 32px; background-color: rgba(148, 163, 184, 0.25);"></span>
+                                            </p>
                                             
                                             <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #6b7280; margin-bottom: 6px; font-weight: 600;">
-                                                <span id="label_fleet_fraction" style="transition: color 0.3s ease;">0 / 0</span>
+                                                <span id="label_fleet_fraction" style="transition: color 0.3s ease;">-- / --</span>
                                                 <span>Active Seats Provisioned</span>
                                             </div>
-
+                                
                                             <div style="position: relative; background-color: #E5E7EB; width: 100%; height: 0.4rem; border-radius: 0.25rem; overflow: hidden;">
                                                 <div id="bar_fleet_total" style="background-color: #10b981; width: 0%; position: absolute; top: 0; left: 0; height: 100%; border-radius: 0.25rem; transition: all 0.5s ease;"></div>
                                             </div>
                                         </div>
                                     </div>
-
+                                
+                                    <!-- 👥 CARD 2: ACTIVE USERS -->
                                     <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; height: 160px; padding: 20px 24px; box-sizing: border-box; margin-bottom: 0;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div style="display: flex; align-items: center; min-width: 0; flex: 1;">
                                                 <span style="background-color: #eff6ff; width: 2.2rem; height: 2.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-user-check" style="color: #2563eb; font-size: 1rem;"></i></span>
                                                 <p style="margin: 0 0 0 0.75rem; font-weight: 700; font-size: 1.05rem; color: #475569;">Active Users</p>
                                             </div>
-                                            <p id="metric_fleet_active_pct" style="color: #2563eb; font-weight: 700; font-size: 0.9rem; margin: 0; flex-shrink: 0;">0%</p>
+                                            <p id="metric_fleet_active_pct" style="color: #2563eb; font-weight: 700; font-size: 0.9rem; margin: 0; flex-shrink: 0;">--%</p>
                                         </div>
                                         <div style="display: flex; flex-direction: column; justify-content: flex-start; margin-top: auto;">
-                                            <p id="metric_fleet_active_home" style="margin: 10px 0; color: #111827; font-size: 2.25rem; line-height: 1; font-weight: 800; text-align: left;">0</p>
+                                            <!-- ✅ FIXED: Swapped hardcoded text for the animated skeleton pulse loader -->
+                                            <p id="metric_fleet_active_home" style="margin: 10px 0; color: #111827; font-size: 2.25rem; line-height: 1; font-weight: 800; text-align: left;">
+                                                <span class="loading-pulse" style="display: inline-block; margin: 0; width: 80px; height: 32px; background-color: rgba(148, 163, 184, 0.25);"></span>
+                                            </p>
                                             <div style="position: relative; background-color: #E5E7EB; width: 100%; height: 0.4rem; border-radius: 0.25rem; overflow: hidden;">
                                                 <div id="bar_active_home" style="background-color: #2563eb; width: 0%; position: absolute; top: 0; left: 0; height: 100%; border-radius: 0.25rem; transition: width 0.5s ease;"></div>
                                             </div>
                                         </div>
                                     </div>
-
+                                
+                                    <!-- 🔴 CARD 3: INACTIVE -->
                                     <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; height: 160px; padding: 20px 24px; box-sizing: border-box; margin-bottom: 0;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div style="display: flex; align-items: center; min-width: 0; flex: 1;">
                                                 <span style="background-color: #fef2f2; width: 2.2rem; height: 2.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-user-minus" style="color: #ef4444; font-size: 1rem;"></i></span>
                                                 <p style="margin: 0 0 0 0.75rem; font-weight: 700; font-size: 1.05rem; color: #475569;">Inactive</p>
                                             </div>
-                                            <p id="metric_fleet_inactive_pct" style="color: #ef4444; font-weight: 700; font-size: 0.9rem; margin: 0; flex-shrink: 0;">0%</p>
+                                            <p id="metric_fleet_inactive_pct" style="color: #ef4444; font-weight: 700; font-size: 0.9rem; margin: 0; flex-shrink: 0;">--%</p>
                                         </div>
                                         <div style="display: flex; flex-direction: column; justify-content: flex-start; margin-top: auto;">
-                                            <p id="metric_fleet_inactive_home" style="margin: 10px 0; color: #111827; font-size: 2.25rem; line-height: 1; font-weight: 800; text-align: left;">0</p>
+                                            <!-- ✅ FIXED: Swapped hardcoded text for the animated skeleton pulse loader -->
+                                            <p id="metric_fleet_inactive_home" style="margin: 10px 0; color: #111827; font-size: 2.25rem; line-height: 1; font-weight: 800; text-align: left;">
+                                                <span class="loading-pulse" style="display: inline-block; margin: 0; width: 80px; height: 32px; background-color: rgba(148, 163, 184, 0.25);"></span>
+                                            </p>
                                             <div style="position: relative; background-color: #E5E7EB; width: 100%; height: 0.4rem; border-radius: 0.25rem; overflow: hidden;">
                                                 <div id="bar_inactive_home" style="background-color: #ef4444; width: 0%; position: absolute; top: 0; left: 0; height: 100%; border-radius: 0.25rem; transition: width 0.5s ease;"></div>
                                             </div>
                                         </div>
                                     </div>
-
+                                
+                                    <!-- 📁 CARD 4: OPEN CASES -->
                                     <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; height: 160px; padding: 20px 24px; box-sizing: border-box; margin-bottom: 0;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                             <div style="display: flex; align-items: center; min-width: 0; flex: 1;">
                                                 <span style="background-color: #fff7ed; width: 2.2rem; height: 2.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-folder-open" style="color: #f59e0b; font-size: 1rem;"></i></span>
                                                 <p style="margin: 0 0 0 0.75rem; font-weight: 700; font-size: 1.05rem; color: #475569;">Open Cases</p>
                                             </div>
-                                            <p id="metric_open_cases_delta" style="color: #f59e0b; font-weight: 700; font-size: 0.9rem; margin: 0; flex-shrink: 0;">0</p>
+                                            <p id="metric_open_cases_delta" style="color: #f59e0b; font-weight: 700; font-size: 0.9rem; margin: 0; flex-shrink: 0;">--</p>
                                         </div>
                                         <div style="display: flex; flex-direction: column; justify-content: flex-start; margin-top: auto;">
-                                            <p id="metric_open_cases_count" style="margin: 10px 0; color: #111827; font-size: 2.25rem; line-height: 1; font-weight: 800; text-align: left;">0</p>
+                                            <!-- ✅ FIXED: Swapped hardcoded text for the animated skeleton pulse loader -->
+                                            <p id="metric_open_cases_count" style="margin: 10px 0; color: #111827; font-size: 2.25rem; line-height: 1; font-weight: 800; text-align: left;">
+                                                <span class="loading-pulse" style="display: inline-block; margin: 0; width: 80px; height: 32px; background-color: rgba(148, 163, 184, 0.25);"></span>
+                                            </p>
                                             <div style="position: relative; background-color: #E5E7EB; width: 100%; height: 0.4rem; border-radius: 0.25rem; overflow: hidden;">
-                                                <div id="bar_open_cases" style="background-color: #f59e0b; width: 100%; position: absolute; top: 0; left: 0; height: 100%; border-radius: 0.25rem;"></div>
+                                                <div id="bar_open_cases" style="background-color: #f59e0b; width: 0%; position: absolute; top: 0; left: 0; height: 100%; border-radius: 0.25rem;"></div>
                                             </div>
                                         </div>
                                     </div>
-
+                                
                                 </div>
 
                                 <div class="card" style="padding: 0; overflow: hidden; border: 1px solid #e2e8f0; width: 100%; max-width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.01); margin-bottom: 30px;">
@@ -6697,17 +6713,26 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                 <div id="userStatsTiles" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 10px;">
                     <div class="stat-tile tile-total" onclick="filterUserManagementByTile('')" style="cursor: pointer; transition: all 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(15,23,42,0.06)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
                         <div class="stat-tile-label">Total Employees</div>
-                        <div id="summary_total_users" class="stat-tile-number">0</div>
+                        <!-- ✅ FIXED: Replaced default static integer string with an explicit loading indicator -->
+                        <div id="summary_total_users" class="stat-tile-number">
+                            <span class="loading-pulse" style="display: inline-block; margin: 0 auto; width: 65px; height: 32px; background-color: rgba(148, 163, 184, 0.25); border-radius: 6px;"></span>
+                        </div>
                     </div>
                     
                     <div class="stat-tile tile-active" onclick="filterUserManagementByTile('active')" style="cursor: pointer; transition: all 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16,185,129,0.06)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
                         <div class="stat-tile-label">Active</div>
-                        <div id="summary_active_users" class="stat-tile-number">0</div>
+                        <!-- ✅ FIXED: Replaced default static integer string with an explicit loading indicator -->
+                        <div id="summary_active_users" class="stat-tile-number">
+                            <span class="loading-pulse" style="display: inline-block; margin: 0 auto; width: 65px; height: 32px; background-color: rgba(148, 163, 184, 0.25); border-radius: 6px;"></span>
+                        </div>
                     </div>
                     
                     <div class="stat-tile tile-inactive" onclick="filterUserManagementByTile('inactive')" style="cursor: pointer; transition: all 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(239,68,68,0.06)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
                         <div class="stat-tile-label">Inactive</div>
-                        <div id="summary_inactive_users" class="stat-tile-number">0</div>
+                        <!-- ✅ FIXED: Replaced default static integer string with an explicit loading indicator -->
+                        <div id="summary_inactive_users" class="stat-tile-number">
+                            <span class="loading-pulse" style="display: inline-block; margin: 0 auto; width: 65px; height: 32px; background-color: rgba(148, 163, 184, 0.25); border-radius: 6px;"></span>
+                        </div>
                     </div>
                 </div>
         
@@ -6786,7 +6811,7 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                             <i class="fas fa-sync-alt"></i> Refresh
                         </button>
                     </div>
-                </div> 
+                </div>
         
                 <div class="table-container" style="
                       position: relative;
@@ -7195,269 +7220,284 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
         <!-- ==========================================
              COMPANY CALENDAR - id="hr_holidays"
             ========================================== -->
-        <div id="hr_holidays" class="section">
-            <div class="card" style="
-                    padding: 0;
-                    overflow: hidden;
-                    border-radius: 16px;
-                    border: 1px solid #e2e8f0;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                  ">
-                <div style="
-                      padding: 25px 30px;
-                      border-bottom: 1px solid #e2e8f0;
-                      display: flex;
-                      justify-content: space-between;
-                      align-items: center;
-                      background: #ffffff;
-                    ">
-                    <div>
-                        <h2 style="
-                          margin: 0;
-                          font-size: 1.4rem;
-                          color: #1e293b;
-                          display: flex;
-                          align-items: center;
-                          gap: 10px;
-                        ">
-                            <i class="fas fa-calendar-alt" style="color: #f59e0b"></i>
-                            Company Calendar
-                        </h2>
-                        <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.9rem">
-                            Manage public holidays and non-working days.
-                        </p>
-                    </div>
+            <div id="hr_holidays" class="section">
+                <div class="card" style="
+                        padding: 0;
+                        overflow: hidden;
+                        border-radius: 12px;
+                        border: 1px solid #e2e8f0;
+                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                      ">
                     <div style="
-                        background: #fffbeb;
-                        color: #b45309;
-                        padding: 6px 15px;
-                        border-radius: 20px;
-                        font-weight: 800;
-                        font-size: 0.9rem;
-                        border: 1px solid #fcd34d;
-                      ">
-                        <span class="current-year-display">2026</span>
-                    </div>
-                </div>
-
-                <div style="
-                      background: #f8fafc;
-                      padding: 20px 30px;
-                      border-bottom: 1px solid #e2e8f0;
-                    ">
-                    <label style="
-                        font-size: 0.7rem;
-                        font-weight: 800;
-                        color: #475569;
-                        text-transform: uppercase;
-                        margin-bottom: 8px;
-                        display: block;
-                      ">
-                        <i class="fas fa-plus-circle"></i> Add New Event
-                    </label>
-
-                    <form onsubmit="addCompanyHoliday(event); return false;" style="
-                        display: flex;
-                        gap: 15px;
-                        align-items: flex-end;
-                        flex-wrap: wrap;
-                      ">
-                        <div style="flex: 1; min-width: 140px">
-                            <label style="
-                            font-size: 0.7rem;
-                            font-weight: 700;
-                            color: #64748b;
-                            display: block;
-                            margin-bottom: 4px;
-                          ">START DATE</label>
-                            <input type="date" id="new_holiday_date" required style="
-                            width: 100%;
-                            height: 42px;
-                            padding: 8px 12px;
-                            border: 1px solid #cbd5e1;
-                            border-radius: 6px;
-                            font-size: 0.9rem;
-                            box-sizing: border-box;
-                            background: white;
-                          " />
-                        </div>
-
-                        <div style="flex: 1; min-width: 140px">
-                            <label style="
-                            font-size: 0.7rem;
-                            font-weight: 700;
-                            color: #64748b;
-                            display: block;
-                            margin-bottom: 4px;
-                          ">END DATE (OPTIONAL)</label>
-                            <input type="date" id="new_holiday_end_date" style="
-                            width: 100%;
-                            height: 42px;
-                            padding: 8px 12px;
-                            border: 1px solid #cbd5e1;
-                            border-radius: 6px;
-                            font-size: 0.9rem;
-                            box-sizing: border-box;
-                            background: white;
-                          " />
-                        </div>
-
-                        <div style="flex: 2; min-width: 220px">
-                            <label style="
-                            font-size: 0.7rem;
-                            font-weight: 700;
-                            color: #64748b;
-                            display: block;
-                            margin-bottom: 4px;
-                          ">HOLIDAY NAME</label>
-                            <input type="text" id="new_holiday_name" placeholder="e.g. National Day" required style="
-                            width: 100%;
-                            height: 42px;
-                            padding: 8px 12px;
-                            border: 1px solid #cbd5e1;
-                            border-radius: 6px;
-                            font-size: 0.9rem;
-                            box-sizing: border-box;
-                          " />
-                        </div>
-
-                        <div style="flex: 1; min-width: 140px">
-                            <label style="
-                            font-size: 0.7rem;
-                            font-weight: 700;
-                            color: #64748b;
-                            display: block;
-                            margin-bottom: 4px;
-                          ">STATES</label>
-                            <input type="text" id="new_holiday_states" placeholder="e.g. All States" style="
-                            width: 100%;
-                            height: 42px;
-                            padding: 8px 12px;
-                            border: 1px solid #cbd5e1;
-                            border-radius: 6px;
-                            font-size: 0.9rem;
-                            box-sizing: border-box;
-                          " />
-                        </div>
-
-                        <button type="submit" class="btn" onclick="addCompanyHoliday(event)" style="
-                          height: 42px;
-                          background: #0f172a;
-                          color: white;
-                          padding: 0 25px;
-                          border-radius: 6px;
-                          font-weight: 600;
-                          border: none;
-                          cursor: pointer;
+                          padding: 15px 20px;
+                          border-bottom: 1px solid #e2e8f0;
                           display: flex;
+                          justify-content: space-between;
                           align-items: center;
-                          gap: 8px;
+                          background: #ffffff;
                         ">
-                            <i class="fas fa-save"></i> Save
+                        <div>
+                            <h2 style="
+                              margin: 0;
+                              font-size: 1.15rem;
+                              color: #1e293b;
+                              display: flex;
+                              align-items: center;
+                              gap: 8px;
+                              border: none;
+                              padding-bottom: 0;
+                            ">
+                                <i class="fas fa-calendar-alt" style="color: #f59e0b"></i>
+                                Company Calendar
+                            </h2>
+                            <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.75rem; font-weight: 500;">
+                                Manage public holidays and non-working days.
+                            </p>
+                        </div>
+                        <div style="
+                            background: #fffbeb;
+                            color: #b45309;
+                            padding: 4px 12px;
+                            border-radius: 6px;
+                            font-weight: 800;
+                            font-size: 0.8rem;
+                            border: 1px solid #fcd34d;
+                          ">
+                            <span class="current-year-display"></span>
+                        </div>
+                    </div>
+    
+                    <div style="
+                          background: #f8fafc;
+                          padding: 12px 20px;
+                          border-bottom: 1px solid #e2e8f0;
+                        ">
+                        <label style="
+                            font-size: 0.65rem;
+                            font-weight: 800;
+                            color: #475569;
+                            text-transform: uppercase;
+                            margin-bottom: 6px;
+                            display: block;
+                            letter-spacing: 0.3px;
+                          ">
+                            <i class="fas fa-plus-circle"></i> Add New Event
+                        </label>
+    
+                        <form onsubmit="addCompanyHoliday(event); return false;" style="
+                            display: flex;
+                            gap: 10px;
+                            align-items: flex-end;
+                            flex-wrap: wrap;
+                          ">
+                            <div style="flex: 1; min-width: 120px">
+                                <label style="
+                                font-size: 0.65rem;
+                                font-weight: 800;
+                                color: #64748b;
+                                display: block;
+                                margin-bottom: 4px;
+                              ">START DATE</label>
+                                <input type="date" id="new_holiday_date" required style="
+                                width: 100%;
+                                height: 32px !important;
+                                padding: 0 8px !important;
+                                border: 1px solid #cbd5e1;
+                                border-radius: 6px;
+                                font-size: 0.82rem;
+                                box-sizing: border-box;
+                                background: white;
+                              " />
+                            </div>
+    
+                            <div style="flex: 1; min-width: 120px">
+                                <label style="
+                                font-size: 0.65rem;
+                                font-weight: 800;
+                                color: #64748b;
+                                display: block;
+                                margin-bottom: 4px;
+                              ">END DATE (OPTIONAL)</label>
+                                <input type="date" id="new_holiday_end_date" style="
+                                width: 100%;
+                                height: 32px !important;
+                                padding: 0 8px !important;
+                                border: 1px solid #cbd5e1;
+                                border-radius: 6px;
+                                font-size: 0.82rem;
+                                box-sizing: border-box;
+                                background: white;
+                              " />
+                            </div>
+    
+                            <div style="flex: 2; min-width: 180px">
+                                <label style="
+                                font-size: 0.65rem;
+                                font-weight: 800;
+                                color: #64748b;
+                                display: block;
+                                margin-bottom: 4px;
+                              ">HOLIDAY NAME</label>
+                                <input type="text" id="new_holiday_name" placeholder="e.g. National Day" required style="
+                                width: 100%;
+                                height: 32px !important;
+                                padding: 0 8px !important;
+                                border: 1px solid #cbd5e1;
+                                border-radius: 6px;
+                                font-size: 0.82rem;
+                                box-sizing: border-box;
+                              " />
+                            </div>
+    
+                            <div style="flex: 1; min-width: 130px">
+                                <label style="
+                                font-size: 0.65rem;
+                                font-weight: 800;
+                                color: #64748b;
+                                display: block;
+                                margin-bottom: 4px;
+                              ">STATES</label>
+                                <input type="text" id="new_holiday_states" placeholder="e.g. All States" style="
+                                width: 100%;
+                                height: 32px !important;
+                                padding: 0 8px !important;
+                                border: 1px solid #cbd5e1;
+                                border-radius: 6px;
+                                font-size: 0.82rem;
+                                box-sizing: border-box;
+                              " />
+                            </div>
+    
+                            <button type="submit" class="btn" onclick="addCompanyHoliday(event)" style="
+                              height: 32px;
+                              background: #0f172a;
+                              color: white;
+                              padding: 0 16px;
+                              border-radius: 6px;
+                              font-weight: 700;
+                              font-size: 0.8rem;
+                              border: none;
+                              cursor: pointer;
+                              display: inline-flex;
+                              align-items: center;
+                              gap: 6px;
+                            ">
+                                <i class="fas fa-save"></i> Save Event
+                            </button>
+                        </form>
+                    </div>
+    
+                    <div class="table-container" style="max-height: calc(100vh - 360px); overflow-y: auto; background: white; margin-top: 0;">
+                        <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 0; border: none; border-radius: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="
+                                  position: sticky;
+                                  top: 0;
+                                  background: #f8fafc;
+                                  z-index: 10;
+                                  padding: 8px 14px !important;
+                                  text-align: left;
+                                  color: #475569;
+                                  font-size: 0.7rem;
+                                  text-transform: uppercase;
+                                  font-weight: 800;
+                                  letter-spacing: 0.5px;
+                                  border-bottom: 1px solid #e2e8f0;
+                                  width: 25%;
+                                  box-shadow: inset 0 -1px 0 #e2e8f0;
+                                ">
+                                        Date
+                                    </th>
+                                    <th style="
+                                  position: sticky;
+                                  top: 0;
+                                  background: #f8fafc;
+                                  z-index: 10;
+                                  padding: 8px 14px !important;
+                                  text-align: left;
+                                  color: #475569;
+                                  font-size: 0.7rem;
+                                  text-transform: uppercase;
+                                  font-weight: 800;
+                                  letter-spacing: 0.5px;
+                                  border-bottom: 1px solid #e2e8f0;
+                                  width: 45%;
+                                  box-shadow: inset 0 -1px 0 #e2e8f0;
+                                ">
+                                        Holiday Name
+                                    </th>
+                                    <th style="
+                                  position: sticky;
+                                  top: 0;
+                                  background: #f8fafc;
+                                  z-index: 10;
+                                  padding: 8px 14px !important;
+                                  text-align: center;
+                                  color: #475569;
+                                  font-size: 0.7rem;
+                                  text-transform: uppercase;
+                                  font-weight: 800;
+                                  letter-spacing: 0.5px;
+                                  border-bottom: 1px solid #e2e8f0;
+                                  width: 15%;
+                                  box-shadow: inset 0 -1px 0 #e2e8f0;
+                                ">
+                                        Status
+                                    </th>
+                                    <th style="
+                                  position: sticky;
+                                  top: 0;
+                                  background: #f8fafc;
+                                  z-index: 10;
+                                  padding: 8px 14px !important;
+                                  text-align: center;
+                                  color: #475569;
+                                  font-size: 0.7rem;
+                                  text-transform: uppercase;
+                                  font-weight: 800;
+                                  letter-spacing: 0.5px;
+                                  border-bottom: 1px solid #e2e8f0;
+                                  width: 15%;
+                                  box-shadow: inset 0 -1px 0 #e2e8f0;
+                                ">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminHolidayTableBody"></tbody>
+                        </table>
+                    </div>
+    
+                    <div id="holidayPaginationControls" style="display: none; justify-content: space-between; align-items: center; padding: 10px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; user-select: none;">
+                        <button id="holidayPrevPageBtn" class="btn-secondary" style="padding: 4px 12px; height: 28px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-chevron-left" style="font-size: 0.6rem;"></i> Prev
                         </button>
-                    </form>
-                </div>
-
-                <div class="table-container" style="max-height: 500px; overflow-y: auto; background: white">
-                    <table style="width: 100%; border-collapse: separate; border-spacing: 0">
-                        <thead>
-                            <tr>
-                                <th style="
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 10;
-                              padding: 15px 30px;
-                              text-align: left;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              font-weight: 700;
-                              border-bottom: 2px solid #e2e8f0;
-                              width: 25%;
-                            ">
-                                    Date
-                                </th>
-                                <th style="
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 10;
-                              padding: 15px;
-                              text-align: left;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              font-weight: 700;
-                              border-bottom: 2px solid #e2e8f0;
-                              width: 45%;
-                            ">
-                                    Holiday Name
-                                </th>
-                                <th style="
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 10;
-                              padding: 15px;
-                              text-align: center;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              font-weight: 700;
-                              border-bottom: 2px solid #e2e8f0;
-                              width: 15%;
-                            ">
-                                    Status
-                                </th>
-                                <th style="
-                              position: sticky;
-                              top: 0;
-                              background: #f8fafc;
-                              z-index: 10;
-                              padding: 15px;
-                              text-align: center;
-                              color: #64748b;
-                              font-size: 0.75rem;
-                              text-transform: uppercase;
-                              font-weight: 700;
-                              border-bottom: 2px solid #e2e8f0;
-                              width: 15%;
-                            ">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminHolidayTableBody"></tbody>
-                    </table>
-                </div>
-                <!-- Footer to be use as a reference -->
-                <div style="
-                padding: 15px
-                  30px;
-                background: #f8fafc;
-                border-top: 1px
-                  solid
-                  #f1f5f9;
-                color: #94a3b8;
-                font-size: 0.75rem;
-                font-style: italic;
-              ">
-                    <i class="fas fa-info-circle"></i>
-                    Note:
-                    These
-                    dates
-                    are
-                    automatically
-                    excluded
-                    from
-                    leave
-                    duration
-                    calculations.
+                        
+                        <div style="text-align: center; line-height: 1.2;">
+                            <div id="holidayPageInfo" style="font-weight: 800; color: #0f172a; font-size: 0.8rem;">Page 1 of 1</div>
+                            <div style="font-size: 0.68rem; color: #64748b; font-weight: 500; margin-top: 1px;">
+                                Total Records: <span id="holidayTotalRecordsSpan" style="font-weight: 700; color: #2563eb;">0</span>
+                            </div>
+                        </div>
+    
+                        <button id="holidayNextPageBtn" class="btn-secondary" style="padding: 4px 12px; height: 28px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;">
+                            Next <i class="fas fa-chevron-right" style="font-size: 0.6rem;"></i>
+                        </button>
+                    </div>
+    
+                    <div style="
+                          padding: 10px 20px;
+                          background: #f8fafc;
+                          border-top: 1px solid #e2e8f0;
+                          color: #94a3b8;
+                          font-size: 0.72rem;
+                          font-style: italic;
+                        ">
+                        <i class="fas fa-info-circle"></i> Note: These dates are automatically excluded from leave duration calculations.
+                    </div>
                 </div>
             </div>
-        </div>
-
         <!-- ==========================================
              SYSTEM ANALYTICS AND PLANNING - id="hr_reporting"
             ========================================== -->
@@ -15934,83 +15974,168 @@ async function loadApproverList() {
       }
 
 
+
+      
+
 // 🌐 Global Cache for Bulletproof Data Passing
 window.companyHolidaysCache = [];
 
-// 1. Fetch and Display Holidays for Admin
+// ============================================================================
+// 🗓️ SYSTEM CALENDAR EXTENSION STACK (PAGINATED & HIGH DENSITY)
+// ============================================================================
+let holidayCurrentPage = 1;
+const holidayPageSize = 20;
+
+/**
+ * 🛰️ NETWORK TRACK: Syncs complete public holiday dataset records to high-speed cache
+ */
 async function loadAdminHolidays() {
   const tbody = document.getElementById("adminHolidayTableBody");
+  const controls = document.getElementById("holidayPaginationControls");
   if (!tbody) return;
 
-  // Visual Loading State
-  tbody.innerHTML = "<tr><td colspan='4' class='text-center' style='padding: 40px; color: #94a3b8;'><i class='fas fa-circle-notch fa-spin'></i> Syncing calendar...</td></tr>";
+  // Visual Loading State (Slim, padding-optimized design variant alignment)
+  tbody.innerHTML = "<tr><td colspan='4' class='text-center' style='padding: 20px; color: #94a3b8;'><i class='fas fa-circle-notch fa-spin'></i> Syncing calendar...</td></tr>";
+  if (controls) controls.style.display = "none";
 
   try {
     const res = await fetchWithAuth(`${API_URL}/leaves/public-holidays`);
     if (!res || !res.ok) return;
 
     let holidays = await res.json();
-    window.companyHolidaysCache = holidays; // 🚀 Save to global cache
+    window.companyHolidaysCache = holidays; // 🚀 Save to global cache safely
     tbody.innerHTML = "";
 
     // Sort by Date (Ascending)
     holidays.sort((a, b) => new Date(a.holiday_date) - new Date(b.holiday_date));
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (holidays.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='4' class='text-center' style='padding: 40px; color: #94a3b8;'>No holidays found. Add one above!</td></tr>";
-      return;
-    }
-
-    // Render Rows
-    holidays.forEach((h) => {
-      // 🚀 Timezone-safe date parsing
-      const [y, m, d] = h.holiday_date.split("-");
-      const hDate = new Date(y, m - 1, d);
-
-      const isPast = hDate < today;
-      const statusBadge = isPast
-        ? `<span style="background: #f1f5f9; color: #64748b; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; border: 1px solid #e2e8f0;">COMPLETED</span>`
-        : `<span style="background: #ecfccb; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; border: 1px solid #d9f99d;">UPCOMING</span>`;
-
-      const dateStr = hDate.toLocaleDateString("en-GB", {
-        weekday: "short", day: "2-digit", month: "short", year: "numeric",
-      });
-
-      // 🚀 THE FIX: Safely extract the states value from the database, fallback to "All States" if empty/null
-      const displayStates = (h.states && h.states.trim() !== "") ? h.states : "All States";
-
-      // 🚀 THE FIX: Inject displayStates into the HTML string
-      tbody.innerHTML += `
-        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-            <td style="padding: 15px 30px;">
-                <div style="font-weight: 600; color: #334155; font-family: monospace; font-size: 0.95rem;">${dateStr}</div>
-            </td>
-            <td style="padding: 15px;">
-                <div style="font-weight: 700; color: #1e293b;">${h.name}</div>
-                <div style="font-size: 0.7rem; color: #64748b;">${displayStates}</div>
-            </td>
-            <td style="padding: 15px; text-align: center;">
-                ${statusBadge}
-            </td>
-            <td style="padding: 15px; text-align: center;">
-                <div style="display: flex; gap: 8px; justify-content: center;">
-                    <button class="icon-btn" onclick="openEditHolidayModal(${h.id})" title="Edit" style="color: #3b82f6; border-color: #dbeafe; background: #eff6ff;">
-                       <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="icon-btn" onclick="deleteHoliday(${h.id})" title="Delete" style="color: #ef4444; border-color: #fee2e2; background: #fef2f2;">
-                       <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>`;
+    // 📅 DYNAMIC YEAR SYNC: Automatically evaluates system clock instead of hardcoding text strings
+    const currentYear = new Date().getFullYear();
+    document.querySelectorAll(".current-year-display").forEach(el => {
+        el.innerText = currentYear;
     });
+
+    // Hand over execution parameters to page-aware row builder layout engine
+    renderAdminHolidaysTable();
+
   } catch (e) {
+    // Preserved your exact original log and error feedback layout parameters intact
     console.error("Holiday Load Error:", e);
     tbody.innerHTML = "<tr><td colspan='4' class='text-center' style='color:red; padding: 20px;'>Failed to load schedule.</td></tr>";
   }
+}
+
+/**
+ * 🎨 RENDER ENGINE: Slices data cache frame array to max 20 entries and repaints cells cleanly
+ */
+function renderAdminHolidaysTable() {
+  const tbody = document.getElementById("adminHolidayTableBody");
+  const controls = document.getElementById("holidayPaginationControls");
+  if (!tbody) return;
+
+  const holidays = window.companyHolidaysCache || [];
+  const totalRecords = holidays.length;
+  const totalPages = Math.ceil(totalRecords / holidayPageSize) || 1;
+
+  // Safety fallback correction boundaries reset
+  if (holidayCurrentPage > totalPages) holidayCurrentPage = 1;
+
+  // Core array slice computation tracking matrices
+  const startIndex = (holidayCurrentPage - 1) * holidayPageSize;
+  const paginatedSlice = holidays.slice(startIndex, startIndex + holidayPageSize);
+
+  tbody.innerHTML = "";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (paginatedSlice.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='4' class='text-center' style='padding: 20px; color: #94a3b8;'>No holidays found. Add one above!</td></tr>";
+    if (controls) controls.style.display = "none";
+    return;
+  }
+
+  // Process paginated slice records loop into the slim rows layout
+  paginatedSlice.forEach((h) => {
+    // 🚀 Timezone-safe date parsing (Preserved exactly from your original implementation)
+    const [y, m, d] = h.holiday_date.split("-");
+    const hDate = new Date(y, m - 1, d);
+
+    const isPast = hDate < today;
+    const statusBadge = isPast
+      ? `<span style="background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; border: 1px solid #e2e8f0;">COMPLETED</span>`
+      : `<span style="background: #ecfccb; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; border: 1px solid #d9f99d;">UPCOMING</span>`;
+
+    const dateStr = hDate.toLocaleDateString("en-GB", {
+      weekday: "short", day: "2-digit", month: "short", year: "numeric",
+    });
+
+    // 🚀 Fallback Handler logic extraction (Preserved exactly from your original implementation)
+    const displayStates = (h.states && h.states.trim() !== "") ? h.states : "All States";
+
+    // Inject refined ultra-slim table data matrix rows 
+    tbody.innerHTML += `
+      <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+          <td style="padding: 8px 14px !important; vertical-align: middle;">
+              <div style="font-weight: 600; color: #334155; font-family: monospace; font-size: 0.85rem;">${dateStr}</div>
+          </td>
+          <td style="padding: 8px 14px !important; vertical-align: middle;">
+              <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem;">${h.name}</div>
+              <div style="font-size: 0.68rem; color: #64748b; margin-top: 1px;">${displayStates}</div>
+          </td>
+          <td style="padding: 8px 14px !important; text-align: center; vertical-align: middle;">
+              ${statusBadge}
+          </td>
+          <td style="padding: 8px 14px !important; text-align: center; vertical-align: middle;">
+              <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                  <button type="button" class="icon-btn" onclick="openEditHolidayModal(${h.id})" title="Edit" style="color: #3b82f6; border-color: #dbeafe; background: #eff6ff; padding: 0 6px !important; height: 24px !important; cursor: pointer;">
+                     <i class="fas fa-edit" style="font-size: 0.75rem;"></i>
+                  </button>
+                  <button type="button" class="icon-btn" onclick="deleteHoliday(${h.id})" title="Delete" style="color: #ef4444; border-color: #fee2e2; background: #fef2f2; padding: 0 6px !important; height: 24px !important; cursor: pointer;">
+                     <i class="fas fa-trash-alt" style="font-size: 0.75rem;"></i>
+                  </button>
+              </div>
+          </td>
+      </tr>`;
+  });
+
+  // Synchronize state metrics onto lower navigation control bars deck elements
+  if (controls) {
+    controls.style.display = "flex";
+    
+    const prevBtn = document.getElementById("holidayPrevPageBtn");
+    const nextBtn = document.getElementById("holidayNextPageBtn");
+    const pageInfo = document.getElementById("holidayPageInfo");
+    const totalSpan = document.getElementById("holidayTotalRecordsSpan");
+
+    if (prevBtn) {
+        prevBtn.disabled = (holidayCurrentPage === 1);
+        prevBtn.onclick = () => changeHolidayPage(-1);
+    }
+    if (nextBtn) {
+        nextBtn.disabled = (holidayCurrentPage >= totalPages);
+        nextBtn.onclick = () => changeHolidayPage(1);
+    }
+    if (pageInfo) pageInfo.innerText = `Page ${holidayCurrentPage} of ${totalPages}`;
+    if (totalSpan) totalSpan.innerText = totalRecords;
+  }
+}
+
+/**
+ * 🧭 NAVIGATION DRIVER: Smooth index shifting engine
+ */
+function changeHolidayPage(direction) {
+  const holidays = window.companyHolidaysCache || [];
+  const totalPages = Math.ceil(holidays.length / holidayPageSize) || 1;
+  const targetPage = holidayCurrentPage + direction;
+
+  if (targetPage < 1 || targetPage > totalPages) return;
+
+  holidayCurrentPage = targetPage;
+  renderAdminHolidaysTable();
+
+  // Reset top container coordinates automatically upon tab slide change triggers
+  const tableContainer = document.querySelector('#hr_holidays .table-container');
+  if (tableContainer) tableContainer.scrollTop = 0;
 }
 
 // 🚀 THE FIX: Breakout Method & Global Cache + States Enhancement
@@ -16063,7 +16188,7 @@ function deleteHoliday(id) {
   });
 }
 
-// 🚀 THE FIX: Upgraded Execution with Loading Spinners
+// 🚀 THE FIX: Upgraded Execution with Loading Spinners & Pagination-Aware
 async function executeDeleteHoliday(id) {
   try {
     Swal.fire({ title: 'Deleting...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
@@ -16075,20 +16200,19 @@ async function executeDeleteHoliday(id) {
     if (res.ok) {
       Swal.fire("Deleted!", "Holiday removed successfully.", "success");
       
-      await loadAdminHolidays();
-      if (typeof loadPublicHolidays === "function") {
-        await loadPublicHolidays();
-      }
+      // 🔄 ✅ CONTEXT PERSISTENCE: Refreshes datasets asynchronously while retaining holidayCurrentPage
+      if (typeof loadAdminHolidays === "function") await loadAdminHolidays();
+      if (typeof loadPublicHolidays === "function") await loadPublicHolidays();
     } else {
       const err = await res.json();
       Swal.fire("Error", err.detail || "Failed to delete holiday.", "error");
     }
   } catch (e) {
+    // Preserved your exact debugging log signature safely
     console.error("Holiday Delete Error:", e);
     Swal.fire("Network Error", "Check server connection.", "error");
   }
 }
-
 
 
 
@@ -16271,7 +16395,7 @@ async function executeDeleteHoliday(id) {
       }
 
 
-// 2. Add New Holiday (Upgraded to SweetAlert)
+// 2. Add New Holiday (Upgraded to SweetAlert & Pagination-Aware)
 async function addCompanyHoliday(event) {
     // 1. 🛡️ Official browser refresh block
     if (event) {
@@ -16382,10 +16506,12 @@ async function addCompanyHoliday(event) {
       // 🚀 FIX #4: Clear the states field
       if (statesEl) statesEl.value = ""; 
 
-      // 6. Refresh the table and stay on the section
+      // 6. ✅ REGISTRATION SYNC: Reset back to page 1 to bring the fresh entry into view instantly
+      holidayCurrentPage = 1;
       await loadAdminHolidays();
       showSection("hr_holidays");
     } catch (e) {
+      // Preserved your exact original log stream tracing configurations
       console.error("System Error:", e);
       Swal.fire("System Error", "Could not reach the server.", "error");
     }
@@ -16959,15 +17085,16 @@ async function submitHolidayEdit() {
 
             closeEditHolidayModal();
             
-            // 🔄 Refresh both the Admin list and the Employee timeline
-            if (typeof loadAdminHolidays === "function") loadAdminHolidays();
-            if (typeof loadPublicHolidays === "function") loadPublicHolidays();
+            // 🔄 ✅ CONTEXT PERSISTENCE: Refreshes datasets asynchronously while retaining holidayCurrentPage
+            if (typeof loadAdminHolidays === "function") await loadAdminHolidays();
+            if (typeof loadPublicHolidays === "function") await loadPublicHolidays();
             
         } else {
             const err = await res.json();
             Swal.fire("Update Failed", err.detail || "Server error", "error");
         }
     } catch (e) {
+        // Preserved your exact debugging log signature safely
         console.error("Holiday Edit Error:", e);
         Swal.fire("Network Error", "Could not connect to server.", "error");
     }
