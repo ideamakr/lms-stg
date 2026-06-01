@@ -1161,18 +1161,6 @@ div.swal2-container {
     background: #94a3b8;
 }
 
-.loading-pulse {
-  display: inline-block;
-  /* 🚀 Width 60px makes it look like '14.5' instead of a square */
-  width: 60px; 
-  height: 28px; 
-  /* Using a slightly brighter white for better visibility on colored cards */
-  background-color: rgba(255, 255, 255, 0.4); 
-  border-radius: 4px;
-  animation: pulse-animation 1.5s infinite ease-in-out;
-  vertical-align: middle;
-}
-
 /* =========================================
    🚀 LOADING ANIMATIONS & INPUT FIXES
    ========================================= */
@@ -1193,21 +1181,26 @@ div.swal2-container {
   to { transform: rotate(360deg); }
 }
 
-/* 2. Skeleton Pulse (Used in Dashboard Cards) */
-/* This ensures a consistent rectangular bar shape */
+/* 2. Skeleton Pulse (Universal Cross-Theme Engine) */
 .loading-pulse {
-  display: block; 
-  width: 80px !important;    
-  height: 40px !important;   
-  background-color: rgba(255, 255, 255, 0.4); 
-  border-radius: 6px; 
+  display: inline-block !important; 
+  width: 70px !important;           
+  height: 34px !important;          
+  background-color: rgba(148, 163, 184, 0.25) !important; /* 🚀 THE FIX: Premium translucent slate grey */
+  border-radius: 6px;
   animation: pulse-animation 1.5s infinite ease-in-out;
-  margin: 5px 0;  
+  margin: 0 !important;
+  vertical-align: middle;
+}
+
+/* 🌓 Dark Mode Contrast Protection */
+html.dark .loading-pulse {
+  background-color: rgba(148, 163, 184, 0.15) !important; /* Softer opacity for deep dark backgrounds */
 }
 
 @keyframes pulse-animation {
   0% { opacity: 0.3; transform: scale(0.98); }
-  50% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1); }
   100% { opacity: 0.3; transform: scale(0.98); }
 }
 
@@ -14719,7 +14712,8 @@ let attachmentHtml = "";
                 const policy = await res.json();
                 if (policy.l2_approval_enabled && l2Container) {
                     l2Container.style.display = "block";
-                    await populateL2ManagerDropdown();
+                    // 🚀 FIX #2: Pass the applicant's name so we get THEIR HOD
+                    await populateL2ManagerDropdown(employeeName);
                 }
             }
         } catch (e) { console.error("L2 Policy Check Error:", e); }
@@ -14872,58 +14866,61 @@ function resetManagerLeaveFilters() {
 }
 
  /**
-       * 🚀 UPDATED HELPER FUNCTION
-       * Fills the L2 Dropdown with active senior managers
-       */
-       async function populateL2ManagerDropdown() {
-        const select = document.getElementById("l2_manager_select");
-        if (!select) return;
+ * 🚀 BULLETPROOF L2 DROPDOWN (Step 1 Fix)
+ * Strictly locks the dropdown to the applicant's assigned HOD array.
+ */
+async function populateL2ManagerDropdown(applicantName) {
+    const select = document.getElementById("l2_manager_select");
+    if (!select) return;
 
-        select.innerHTML =
-          '<option value="" disabled selected>-- Choose Level 2 Approver --</option>';
+    select.innerHTML = '<option value="" disabled selected>-- Choose Level 2 Approver --</option>';
 
-        try {
-          const res = await fetchWithAuth(`${API_URL}/users/all`);
-          if (!res || !res.ok) throw new Error("Could not fetch managers");
+    try {
+        // 1. Locate the applicant's profile to extract THEIR specific HODs
+        let applicantObj = (window.allUsersList || []).find(u => u.full_name === applicantName);
 
-          const responseData = await res.json();
-          const users = responseData.users || [];
-
-          // 🚀 THE UPDATED FILTER LOGIC
-          const eligibleManagers = users.filter((u) => {
-            // 🛡️ RULE: Status Sentry (Must be active)
-            const isActive = u.is_active !== false;
-
-            // RULE: Must be marked as Senior Manager
-            const isSenior = u.is_senior_manager === true;
-
-            // ⛔ RULE: Must NOT be HR Admin (Blocks Natasha)
-            const isNotAdmin = u.role !== "hr_admin";
-
-            // RULE: Must not be the person currently logged in (Sarah can't pick Sarah)
-            const isNotSelf = u.username !== currentUser;
-
-            return isActive && isSenior && isNotAdmin && isNotSelf;
-          });
-
-          if (eligibleManagers.length === 0) {
-            select.innerHTML =
-              '<option value="" disabled>No active L2 Managers found</option>';
-            return;
-          }
-
-          // 3. Populate
-          eligibleManagers.forEach((mgr) => {
-            // Optional: If you want to show a visual hint that they are away, 
-            // you can check currentAwayToday here, but the Sentry usually just hides inactive people.
-            select.innerHTML += `<option value="${mgr.full_name}">${mgr.full_name}</option>`;
-          });
-        } catch (e) {
-          console.error("L2 Dropdown error:", e);
-          select.innerHTML = '<option value="">Error loading managers</option>';
+        // Fallback: Fetch from DB if they aren't in the local memory cache
+        if (!applicantObj) {
+            const res = await fetchWithAuth(`${API_URL}/users/all?search=${encodeURIComponent(applicantName)}`);
+            if (res && res.ok) {
+                const data = await res.json();
+                applicantObj = (data.users || []).find(u => u.full_name === applicantName);
+            }
         }
-      }
 
+        // 2. Guard: Check if they even have an HOD assigned
+        if (!applicantObj || !applicantObj.hod_name || applicantObj.hod_name.length === 0) {
+            select.innerHTML = '<option value="" disabled>No HOD assigned (Contact HR)</option>';
+            return;
+        }
+
+        // 3. Extract the array cleanly (handles both string and array database returns)
+        let assignedHODs = Array.isArray(applicantObj.hod_name) ? applicantObj.hod_name : [applicantObj.hod_name];
+        
+        // Strip out any blank strings or placeholder dashes
+        assignedHODs = assignedHODs.filter(h => h && h.trim() !== "" && h !== "—");
+
+        if (assignedHODs.length === 0) {
+            select.innerHTML = '<option value="" disabled>No HOD assigned (Contact HR)</option>';
+            return;
+        }
+
+        // 4. Populate ONLY with their specific HODs
+        assignedHODs.forEach(hod => {
+            select.innerHTML += `<option value="${hod}">${hod}</option>`;
+        });
+
+        // 🚀 UX FIX: Auto-select if there is only 1 HOD to save the manager a click!
+        if (assignedHODs.length === 1) {
+            select.value = assignedHODs[0];
+            select.style.borderColor = "#e2e8f0"; // Clears any red validation borders
+        }
+
+    } catch (e) {
+        console.error("L2 Dropdown error:", e);
+        select.innerHTML = '<option value="">Error loading HOD</option>';
+    }
+}
       // 2. CLOSE MODAL
       function closeReviewModal() {
         document.getElementById("reviewModal").style.display = "none";
@@ -14937,14 +14934,24 @@ function resetManagerLeaveFilters() {
        * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
        * This function is called by the modal buttons in processApproval()
        */
-       async function submitDecision(leaveId, status) {
+/**
+ * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
+ * This function is called by the modal buttons in processApproval()
+ */
+ async function submitDecision(leaveId, status) {
     const remarks = document.getElementById("mgr_review_remarks").value;
     const l2Container = document.getElementById("l2SelectorContainer");
     
     // 🛡️ Safe Access
     const l2Select = document.getElementById("l2_manager_select");
-    const l2Name = l2Select ? l2Select.value : "";
+    let l2Name = l2Select ? l2Select.value : ""; // 🚀 Changed to 'let' so we can safely mutate it
     const approverName = localStorage.getItem("currentUser");
+
+    // 🚀 THE FAILSAFE: If L2 is OFF (Container Hidden), wipe the L2 name 
+    // so it doesn't accidentally trigger a multi-level approval backend route!
+    if (l2Container && l2Container.style.display === "none") {
+        l2Name = "";
+    }
 
     // 1. Validation: L2 Selection Check
     if (status === "Approved" && l2Container && l2Container.style.display !== "none" && !l2Name) {
@@ -23665,6 +23672,12 @@ function sortManagerOTQueue(key) {
         l2Select.style.borderColor = "#e2e8f0";
     }
 
+    // --- 3. FETCH DETAILS & IDENTITY FIRST (Crucial for Step 2) ---
+    const otRecord = (window.currentManagerOTRequests || []).find(r => r.id === otId);
+    const employeeName = otRecord ? otRecord.employee_name : "Staff Member";
+    let reasonText = otRecord ? (otRecord.reason || "No description provided.") : "N/A";
+    reasonText = reasonText.split("| Manager Note:")[0].trim(); 
+
     // --- 2. Smart L2 Logic ---
     const isSenior = localStorage.getItem("is_senior_manager") === "true";
     const isFirstStage = currentStatus === "Pending"; 
@@ -23679,17 +23692,12 @@ function sortManagerOTQueue(key) {
                     l2Container.style.background = "#f8fafc"; 
                     l2Container.style.padding = "15px";
                     l2Container.style.marginTop = "20px";
-                    await populateL2ManagerDropdown();
+                    // 🚀 FIX #3: Pass the applicant's name so we get THEIR HOD
+                    await populateL2ManagerDropdown(employeeName);
                 }
             }
         } catch (e) { console.error("L2 Policy check failed:", e); }
     }
-
-    // --- 3. FETCH DETAILS & IDENTITY ---
-    const otRecord = (window.currentManagerOTRequests || []).find(r => r.id === otId);
-    const employeeName = otRecord ? otRecord.employee_name : "Staff Member";
-    let reasonText = otRecord ? (otRecord.reason || "No description provided.") : "N/A";
-    reasonText = reasonText.split("| Manager Note:")[0].trim(); 
 
     let attachmentHtml = "";
     if (otRecord && otRecord.attachment_path) {
@@ -23704,8 +23712,8 @@ function sortManagerOTQueue(key) {
             </div>`;
     }
 
-// --- 4. 🚀 THE REVAMPED HISTORY TIMELINE ---
-let timelineHtml = "";
+    // --- 4. 🚀 THE REVAMPED HISTORY TIMELINE ---
+    let timelineHtml = "";
     if (otRecord && otRecord.status_history) {
         const historySteps = otRecord.status_history.split(" > ");
         timelineHtml = `<div style="margin-top: 25px; border-top: 2px solid #f1f5f9; padding-top: 15px;"><label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Decision History Log</label><div style="position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 8px; margin-top:15px;">`;
@@ -23776,8 +23784,8 @@ let timelineHtml = "";
         timelineHtml += `</div></div>`;
     }
 
-// --- 5. RENDER SUMMARY ---
-const rawStatus = currentStatus || "Pending";
+    // --- 5. RENDER SUMMARY ---
+    const rawStatus = currentStatus || "Pending";
     let displayStatus = (rawStatus === "Pending L2 Approval") ? "Final Approval" : rawStatus;
     let statusBadgeColor = (rawStatus === "Pending L2 Approval") ? "#8b5cf6" : (rawStatus === "Approved" ? "#10b981" : (rawStatus === "Rejected" ? "#ef4444" : "#f59e0b"));
 
@@ -23839,7 +23847,7 @@ const rawStatus = currentStatus || "Pending";
             if (l2Container && l2Container.style.display !== "none" && !l2Select.value) {
                 l2Select.style.borderColor = "#dc2626"; return;
             }
-            executeOTFinalDecision(otId, "Approved");
+            executeOTFinalDecision(otId, "Approved", employeeName);
         };
         rejectBtn.onclick = () => closeReviewModal();
     } else {
@@ -23847,7 +23855,7 @@ const rawStatus = currentStatus || "Pending";
         rejectBtn.innerHTML = (currentStatus === "Pending Cancel") ? '<i class="fas fa-times-circle"></i> Deny Request' : '<i class="fas fa-times"></i> Reject';
         approveBtn.style.background = "white"; approveBtn.style.color = "#64748b";
         approveBtn.innerHTML = 'Go Back';
-        rejectBtn.onclick = () => executeOTFinalDecision(otId, "Rejected");
+        rejectBtn.onclick = () => executeOTFinalDecision(otId, "Rejected", employeeName);
         approveBtn.onclick = () => closeReviewModal(); 
     }
     modal.style.display = "flex";
@@ -26220,10 +26228,6 @@ async function resumeDraft() {
 
 
 /**
- * 👥 MANAGER & HOD LOADER (Multi-Select Edition)
- * Fetches the directory and populates the multi-select boxes for Phase 2.
- */
- /**
  * 👥 MANAGER & HOD LOADER (Checkbox Edition)
  * Fetches the directory and populates the scrollable checkbox boxes.
  */
@@ -26248,11 +26252,14 @@ async function resumeDraft() {
         const responseData = await res.json();
         const users = responseData.users || [];
 
-        // 3. Filter for eligible approvers (Managers, HR, or Seniors)
+        // 3. Filter for eligible approvers (Managers or Seniors ONLY)
         const eligible = users.filter(u => {
             const isActive = u.is_active !== false; 
             const roles = (u.roles_list || []).map(r => r.toLowerCase());
-            const hasPower = roles.includes("manager") || roles.includes("hr_admin") || u.is_senior_manager === true;
+            
+            // 🛑 THE FIX: Removed "hr_admin" so pure HR staff don't accidentally become Line Managers!
+            const hasPower = roles.includes("manager") || u.is_senior_manager === true;
+            
             return isActive && hasPower;
         });
 
