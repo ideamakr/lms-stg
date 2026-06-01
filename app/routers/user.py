@@ -54,6 +54,8 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
 @router.get("/all")
 def get_all_users(
     search: str = "", 
@@ -81,6 +83,27 @@ def get_all_users(
     offset = (page - 1) * page_size
     users = query.offset(offset).limit(page_size).all()
     
+    # ==============================================================
+    # 🚀 ANTI N+1 BOTTLENECK FIX: BULK LEAVE LOOKUP
+    # ==============================================================
+    # Extract all user full names from this current batch
+    user_full_names = [u.full_name for u in users if u.full_name]
+    
+    leave_dict = {}
+    if user_full_names:
+        # Ask the database ONCE for all active leaves matching these users
+        active_leaves = db.query(models.Leave).filter(
+            models.Leave.employee_name.in_(user_full_names),
+            models.Leave.status == 'Approved',
+            models.Leave.start_date <= today,
+            models.Leave.end_date >= today
+        ).all()
+        
+        # Build a lightning-fast memory dictionary: {"Sarah Connor": "2026-05-10"}
+        for leave in active_leaves:
+            leave_dict[leave.employee_name] = str(leave.end_date)
+    # ==============================================================
+
     result = []
     
     # Safely map every user to a dictionary
@@ -93,17 +116,9 @@ def get_all_users(
         if u.role and u.role not in roles_list:
             roles_list.append(u.role)
 
-        # 🚀 PHASE 3: NEW STATUS LOGIC
-        # Check if this specific user has an 'Approved' leave overlapping today
-        current_leave = db.query(models.Leave).filter(
-            models.Leave.employee_name == u.full_name,
-            models.Leave.status == 'Approved',
-            models.Leave.start_date <= today,
-            models.Leave.end_date >= today
-        ).first()
-        
-        # Format the date for the frontend (e.g., "2026-05-10") or return None
-        leave_end_str = str(current_leave.end_date) if current_leave else None
+        # 🚀 PHASE 3: NEW STATUS LOGIC (Optimized)
+        # Instantly check the dictionary instead of pausing to query the database
+        leave_end_str = leave_dict.get(u.full_name)
             
         result.append({
             "id": u.id,

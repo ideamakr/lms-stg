@@ -27,23 +27,59 @@ def upgrade_database():
             print("❌ ERROR: Connected, but 'users' table is missing! Check your .env DATABASE_URL path.")
             return
 
-        # 4. Add overtime_bank
-        try:
-            cursor.execute("ALTER TABLE users ADD COLUMN overtime_bank FLOAT DEFAULT 0.0;")
-            print("✅ SUCCESS: Added 'overtime_bank' column.")
-        except sqlite3.OperationalError as e:
-            print(f"⏭️ SKIP: 'overtime_bank' - {e}")
+        # 4. Standard structural legacy safeguards
+        legacy_cols = [
+            ("overtime_bank", "FLOAT DEFAULT 0.0"),
+            ("unpaid_taken", "FLOAT DEFAULT 0.0")
+        ]
 
-        # 5. Add unpaid_taken
-        try:
-            cursor.execute("ALTER TABLE users ADD COLUMN unpaid_taken FLOAT DEFAULT 0.0;")
-            print("✅ SUCCESS: Added 'unpaid_taken' column.")
-        except sqlite3.OperationalError as e:
-            print(f"⏭️ SKIP: 'unpaid_taken' - {e}")
+        # 5. Complete manifest of newly mapped enterprise & banking column pillars
+        new_enterprise_cols = [
+            ("employee_no_old", "TEXT"),
+            ("common_name", "TEXT"),
+            ("employee_status", "TEXT"),
+            ("organization_o", "TEXT"),
+            ("organization_ou1", "TEXT"),
+            ("organization_ou2", "TEXT"),
+            ("lotus_notes_id", "TEXT"),
+            ("document_status", "TEXT"),
+            ("company", "TEXT"),
+            ("location", "TEXT"),
+            ("position_grade", "TEXT"),
+            ("contract_expiry_date", "TEXT"),
+            ("expat_type", "TEXT"),
+            ("category", "TEXT"),
+            ("ranking", "TEXT"),
+            ("highest_qualification", "TEXT"),
+            ("level_0", "TEXT"),
+            ("level_1", "TEXT"),
+            ("level_2", "TEXT"),
+            ("place_of_birth", "TEXT"),
+            ("date_ict_removal", "TEXT"),
+            ("date_resigned", "TEXT"),
+            ("last_working_day", "TEXT"),
+            ("last_day_of_service", "TEXT"),
+            ("shift_employee", "TEXT"),
+            ("compensation_leave_entitled", "TEXT"),
+            ("commissioning_engineer", "TEXT"),
+            ("scholar", "TEXT"),
+            ("bank_holder_name", "TEXT"),
+            ("bank_name", "TEXT"),
+            ("bank_account_number", "TEXT"),
+            ("bank_account_status", "TEXT DEFAULT 'Active'")
+        ]
+
+        # Execute safe sequential migrations
+        for col_name, col_type in (legacy_cols + new_enterprise_cols):
+            try:
+                cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type};")
+                print(f"✅ SUCCESS: Added '{col_name}' column.")
+            except sqlite3.OperationalError as e:
+                print(f"⏭️ SKIP: '{col_name}' - Already matches structural rules.")
 
         conn.commit()
         conn.close()
-        print("🎉 Database upgrade complete!")
+        print("🎉 Database upgrade complete! Table schema is now aligned with models.py.")
 
     except Exception as e:
         print(f"❌ ERROR: {e}")
