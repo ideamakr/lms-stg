@@ -4852,9 +4852,13 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                                                             </div>
                                 
                                                             <div class="saas-form-group" style="margin: 0;">
-                                                                <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Select Approver</label>
+                                                                <!-- ✅ ADDED: Flex alignment with an elegant, spinning FontAwesome notch indicator -->
+                                                                <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                                                                    Select Approver 
+                                                                    <i class="fas fa-circle-notch fa-spin approver-spinner" style="color: #2563eb; font-size: 0.65rem;"></i>
+                                                                </label>
                                                                 <select id="dash_approver" class="saas-form-control" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
-                                                                    <option value="" disabled selected hidden>⏳ Synchronizing approvers...</option>
+                                                                    <option value="" disabled selected hidden>Loading managers...</option>
                                                                 </select>
                                                                 <div id="dash_approver_alert" style="display: none; margin-top: 10px;"></div>
                                                             </div>
@@ -4931,9 +4935,13 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                                                         </div>
                                                         
                                                         <div class="saas-form-group" style="margin: 0;">
-                                                            <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Approver</label>
+                                                            <!-- ✅ ADDED: Matching flex alignment and spinning loader flag -->
+                                                            <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                                                                Select Approver
+                                                                <i class="fas fa-circle-notch fa-spin approver-spinner" style="color: #2563eb; font-size: 0.65rem;"></i>
+                                                            </label>
                                                             <select id="dash_approver_ot" class="saas-form-control" required style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
-                                                                <option value="" disabled selected hidden>⏳ Synchronizing approvers...</option>
+                                                                <option value="" disabled selected hidden>Loading managers...</option>
                                                             </select>
                                                             <div id="dash_approver_ot_alert" style="display: none; margin-top: 6px;"></div>
                                                         </div>
@@ -15726,7 +15734,7 @@ async function loadApproverList() {
         selects.forEach((sel) => {
             if (sel.value && sel.value !== "") return;
 
-            // ✅ FIXED: Wipes out the initial "⏳ Synchronizing approvers..." placeholder
+            // ✅ FIXED: Wipes out the loading placeholder and establishes standard selection layout
             sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
             
             if (assignedManagers.length === 0) {
@@ -15762,6 +15770,9 @@ async function loadApproverList() {
                 }, 300); // 300ms ensures the UI has finished painting
             }
         });
+
+        // ✅ PROGRESSIVE LOADING RESOLVED: Instantly hide out all visual spinner components
+        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
         return; 
     }
 
@@ -15775,6 +15786,8 @@ async function loadApproverList() {
                     sel.innerHTML = '<option value="" disabled selected hidden>❌ Failed to load managers</option>';
                 }
             });
+            // Clear out spinners on failure too so they don't spin forever
+            document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
             return;
         }
 
@@ -15787,7 +15800,7 @@ async function loadApproverList() {
         selects.forEach((sel) => {
             if (sel.value && sel.value !== "") return;
 
-            // ✅ FIXED: Wipes out the initial "⏳ Synchronizing approvers..." placeholder
+            // ✅ FIXED: Wipes out the loading placeholder and establishes standard selection layout
             sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
             
             if (assignedManagers.length === 0) {
@@ -15814,6 +15827,10 @@ async function loadApproverList() {
                 }, 300);
             }
         });
+
+        // ✅ NETWORK API STREAM RESOLVED: Hide all visual spinner components cleanly
+        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
+
     } catch (e) {
         console.error("Smart Approver Load Error:", e);
         // Safety: Prevent permanent loading loop state if user is completely offline
@@ -15822,6 +15839,8 @@ async function loadApproverList() {
                 sel.innerHTML = '<option value="" disabled selected hidden>❌ Network error. Re-try...</option>';
             }
         });
+        // Clear spinners on error state too
+        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
     }
 }
 
