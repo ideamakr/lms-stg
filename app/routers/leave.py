@@ -134,14 +134,18 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     cf_banked = float(balance_entry.carry_forward_total or 0.0)
     today = datetime.now().date()
     
-    # 🚀 The Fix: Read from the main 'carry_forward' settings JSON
-    settings = db.query(models.SystemSetting).filter(models.SystemSetting.key == "carry_forward").first()
+    # 🚀 THE FIX: Target the exact row key from the database
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
     
     expiry_date = None
-    if settings and settings.value.get("expiry_date"):
+    if setting and setting.value:
         try:
-            # Use the date from your Admin Settings toggle
-            expiry_date = date.fromisoformat(settings.value["expiry_date"])
+            date_str = str(setting.value).strip()
+            if "/" in date_str:
+                from datetime import datetime
+                expiry_date = datetime.strptime(date_str, "%d/%m/%Y").date()
+            else:
+                expiry_date = date.fromisoformat(date_str)
         except:
             expiry_date = date(year, 3, 23) # Fallback
     else:
@@ -151,9 +155,18 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     if today > expiry_date:
         cf_banked = spent_cf
 
+# --- FETCH MAX DAYS FOR UI ---
+    max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
+    cf_max_days = float(max_setting.value) if max_setting and max_setting.value else 0.0
+
     # 5. FINAL CALCULATION
     annual_remaining = base_entitlement - spent_annual
     cf_remaining = cf_banked - spent_cf
+
+    # 🚀 Format variations for absolute JavaScript binding safety
+    expiry_iso = expiry_date.strftime("%Y-%m-%d") if expiry_date else None
+    expiry_slash = expiry_date.strftime("%d/%m/%Y") if expiry_date else None
+    expiry_human = expiry_date.strftime("%d %b %Y") if expiry_date else None
 
     return {
         "employee_name": employee_name,
@@ -163,7 +176,12 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         "carry_forward_total": max(0, cf_remaining), 
         "remaining": annual_remaining,                
         "taken": approved_taken_total,
-        "pending_total": pending_total
+        "pending_total": pending_total,
+        "expiry_date": expiry_iso,          # 🚀 Powers Application Center Form
+        "cf_expiry_date": expiry_iso,       # 🚀 Standard fallback
+        "cf_expiry_label": expiry_slash,    # 🚀 Matches HTML element ID directly
+        "expiry_human": expiry_human,       # 🚀 Human readable option (e.g., 30 Jun 2026)
+        "cf_max_days": cf_max_days 
     }
 
 @router.get("/balance")
@@ -1044,6 +1062,7 @@ def get_team_entitlements(
     x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
     current_year = datetime.now().year
+    today = datetime.now().date() # 🚀 ADDED: Capture today's date for expiry check
     
     # 1. Standardize Inputs
     role_clean = user_role.lower().strip()
@@ -1067,6 +1086,26 @@ def get_team_entitlements(
     allowed_roles = ["hr_admin", "manager", "payroll", "payroll_approver"]
     if role_clean not in allowed_roles:
         return []
+
+    # 🚀 THE FIX: Target the exact row key 'cf_expiry_date'
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
+    expiry_date = None
+    if setting and setting.value:
+        try:
+            date_str = str(setting.value).strip()
+            if "/" in date_str:
+                from datetime import datetime
+                expiry_date = datetime.strptime(date_str, "%d/%m/%Y").date()
+            else:
+                expiry_date = date.fromisoformat(date_str)
+        except:
+            expiry_date = date(current_year, 3, 23)
+    else:
+        expiry_date = date(current_year, 3, 23)
+
+    # 🚀 FETCH MAX DAYS TARGET FOR PAYLOAD PIPELINE
+    max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
+    cf_max_days = float(max_setting.value) if max_setting and max_setting.value else 0.0
 
     # ============================================================
     # 📊 SECTION 4: SMART ROUTING QUERY (LM vs HOD vs HR) (FIXED)
@@ -1136,7 +1175,7 @@ def get_team_entitlements(
             u_bals = bal_map.get(emp_name, [])
             u_leaves = leave_map.get(emp_name, [])
 
-            # 🛠️ INTERNAL BUCKET CALCULATOR
+ # 🛠️ INTERNAL BUCKET CALCULATOR
             def get_bucket(l_type):
                 b = next((x for x in u_bals if str(getattr(x.leave_type, 'value', x.leave_type)) == l_type), None)
                 ent = float(b.entitlement or 0.0) if b else defaults.get(l_type, 0.0)
@@ -1165,6 +1204,11 @@ def get_team_entitlements(
                                 spent_annual += days
                         else:
                             spent_annual += days
+                
+                # 🚀 ADDED: ENFORCE THE EXPIRY DEADLINE
+                # If the deadline has passed, unspent CF days are forfeited from the display
+                if l_type == "Annual Leave" and today > expiry_date:
+                    cf_banked = spent_cf
                             
                 return {
                     "ent": ent, 
@@ -1175,13 +1219,18 @@ def get_team_entitlements(
             ann = get_bucket("Annual Leave")
             med = get_bucket("Medical Leave")
             
-            # 🚀 ADD THESE TWO LINES HERE:
+            # 🚀 PRESERVED: Emergency & Compassionate additions
             emg = get_bucket("Emergency Leave")
             com = get_bucket("Compassionate Leave")
             
             unpaid_taken = sum(float(l.days_taken or 0.0) for l in u_leaves 
                                if str(getattr(l.leave_type, 'value', l.leave_type)) == "Unpaid Leave" 
                                and str(getattr(l.status, 'value', l.status)) == "Approved")
+
+            # 🚀 Format variations for absolute JavaScript binding safety inside Step 2
+            expiry_iso = expiry_date.strftime("%Y-%m-%d") if expiry_date else None
+            expiry_slash = expiry_date.strftime("%d/%m/%Y") if expiry_date else None
+            expiry_human = expiry_date.strftime("%d %b %Y") if expiry_date else None
 
             results.append({
                 "name": emp_name,
@@ -1192,14 +1241,19 @@ def get_team_entitlements(
                 "medical_remaining": med["rem"],
                 "medical_entitlement": med["ent"],
                 
-                # 🚀 ADD THESE FOUR FIELDS TO THE DICTIONARY:
+                # 🚀 PRESERVED: Emergency & Compassionate dictionary fields
                 "emergency_remaining": emg["rem"],
                 "emergency_entitlement": emg["ent"],
                 "compassionate_remaining": com["rem"],
                 "compassionate_entitlement": com["ent"],
                 
                 "unpaid_taken": unpaid_taken,
-                "carry_forward_total": ann["cf_rem"],
+                "carry_forward_total": ann["cf_rem"], 
+                "cf_expiry_date": expiry_iso,       # 🚀 Synced to standard ISO
+                "expiry_date": expiry_iso,          # 🚀 Secondary fallback
+                "cf_expiry_label": expiry_slash,    # 🚀 Direct HTML mapping match (DD/MM/YYYY)
+                "expiry_human": expiry_human,       # 🚀 Human-readable layout match
+                "cf_max_days": cf_max_days, 
                 "overtime_bank": float(getattr(u, 'overtime_bank', 0) or 0)
             })
             
@@ -1660,18 +1714,25 @@ def merge_cf_bulk(payload: dict = Body(...), db: Session = Depends(get_db)):
             
     db.commit()
     return {"message": f"Successfully merged {merged_count} requests to next year's balance."}
+
+
 # 🧹 V1.5.0: The Carry-Forward "Grim Reaper" with Audit Trail
 def check_and_wipe_expired_cf(db: Session):
     today = date.today()
     
-    # 1. Fetch the Expiry Date from your Settings table
-    settings = db.query(models.SystemSetting).filter(models.SystemSetting.key == "carry_forward").first()
+    # 🚀 THE FIX: Target the exact row key
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
     
-    if not settings or not settings.value.get("expiry_date"):
+    if not setting or not setting.value:
         return
 
     try:
-        expiry_date = date.fromisoformat(settings.value["expiry_date"])
+        date_str = str(setting.value).strip()
+        if "/" in date_str:
+            from datetime import datetime
+            expiry_date = datetime.strptime(date_str, "%d/%m/%Y").date()
+        else:
+            expiry_date = date.fromisoformat(date_str)
     except:
         return 
 

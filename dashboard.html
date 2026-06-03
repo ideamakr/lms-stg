@@ -4128,7 +4128,7 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                                     </div>
                                 </div>
                             
-                                <div id="wrapper_cf" class="card" style="display: none;">
+                                <div id="wrapper_cf" class="card" style="display: none; border-left: none !important;">
                                     <div class="title" style="justify-content: space-between;">
                                         <div style="display: flex; align-items: center;">
                                             <span style="background-color: #0ea5e9;"><i class="fas fa-clock-rotate-left"></i></span>
@@ -4137,10 +4137,12 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                                     </div>
                                     <div class="data">
                                         <p id="card_cf">0.0</p>
-                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #6b7280; font-weight: 600; margin-top: 10px;">
+                                        
+                                        <div style="display: flex; justify-content: flex-start; align-items: center; gap: 6px; font-size: 0.75rem; color: #6b7280; font-weight: 600; margin-top: 15px;">
                                             <span>Expires:</span>
-                                            <span id="cf_expiry_label" style="color: #0ea5e9;">--</span>
+                                            <span id="cf_expiry_label" style="color: #ef4444 !important; background: transparent !important; border: none !important; padding: 0 !important; margin-top: 0px !important; font-size: 0.75rem !important; font-weight: 700 !important;">--</span>
                                         </div>
+                                        
                                     </div>
                                 </div>
                             
@@ -10971,6 +10973,29 @@ async function prefetchBalances(signal) {
                 let deadline = (dbDateStr !== "N/A") ? new Date(dbDateStr) : new Date(today.getFullYear(), 2, 23);
                 const diffDays = Math.round((deadline - today) / (1000 * 60 * 60 * 24));
                 const isExpired = diffDays < 0;
+
+                // 🚀 THE FIX: Locate the label element and bind the backend date to it
+                const expiryLabel = document.getElementById("cf_expiry_label");
+                if (expiryLabel) {
+                    // Pull our custom human-readable date format directly from the active loop payload
+                    const targetDate = data.expiry_human || data.cf_expiry_date || dbDateStr;
+                    
+                    if (targetDate && targetDate !== "N/A") {
+                        // If it's an ISO string (YYYY-MM-DD), make it look nice. Otherwise, print it directly.
+                        if (targetDate.includes("-")) {
+                            const d = new Date(targetDate);
+                            expiryLabel.innerText = d.toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric"
+                            });
+                        } else {
+                            expiryLabel.innerText = targetDate;
+                        }
+                    } else {
+                        expiryLabel.innerText = "—";
+                    }
+                }
 
                 ["wrapper_cf", "wrapper_cf_apply"].forEach(id => {
                     const el = document.getElementById(id);
