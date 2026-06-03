@@ -1082,7 +1082,7 @@ def get_team_entitlements(
         if requester.role in ["hr_admin", "superuser"] or "hr_admin" in user_roles_list:
             role_clean = "hr_admin"
 
-    # 3. RBAC Check
+# 3. RBAC Check
     allowed_roles = ["hr_admin", "manager", "payroll", "payroll_approver"]
     if role_clean not in allowed_roles:
         return []
@@ -1094,7 +1094,7 @@ def get_team_entitlements(
         try:
             date_str = str(setting.value).strip()
             if "/" in date_str:
-                from datetime import datetime
+                # 🖥️ CLEANED: Removed the inline import line that was crashing the function scope
                 expiry_date = datetime.strptime(date_str, "%d/%m/%Y").date()
             else:
                 expiry_date = date.fromisoformat(date_str)
