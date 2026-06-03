@@ -25335,14 +25335,8 @@ function openFullActivityLog() {
 }
 
 /**
- * 🚀 POPUP: Shows the list of people away today in a clean Modal
- */
- /**
  * 🚀 POPUP: Shows the list of people away today in an Expanded Modal
- */
-/**
- * 🚀 POPUP: Shows the list of people away today in an Expanded Modal
- * Optimized for long names and perfect vertical alignment.
+ * Optimized for long names, profile pictures, and perfect vertical alignment.
  */
  function showWhosAwayModal() {
     const awayList = window.currentAwayToday || [];
@@ -25350,7 +25344,16 @@ function openFullActivityLog() {
     let listHtml = awayList.length > 0 
         ? awayList.map(p => {
             const initials = p.employee_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-            const photoUrl = getFullPath(p.profile_pic_url);
+            
+            // 🛡️ ACCENT LOOKUP GATE: Cross-references the active calendar registry name with the general directory cache
+            let rawPic = p.profile_pic_url;
+            if (!rawPic || rawPic === "null" || rawPic === "NULL" || rawPic === "") {
+                const userMatch = (window.allUsersList || []).find(u => 
+                    (u.full_name || "").trim().toLowerCase() === (p.employee_name || "").trim().toLowerCase()
+                );
+                if (userMatch) rawPic = userMatch.profile_pic_url || userMatch.avatar_url;
+            }
+            const photoUrl = getFullPath(rawPic);
             
             const avatarHtml = photoUrl 
                 ? `<img src="${photoUrl}" 
@@ -25383,15 +25386,16 @@ function openFullActivityLog() {
         : '<div style="padding: 40px; text-align: center; color: #64748b; font-weight: 600;">Everyone is in today! ☀️</div>';
 
     Swal.fire({
-        title: '<span style="font-size: 1.2rem; font-weight: 800; color: #1e293b;">Who\'s Away Today</span>',
+        // 🚀 RESOLVED CONTRAST EXCEPTION: Locked to pure white using !important to bypass dark text inherited rule chains
+        title: '<span style="font-size: 1.2rem; font-weight: 800; color: #ffffff !important; text-transform: uppercase; letter-spacing: 0.05em;">Who\'s Away Today</span>',
         html: `<div style="max-height: 450px; overflow-y: auto;" class="custom-scrollbar">${listHtml}</div>`,
         showConfirmButton: false,
         showCloseButton: true,
-        width: '550px', // 🚀 WIDTH INCREASED to 550px to prevent name wrapping
+        width: '550px', 
         padding: '1rem',
         customClass: { 
             popup: 'rounded-2xl shadow-2xl',
-            title: 'text-center' // 🚀 Forces Title to dead center
+            title: 'text-center' 
         }
     });
 }
