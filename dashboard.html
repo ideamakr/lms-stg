@@ -942,8 +942,10 @@ div.swal2-container {
     padding: 0 15px !important;
   }
 
-  /* 3. DASHBOARD OBJECT REPAIR (Stacking the columns) */
-  #home > div[style*="display: grid"] {
+ /* ====================================================================
+     🏁 STEP 1: DASHBOARD OBJECT REPAIR & FLAT EDGE ENFORCEMENT
+     ==================================================================== */
+     #home > div[style*="display: grid"] {
     display: flex !important;
     flex-direction: column !important;
     grid-template-columns: 1fr !important;
@@ -959,7 +961,1012 @@ div.swal2-container {
     width: 100% !important;
   }
 
-  /* 🚀 NEW: CALENDAR TIGHTENING (The Pro Tip) */
+  /* 🛠️ THE UNBEATABLE VERTICAL STACK OVERRIDE */
+  /* 🚀 FIXED SPECIFICITY: Prepending 'html body' increases selector weight to smash 
+     the global layout rule at Line 2509, forcing the cards into a perfect vertical line! */
+  html body #manager_action_center > div[style*="display: grid"],
+  html body #manager_action_center > div[style*="display: flex"],
+  html body #manager_action_center > div {
+    display: flex !important;
+    flex-direction: column !important; /* 🔄 Snaps your cards into a perfect vertical layout column */
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    margin-bottom: 20px !important;
+    width: 100% !important;
+  }
+
+  /* Force the individual insight cards to stretch fully across the vertical column layout */
+  html body #manager_action_center div:has(> #home_away_list),
+  html body #manager_action_center div:has(> #tile_leave_inbox),
+  html body #manager_action_center div:has(> #tile_ot_inbox),
+  html body #manager_action_center > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;           /* Unlocks desktop height constraints so content flows naturally */
+    min-height: 280px !important; 
+    padding: 16px !important; 
+    border-radius: 0px !important;     /* 🛡️ Strips rounded corners completely */
+    box-sizing: border-box !important;
+  }
+
+  /* Re-align actions buttons context margins inside stacked view */
+  #manager_action_center button {
+    margin-top: 12px !important;
+    position: relative !important;
+    width: 100% !important;
+  }
+
+
+  /* ====================================================================
+     🚀 RIGHT SIDEBAR (MOBILE DRAWER MODE)
+     ==================================================================== */
+
+  /* 1. Force the toggle button to display on mobile (Overrides Tailwind 'hidden') */
+  #right-sidebar-toggle-btn {
+    display: flex !important;
+  }
+
+  /* 2. Turn the right sidebar into an off-screen fixed drawer */
+  #right-sidebar {
+    position: fixed !important;
+    right: -320px !important;         /* Hides completely off-screen to the right */
+    top: 60px !important;             /* Starts directly under the topbar */
+    width: 300px !important;
+    min-width: 300px !important;
+    height: calc(100vh - 60px) !important;
+    z-index: 99999 !important;        /* Hovers securely above all main content */
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: -10px 0 25px rgba(0,0,0,0.3) !important;
+    border-left: none !important;
+  }
+
+  /* 3. The trigger class JavaScript will use to slide it into view */
+  #right-sidebar.mobile-open-right {
+    right: 0 !important;              
+  }
+
+/* ====================================================================
+     📝 STEP 2: FORM CONTROLS & WIZARD GRID OVERRIDES
+     ==================================================================== */
+  /* 1. COLLAPSE MULTI-COLUMN FORM GRIDS */
+  #registration div[style*="display: grid"],
+  #self_edit_section div[style*="display: grid"],
+  #apply div[style*="display: grid"],
+  .saas-form-grid {
+    grid-template-columns: 1fr !important; 
+    gap: 16px !important;
+  }
+
+  /* 2. 🚀 THE LINK NAVIGATION FIX: ISOLATE LAYER EXTRACTION TO ACTIVE STATE ONLY */
+  /* Appending .active guarantees that this fixed viewport block completely unmounts 
+     when you switch tabs, freeing up your screen links to work perfectly again! */
+  html body #apply.saas-canvas.active {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    
+    position: fixed !important;           /* Extracts container from standard layout flow */
+    top: 60px !important;                 /* Align right below the 60px topbar line */
+    left: 0 !important;
+    width: 100vw !important;              /* Full phone width */
+    height: calc(100vh - 60px) !important; /* Constrain container to viewport limits */
+    z-index: 90 !important;               /* Sits safely beneath the main topbar layer */
+    
+    overflow-y: auto !important;          /* Enables native vertical layout scrolling */
+    -webkit-overflow-scrolling: touch !important; /* Premium touch momentum physics for mobile devices */
+    
+    margin: 0 !important;
+    padding: 20px 14px 60px 14px !important; 
+    box-sizing: border-box !important;
+  }
+
+  html body #apply.active .saas-card,
+  html body #apply.active .saas-card-body {
+    max-height: none !important;  
+    height: auto !important;
+    overflow: visible !important; /* Lets form blocks cascade down naturally */
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  html body #apply.active .saas-card-header h2 {
+    font-size: 1.25rem !important; 
+  }
+
+  /* 3. RESPONSIVE TAB BAR ROW WRAPPING */
+  html body #apply.active .saas-tabs-container,
+  html body #apply.active .context-tab-wrapper {
+    display: flex !important;
+    flex-wrap: wrap !important; 
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  html body #apply.active .saas-tab-pill,
+  html body #apply.active .context-tab {
+    flex: 1 1 auto !important; 
+    justify-content: center !important;
+    padding: 8px 14px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* 4. REPAIR REGISTRATION STEPPER LABELS */
+  .stepper-wrapper {
+    max-width: 100% !important;
+    padding: 0 10px !important;
+  }
+
+  .stepper-item { width: 65px !important; }
+  .step-label { font-size: 0.65rem !important; font-weight: 700 !important; }
+  .step-line { margin-bottom: 26px !important; }
+
+  /* 5. DATE & HALF-DAY LAYOUT STRETCH */
+  #form_leave_container div[style*="display: flex; gap: 10px"] {
+    flex-direction: column !important; 
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  #form_leave_container div:has(> #dash_half_day) {
+    width: 100% !important; 
+    justify-content: center !important;
+    height: 44px !important; 
+    border: 1px dashed #cbd5e1 !important;
+    background: #f8fafc !important;
+  }
+
+  /* 6. COMPACT CARDS PADDING SYSTEM */
+  .saas-card-body,
+  .scrollable-step-container,
+  #registration .saas-card-body {
+    padding: 20px 16px !important; 
+  }
+
+  /* 7. CARRY FORWARD WORKFLOW UI TWEAKS */
+  #carry_forward_ui div[style*="display: flex; justify-content: space-between"] {
+    flex-direction: column !important; 
+    align-items: flex-start !important;
+    gap: 4px !important;
+    padding-bottom: 8px !important;
+  }
+
+
+
+/* ====================================================================
+     🏁 STEP 3: EMPLOYEE & MANAGER LEAVE HISTORY TABLES OVERRIDES
+     ==================================================================== */
+
+  /* 1. 🚀 THE STRUCTURAL POSITION EXTRACTION FIX */
+  /* Snaps BOTH history screens directly below your 60px mobile topbar line when active, 
+     neutralizing empty sibling height displacement bugs instantly. */
+     html body #history.active,
+  html body #history.section.active,
+  html body #manager_history.active,
+  html body #manager_history.section.active {
+    display: block !important;
+    position: fixed !important;           /* Extracts from standard layout flow constraints */
+    top: 60px !important;                 /* Aligns flush right below your 60px topbar */
+    left: 0 !important;
+    width: 100vw !important;              /* Claims full horizontal phone width dimensions */
+    height: calc(100vh - 60px) !important; /* Locks maximum viewport canvas space boundaries */
+    z-index: 85 !important;               /* Mounts safely under the sticky navigation menu */
+    overflow-y: auto !important;          /* Enforces smooth native vertical document scrolling */
+    -webkit-overflow-scrolling: touch !important; /* Premium fluid momentum touch control mechanics */
+    margin: 0 !important;
+    padding: 16px 14px 60px 14px !important; /* Added a 60px bottom gutter clearance tracking profile */
+    box-sizing: border-box !important;
+  }
+
+  /* 2. UNLOCK NESTED SCROLL IN THE TABLE CONTAINERS & FORCE HORIZONTAL ACCESS */
+  /* Targets parent wrapper elements explicitly to destroy inline overflow: hidden locks */
+  html body #history div:has(> .table-scroll-container),
+  html body #manager_history div:has(> .table-scroll-container),
+  html body #history .table-scroll-container,
+  html body #manager_history .table-scroll-container,
+  html body .table-scroll-container {
+    max-height: none !important;    /* Destroys the restricted calculation trap */
+    height: auto !important;
+    overflow-x: auto !important;    /* 📱 Forces a native mobile horizontal scrollbar lane */
+    overflow-y: visible !important; /* Prevents ugly double-scrollbar layout glitches */
+    scrollbar-gutter: auto !important;
+    -webkit-overflow-scrolling: touch !important; 
+  }
+
+  /* 3. HARDEN HORIZONTAL SWIPING FOR WIDE DATA ROWS */
+  /* Lets users swipe left-and-right to read table columns without breaking page boundaries */
+  html body #history .table-container,
+  html body #manager_history .table-container,
+  html body .table-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important; 
+    margin-top: 8px !important;
+    border-radius: 0px !important; 
+    box-sizing: border-box !important;
+  }
+
+  /* 🚀 THE CRITICAL PIECE: Breaks the compression trap by letting the grid expand safely */
+  html body #history table,
+  html body #historyTable,
+  html body #manager_history table,
+  html body #managerHistoryTable {
+    border-radius: 0px !important; 
+    width: max-content !important; /* Forces the table columns to break past 100% viewport limits */
+    min-width: 760px !important;   /* Provides extra space since Manager view has the "Employee" column */
+  }
+
+  /* 4. COMPACT TYPOGRAPHY BALANCING FOR TABLE DATA LINES */
+  html body #history th, 
+  html body #history td,
+  html body #manager_history th,
+  html body #manager_history td {
+    padding: 10px 12px !important; 
+    font-size: 0.8rem !important;
+    white-space: nowrap !important; /* 🛡️ Stops text strings inside cells from breaking into multi-line rows */
+  }
+
+  /* 5. BALANCE TILES TOP CONTAINER GUTTER CALIBRATION */
+  html body #history .leave-grid,
+  html body #manager_history .leave-grid {
+    padding: 10px 4px 12px 4px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  /* ====================================================================
+     🏁 STEP 4: PENDING APPROVAL QUEUE & PUBLIC HOLIDAYS (#HOLIDAYS)
+     ==================================================================== */
+
+  /* 1. 🚀 THE STRUCTURAL EXTRACTION ENGINE & VOID CRUSHER */
+  /* Snaps the holiday canvas flush beneath your 60px mobile topbar when active */
+  html body #holidays.active,
+  html body #holidays.section.active {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important; /* Pulls active card straight up flush to topbar line */
+    align-items: stretch !important;
+    
+    position: fixed !important;           /* Extracts container from standard layout constraints */
+    top: 60px !important;                 /* Aligns flush right below your 60px topbar */
+    left: 0 !important;
+    width: 100vw !important;              /* Claims full horizontal phone width dimensions */
+    height: calc(100vh - 60px) !important; /* Locks maximum viewport canvas space boundaries */
+    z-index: 80 !important;               /* Sits safely beneath the main sticky topbar */
+    
+    overflow-y: auto !important;          /* Enforces smooth native vertical document scrolling */
+    -webkit-overflow-scrolling: touch !important; /* Premium fluid momentum touch control mechanics */
+    
+    margin: 0 !important;
+    padding: 12px 12px 60px 12px !important; /* Optimized 60px bottom gutter clearance profile */
+    box-sizing: border-box !important;
+  }
+
+  /* 2. CARD HOUSING STRETCH & VERTICAL STREAM RESETS */
+  /* 💡 FIXED: 'display: flex !important' has been completely removed here. This allows 
+     your JavaScript tab toggles to safely hide and show the correct card automatically! */
+  html body #holidays .card,
+  html body #holidays .saas-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 0 !important;               /* Erases top margin white tracking voids */
+    padding: 16px !important;               /* Reclaims side margins for small displays */
+    border-radius: 0px !important;          /* Reinforces your strict straight flat-edge profile */
+    box-sizing: border-box !important;
+  }
+
+  /* 3. UNLOCK HORIZONTAL TOUCH SCROLLING CONTAINER CHANNELS */
+  /* Only arms the scroll bar container lanes when the child table elements are active */
+  html body #holidays .table-container,
+  html body #holidays .table-scroll-container,
+  html body #holidays div[style*="overflow-x"] {
+    overflow-x: auto !important;              /* Activates mobile horizontal layout scrolling */
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important; /* Premium touch momentum gesture mechanics */
+  }
+
+  /* 4. SET BREAK-BOUNDARY WIDTH ON WIDE DATA MATRICES */
+  /* Expands the data grid tables past phone screen boundaries to resolve text overlaps */
+  html body #holidays table,
+  html body #holidaysTable,
+  html body #holidays table.table {
+    width: max-content !important; 
+    min-width: 760px !important; /* Provides columns ample horizontal tracks to settle overlaps */
+    border-collapse: separate !important;
+  }
+
+  /* 5. CELL NO-WRAP SAFEGUARD & TYPOGRAPHY DENSITY */
+  html body #holidays th,
+  html body #holidays td {
+    white-space: nowrap !important; /* Enforces data points and tags to stay on uniform straight rows */
+    padding: 12px 10px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* 6. RESPONSIVE FILTER FIELD FLEXBOX WRAPPING */
+  /* Keeps filter headers organized cleanly side-by-side without clipping view profiles */
+  html body #holidays .filter-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    padding: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  html body #holidays .filter-group {
+    flex: 1 1 140px !important; /* Clean corporate balancing scaling grid items profiles */
+    width: auto !important;
+  }
+
+  
+  /* ====================================================================
+     🏁 STEP 5: MY PROFILE OVERRIDES (SECTION 5A)
+     ==================================================================== */
+
+  /* 1. 🚀 THE STRUCTURAL EXTRACTION ENGINE */
+  /* Bypasses parent wrapper constraints entirely, snapping the profile view
+     straight to the top of the mobile layout viewport when activated. */
+     html body #profile.active,
+  html body #profile.section.active {
+    display: block !important;
+    position: fixed !important;           /* Extracts container from standard layout flow constraints */
+    top: 60px !important;                 /* Aligns flush right below your 60px topbar */
+    left: 0 !important;
+    width: 100vw !important;              /* Claims full horizontal phone width dimensions */
+    height: calc(100vh - 60px) !important; /* Locks maximum viewport canvas space boundaries */
+    z-index: 75 !important;               /* Layers cleanly underneath the sticky navigation topbar */
+    
+    overflow-y: auto !important;          /* Enforces smooth native vertical document scrolling */
+    -webkit-overflow-scrolling: touch !important; /* Premium fluid momentum touch control mechanics */
+    
+    margin: 0 !important;
+    padding: 16px 14px 60px 14px !important; /* Deep 60px bottom gutter clearance tracking profile */
+    box-sizing: border-box !important;
+  }
+
+  /* 2. CARD SURFACES AND BOX REAL ESTATE RESCALE */
+  /* Stretches profile cards out to the edge of the mobile glass while snugging up margins */
+  html body #profile .prof-card,
+  html body #profile .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 20px 16px !important; /* Reclaims side margins for touch scanning fields */
+    border-radius: 0px !important; /* Reinforces your strict straight flat-edge profile standard */
+    margin-bottom: 16px !important;
+  }
+
+  /* ====================================================================
+     🏁 STEP 5B: MY PROFILE HIGH-DENSITY COMPACT ENGINE
+     ==================================================================== */
+
+  /* 1. TIGHTEN PROFILE DATA CELL ROWS */
+  /* Replaces empty whitespace margins with high-contrast split lines to save screen height */
+  html body #profile .prof-card div:has(> .data-label) {
+    margin-bottom: 8px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important; /* Crisp divider accent line */
+  }
+
+  /* Clears lines out of the absolute final profile rows element container block line */
+  html body #profile .prof-card div:has(> .data-label):last-child {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* 2. SCALE TYPOGRAPHY DENSITY TRACKING */
+  html body #profile .data-label {
+    font-size: 0.68rem !important; /* Muted label text scaling tracking profile */
+    margin-bottom: 2px !important; /* Pulls value text up snug right under the label line */
+    text-transform: uppercase !important;
+    letter-spacing: 0.2px !important;
+  }
+
+  html body #profile .data-value {
+    font-size: 0.88rem !important; /* Balanced contrast visibility ink typography */
+    font-weight: 500 !important;
+  }
+
+  /* 3. COMPACT PROFILE CARD SECTION HEADERS */
+  html body #profile .prof-card-header {
+    margin-bottom: 16px !important;
+    padding-bottom: 8px !important;
+  }
+
+  html body #profile .prof-card-title {
+    font-size: 0.95rem !important; /* Snugger header definitions */
+  }
+
+  html body #profile .prof-btn-edit {
+    padding: 4px 10px !important;  /* Compact size adjustments for action button */
+    font-size: 0.72rem !important;
+    height: 28px !important;
+  }
+
+  /* 4. COLLAPSE CARDS INTERNAL MULTI-COLUMN FLOW CONTROLS */
+  /* Forces grid components into high-density single items tracks */
+  html body #profile .prof-card > div[style*="display: grid"],
+  html body #profile .prof-card > div[style*="display: flex"]:not(.prof-card-header) {
+    display: grid !important;
+    grid-template-columns: 1fr !important; 
+    gap: 10px !important; /* Tight internal data clustering */
+  }
+  
+/* ====================================================================
+     🏁 STEP 6: MANAGER QUEUES & APPROVALS - EXACT FIX (LEAVE & OT)
+     ==================================================================== */
+
+  /* 1. MASTER CANVAS VIEWPORT EXTRACTION */
+  html body #manager_requests.active,
+  html body #manager_ot_requests.active {
+    display: block !important;
+    position: fixed !important;
+    top: 60px !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: calc(100vh - 60px) !important;
+    z-index: 80 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin: 0 !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    background: #f1f5f9 !important;
+  }
+
+  /* 2. CARD HOUSING - UNLOCK HORIZONTAL SWIPING */
+  html body #manager_requests .card,
+  html body #manager_ot_requests .card {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 16px !important;             
+    border-radius: 0px !important;
+    margin-bottom: 16px !important;
+    
+    overflow-x: auto !important;          /* 📱 The Magic Scroll Lane */
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* ====================================================================
+     🏁 STEP 6B: WIDE-CANVAS COLUMN EXPANSION
+     ==================================================================== */
+
+  /* 1. FILTER CONTAINER EXPANSION */
+  html body #manager_requests .filter-container,
+  html body #manager_ot_requests .filter-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-end !important;
+    gap: 12px !important;
+    padding: 16px !important;
+    min-width: 1050px !important;         /* Forces width past phone screen */
+    width: max-content !important;
+    box-sizing: border-box !important;
+  }
+
+  html body #manager_requests .filter-container > div,
+  html body #manager_ot_requests .filter-container > div {
+    flex: 1 0 auto !important;
+  }
+
+  /* 2. MASTER DATA TRACK STRETCH */
+  /* Targets the header row using adjacent sibling hook */
+  html body #manager_requests .filter-container + div,
+  html body #manager_ot_requests .filter-container + div {
+    display: flex !important;
+    flex-direction: row !important;
+    min-width: 1050px !important;         /* Forces the 1050px track */
+    width: 1050px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Targets the wrapper container for the dynamic rows */
+  html body #manager_requests .table-scroll-container,
+  html body #manager_ot_requests .table-scroll-container {
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 1050px !important;
+    width: 1050px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 3. DYNAMIC JAVASCRIPT ROW STRETCH */
+  /* Targets every individual record row inside the scroll containers regardless of ID */
+  html body #manager_requests .table-scroll-container > div,
+  html body #manager_ot_requests .table-scroll-container > div {
+    display: flex !important;
+    min-width: 1050px !important;
+    width: 1050px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 4. ALIGN THE PAGINATION FOOTER */
+  html body #manager_requests .pagination-footer,
+  html body #manager_ot_requests .pagination-footer {
+    min-width: 1050px !important;
+    width: 1050px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 5. PREVENT TEXT WRAPPING */
+  /* Stops strings from stacking vertically so your columns don't crush */
+  html body #manager_requests .card span,
+  html body #manager_ot_requests .card span,
+  html body #manager_requests .card div,
+  html body #manager_ot_requests .card div {
+    white-space: nowrap !important;
+  }
+
+
+  /* ====================================================================
+     🏁 STEP 7: LEAVE ENTITLEMENTS SCREEN (#manager_entitlements)
+     ==================================================================== */
+
+  /* 1. 🚀 MASTER CANVAS VIEWPORT EXTRACTION */
+  html body #manager_entitlements.active,
+  html body #manager_entitlements.section.active {
+    display: block !important;
+    position: fixed !important;           /* Extracts panel cleanly from parent layout constraints */
+    top: 60px !important;                 /* Aligns flush right below your 60px header mobile topbar */
+    left: 0 !important;
+    width: 100vw !important;              /* Claims full horizontal phone width dimensions */
+    height: calc(100vh - 60px) !important; /* Constrains container to maximum visible screen limits */
+    z-index: 80 !important;
+    overflow-y: auto !important;          /* Restores fluid vertical document swipe scrolling */
+    -webkit-overflow-scrolling: touch !important; 
+    margin: 0 !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    background: #f1f5f9 !important;
+  }
+
+  /* 2. CARD HOUSING COMPRESSION */
+  html body #manager_entitlements .card {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 16px !important;             
+    border-radius: 0px !important;         /* Enforces flat-edge profile */
+    margin-bottom: 16px !important;
+  }
+
+  /* 3. 📊 STAT TILES - HORIZONTAL SWIPE CONVERSION */
+  /* Changes the 3 summary tiles from a crushed grid into a smooth, swipeable row */
+  html body #manager_entitlements #entitlementStatsTiles {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;          /* Enables horizontal swiping for the tiles */
+    -webkit-overflow-scrolling: touch !important;
+    gap: 12px !important;
+    padding-bottom: 8px !important;       /* Adds breathing room for the invisible scrollbar */
+    margin-bottom: 16px !important;
+  }
+  
+  html body #manager_entitlements .stat-tile {
+    flex: 0 0 160px !important;           /* Locks tile width so text and numbers never crush */
+    margin-bottom: 0 !important;
+  }
+
+  /* 4. 🔍 RESPONSIVE FILTER BAR WRAPPING */
+  html body #manager_entitlements .filter-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;           /* Allows filter inputs to stack cleanly on small screens */
+    gap: 12px !important;
+    padding: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  html body #manager_entitlements .filter-bar > div {
+    flex: 1 1 140px !important;           /* Allows inputs to dynamically fill rows */
+  }
+
+  /* 5. 🔓 TABLE CONTAINER SCROLL UNLOCK */
+  html body #manager_entitlements .table-container {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;          /* Activates horizontal mobile finger swiping lanes */
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-radius: 0px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 6. 🚀 DATA GRID COLUMN DE-COMPRESSION */
+  html body #manager_entitlements table {
+    display: table !important;
+    width: max-content !important;        /* Releases mobile width compression layout clamps */
+    min-width: 800px !important;          /* Forces columns to expand wide enough to read the data pills */
+    border-collapse: separate !important;
+  }
+
+  /* 7. CELL & TEXT LINE NO-WRAP SAFEGUARD */
+  html body #manager_entitlements th,
+  html body #manager_entitlements td {
+    white-space: nowrap !important;       /* Forces names and badges to stay completely linear */
+    padding: 12px 14px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* ====================================================================
+     🏁 STEP 8: CHANGE PASSWORD SCREEN (#password)
+     ==================================================================== */
+
+  /* 1. 🚀 MASTER CANVAS VIEWPORT EXTRACTION */
+  /* Snaps the password screen directly below the topbar and restores native scrolling */
+  html body #password.active,
+  html body #password.section.active {
+    display: block !important;            /* Disables desktop vertical flex-centering rules */
+    position: fixed !important;           /* Extracts panel cleanly from parent layout constraints */
+    top: 60px !important;                 /* Aligns flush right below your 60px header mobile topbar */
+    left: 0 !important;
+    width: 100vw !important;              /* Claims full horizontal phone width dimensions */
+    height: calc(100vh - 60px) !important; /* Constrains container to maximum visible screen limits */
+    z-index: 80 !important;
+    
+    overflow-y: auto !important;          /* Restores fluid vertical document swipe scrolling */
+    -webkit-overflow-scrolling: touch !important; 
+    
+    margin: 0 !important;
+    padding: 24px 16px 80px 16px !important; /* Comfortable padding with deep bottom clearance */
+    box-sizing: border-box !important;
+    background: #f1f5f9 !important;
+  }
+
+  /* 2. OVERRIDE INLINE FLEX WRAPPERS */
+  /* Destroys the inline flexbox wrapper from your HTML to prevent vertical centering anomalies */
+  html body #password > div {
+    display: block !important;
+    padding-top: 0 !important; 
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 3. CARD CENTERING & MOBILE OPTIMIZATION */
+  /* Keeps the card centered, but ensures it doesn't bleed off the edges of a small phone */
+  html body #password .saas-card {
+    display: block !important;
+    width: 100% !important;
+    max-width: 480px !important;          /* Keeps the form at a clean, readable maximum width */
+    margin: 0 auto 30px auto !important;  /* Centers the card horizontally */
+    box-sizing: border-box !important;
+    border-radius: 12px !important;       /* Softer corners for the security modal look */
+  }
+
+  /* 4. TIGHTEN INTERNAL PADDING FOR MOBILE */
+  /* Reclaims screen real estate by compressing the desktop-sized padding */
+  html body #password .saas-card-body {
+    padding: 20px !important;             
+  }
+  
+  html body #password .saas-card > div:first-child {
+    padding: 25px 20px !important;        /* Adjusts the dark gradient header padding */
+  }
+
+ /* ====================================================================
+     🏁 STEP 9: HR ADMIN & SYSTEM COMMAND SCREENS MOBILE EXTRACTION
+     ==================================================================== */
+
+  /* 1. 🚀 MASTER CANVAS VIEWPORT EXTRACTION */
+  html body #hr_users.active, html body #hr_policy.active,
+  html body #hr_holidays.active, html body #hr_reporting.active,
+  html body #hr_audit.active, html body #superuser_command_center.active,
+  html body #it_support_tickets.active, html body #hr_bulk_onboard.active,
+  html body #hr_settings.active {
+    display: block !important;
+    position: fixed !important;
+    top: 60px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    height: auto !important;
+    z-index: 80 !important;
+    
+    overflow-y: auto !important;           /* 📱 Unlocks vertical scrolling */
+    overflow-x: hidden !important;         /* Prevents the whole screen from wobbling */
+    -webkit-overflow-scrolling: touch !important;
+    
+    margin: 0 !important;
+    padding: 12px 12px 80px 12px !important; 
+    box-sizing: border-box !important;
+    background: var(--bg-main, #f1f5f9) !important;
+  }
+
+  /* 2. CARD HOUSING COMPRESSION (NO SCROLL TRAPS HERE) */
+  html body #hr_users .card, html body #hr_policy .card,
+  html body #hr_holidays .card, html body #hr_reporting .card,
+  html body #hr_audit .card, html body #superuser_command_center .card,
+  html body #it_support_tickets .card, html body #hr_bulk_onboard .card,
+  html body #hr_settings .card {
+    display: flex !important;              /* Flex column prevents elements from collapsing */
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 16px !important;
+    border-radius: 0px !important; 
+    margin-bottom: 16px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;          /* 🚀 CRITICAL: Kills the card swipe trap! */
+  }
+
+  /* 3. 📊 STAT TILES - HORIZONTAL SWIPE CONVERSION */
+  html body #hr_users #userStatsTiles,
+  html body #hr_audit div[style*="grid-template-columns: repeat(3, 1fr)"],
+  html body #superuser_command_center #fleet_metrics_container > div[style*="display: grid"],
+  html body #it_support_tickets div[style*="grid-template-columns: repeat(4, 1fr)"] {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;           /* Allows swiping for the stat tiles */
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 12px !important;
+    padding-bottom: 8px !important;
+    width: 100% !important;
+  }
+  
+  html body #hr_users .stat-tile,
+  html body #hr_audit .card,
+  html body #superuser_command_center .saas-card,
+  html body #it_support_tickets .card[style*="border-left"] {
+    flex: 0 0 160px !important;            /* Locks tile widths so they never crush */
+    min-width: 160px !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* 4. 🔓 TABLE CONTAINER SCROLL UNLOCK */
+  html body #hr_users .table-container,
+  html body #hr_holidays .table-container,
+  html body #hr_audit .table-scroll-container,
+  html body #it_support_tickets .table-scroll-container,
+  html body #superuser_command_center .card > div[style*="overflow-x: auto"],
+  html body #hr_bulk_onboard > div:last-child {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;           /* 📱 The Horizontal Swipe Lane for Tables */
+    overflow-y: hidden !important;         
+    -webkit-overflow-scrolling: touch !important;
+    border-radius: 0px !important;
+    box-sizing: border-box !important;
+    max-height: none !important;
+  }
+
+  /* 5. 🚀 DATA GRID COLUMN DE-COMPRESSION */
+  html body #hr_users table, html body #hr_holidays table,
+  html body #hr_audit table, html body #it_support_tickets table,
+  html body #superuser_command_center table, html body #hr_bulk_onboard table {
+    display: table !important;
+    width: 100% !important;                
+    min-width: 850px !important;           /* Forces the scroll track to activate */
+    border-collapse: separate !important;
+  }
+
+  /* 6. ADMIN GRID TYPOGRAPHY & NO-WRAP */
+  html body #hr_users th, html body #hr_users td,
+  html body #hr_holidays th, html body #hr_holidays td,
+  html body #hr_audit th, html body #hr_audit td,
+  html body #it_support_tickets th, html body #it_support_tickets td,
+  html body #superuser_command_center th, html body #superuser_command_center td {
+    white-space: nowrap !important;        
+    padding: 12px 14px !important;
+  }
+
+  /* 7. RESPONSIVE FILTER BAR WRAPPING */
+  html body #hr_users .filter-bar, html body #hr_audit .filter-bar,
+  html body #it_support_tickets .filter-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  html body #hr_users .filter-group, html body #hr_audit .filter-group,
+  html body #it_support_tickets .filter-group {
+    flex: 1 1 140px !important;
+  }
+
+  /* ====================================================================
+     📱 STEP 10: HR POLICY & ENTITLEMENTS MOBILE FIX
+     ==================================================================== */
+
+  /* 1. 👆 MAKE THE TOP TABS SWIPEABLE */
+  /* Targets the container holding the 3 main buttons and unlocks horizontal scroll */
+  html body #hr_policy > div > div > div[style*="display: flex"]:first-child,
+  html body #hr_policy div[style*="background-color: #f1f5f9"]:has(> button) {
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      padding-bottom: 8px !important;
+      justify-content: flex-start !important;
+  }
+  
+  /* Stops the individual tab buttons from shrinking */
+  html body #hr_policy div:has(> button) > button {
+      flex: 0 0 auto !important;
+      min-width: 130px !important;
+      white-space: normal !important;
+  }
+
+  /* 2. 🧱 STACK THE LEAVE QUOTA GRID */
+  /* Converts the crushed 2-column or 4-column grid into a clean 1-column stack */
+  html body #hr_policy #companyDefaultsTab div[style*="display: grid"],
+  html body #hr_policy div[style*="grid-template-columns"] {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 16px !important;
+      width: 100% !important;
+  }
+
+  /* 3. 🔢 EXPAND THE NUMBER INPUT FIELDS */
+  /* Gives the number inputs permission to stretch to the edges */
+  html body #hr_policy #companyDefaultsTab input[type="number"],
+  html body #hr_policy input[type="number"] {
+      flex: 1 1 auto !important;
+      width: 100% !important;
+      min-width: 80px !important;
+      font-size: 1.1rem !important;        /* Makes the numbers easier to read on mobile */
+  }
+
+
+ /* ====================================================================
+     📱 STEP 11: SYSTEM REPORTING & CALENDAR STACK (SHRINK-TO-FIT)
+     ==================================================================== */
+
+  /* 1. 🧱 STACK EVERYTHING INTO COLUMNS FIRST */
+  html body #hr_reporting .card > div,
+  html body #hr_reporting .card > div[style*="display: grid"] {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+  }
+
+  /* 2. 📊 RESCUE TOP 4 CARDS -> FORCE HORIZONTAL SWIPE */
+  html body #hr_reporting .card > div:first-child,
+  html body #hr_reporting .card > div:has(> div:nth-child(4):last-child) {
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      align-items: stretch !important;
+      gap: 12px !important;
+      padding: 4px 4px 16px 4px !important; 
+      width: 100% !important;
+  }
+
+  html body #hr_reporting .card > div:has(> div:nth-child(4):last-child) > div {
+      flex: 0 0 160px !important;            
+      min-width: 160px !important;
+      width: 160px !important;
+      margin-bottom: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      box-sizing: border-box !important;
+  }
+  
+  /* 3. 📅 CALENDAR CONTAINER: NUKE ALL JS RESTRAINTS */
+  html body #hr_reporting .calendar-container,
+  html body #hr_reporting .card > div:has(table) {
+      display: block !important;
+      width: 100% !important;
+      max-width: 100vw !important;
+      overflow: hidden !important;           /* Lock the wrapper */
+      height: auto !important;               /* Fixes the bottom row cutoff */
+      padding-bottom: 15px !important;       /* Adds safe space for the bottom row */
+      margin-top: 15px !important;
+      border: none !important;
+  }
+
+  /* 🚀 THE NUCLEAR OPTION: Destroy all JS-injected min-widths inside the calendar */
+  html body #hr_reporting .calendar-container *,
+  html body #hr_reporting .card > div:has(table) * {
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+  }
+
+  /* 4. 🚀 CALENDAR TABLE: EXACT 7-COLUMN SQUEEZE */
+  html body #hr_reporting table {
+      display: table !important;
+      width: 100% !important;                /* Force table to respect the screen width */
+      max-width: 100% !important;
+      table-layout: fixed !important;        /* 🚀 CRITICAL: Forces 7 strictly equal columns */
+      margin: 0 !important;
+      border-collapse: collapse !important;
+  }
+
+  /* Force every single day to be exactly 1/7th of the screen */
+  html body #hr_reporting table th,
+  html body #hr_reporting table td {
+      width: 14.28% !important;              
+      padding: 2px !important;               /* Ultra-tight padding */
+      border: 1px solid var(--border-color, #e2e8f0) !important;
+      text-align: center !important;
+      overflow: hidden !important;
+  }
+  
+  html body #hr_reporting table th {
+      font-size: 0.65rem !important;         
+      padding: 4px 0 !important;
+  }
+
+  /* Squeeze the text and pills to survive inside the tiny day boxes */
+  html body #hr_reporting table td div,
+  html body #hr_reporting table td span,
+  html body #hr_reporting table td a {
+      font-size: 0.6rem !important;          /* Micro-text */
+      padding: 2px !important;           
+      margin: 1px 0 !important;
+      white-space: normal !important;        /* Allow names to wrap to a second line */
+      word-break: break-word !important;     /* Prevent long names from breaking the box */
+      line-height: 1.1 !important;
+      display: block !important;
+      text-align: center !important;
+  }
+
+  /* 4. 🚀 CALENDAR TABLE: SQUEEZE TO 7 COLUMNS */
+  html body #hr_reporting table {
+      display: table !important;
+      width: 100% !important;                /* Force table to fit screen width */
+      min-width: 0 !important;               /* Remove previous wide restrictions */
+      max-width: 100% !important;
+      table-layout: fixed !important;        /* Forces all 7 days to be exactly equal width */
+      margin: 0 !important;
+      border-collapse: collapse !important;
+  }
+
+  /* Shrink the cells to bare minimums */
+  html body #hr_reporting table th,
+  html body #hr_reporting table td {
+      width: 14.28% !important;              /* Exactly 1/7th of the screen */
+      min-width: 0 !important;           
+      padding: 4px 2px !important;           /* Ultra-tight padding */
+      border: 1px solid var(--border-color, #e2e8f0) !important;
+      text-align: center !important;
+      overflow: hidden !important;
+  }
+  
+  html body #hr_reporting table th {
+      font-size: 0.65rem !important;         /* Shrink SUN, MON, TUE labels */
+      padding: 4px 0 !important;
+  }
+
+  /* Shrink the text and pills to survive the tiny columns */
+  html body #hr_reporting table td div,
+  html body #hr_reporting table td span {
+      font-size: 0.6rem !important;          /* Micro-text for mobile */
+      padding: 2px !important;           
+      margin: 2px 0 !important;
+      white-space: normal !important;        /* Let long names wrap to a new line */
+      word-break: break-all !important;      /* Prevent long names from breaking the table */
+      line-height: 1.1 !important;
+      display: block !important;
+  }
+
+  /* 5. 📥 PENDING INBOX */
+  html body #hr_reporting .card > div:last-child:not(:has(table)) {
+      width: 100% !important;
+      max-width: 100% !important;
+      border-left: none !important; 
+      padding-left: 0 !important;
+      margin-top: 20px !important;
+      box-sizing: border-box !important;
+  }
+
+  /* ====================================================================
+     ⚙️ MISC MOBILE UI UTILITIES
+     ==================================================================== */
   #modal_calendar_grid .calendar-day {
     min-height: 50px !important; 
     font-size: 0.85rem !important;
@@ -972,7 +1979,6 @@ div.swal2-container {
     margin-top: 2px !important;
   }
 
-  /* 4. GRID ADJUSTMENTS FOR CARDS */
   .leave-grid {
     grid-template-columns: repeat(2, 1fr) !important; 
     gap: 10px !important;
@@ -985,7 +1991,7 @@ div.swal2-container {
   .mobile-toggle-btn {
     display: flex !important;
   }
-}
+} /* <--- THIS IS THE ONLY MEDIA QUERY CLOSING BRACE ALWAYS KEPT AT THE ABSOLUTE END */
 
 /* 5. DARK OVERLAY (Outside media query) */
 #mobile-overlay {
@@ -1000,7 +2006,6 @@ div.swal2-container {
   transition: opacity 0.3s;
 }
 
-
 /* 🚀 THE ICON OVERLAP FIX */
 #password .saas-form-group div[style*="position: relative"] {
     display: flex;
@@ -1009,8 +2014,8 @@ div.swal2-container {
 
 #password .saas-form-control {
     height: 48px !important;
-    padding-left: 45px !important;  /* ⬅️ Creates room for the LOCK icon */
-    padding-right: 45px !important; /* ➡️ Creates room for the EYE icon */
+    padding-left: 45px !important;  
+    padding-right: 45px !important; 
     background: #f8fafc;
     width: 100%;
     box-sizing: border-box;
@@ -1020,54 +2025,50 @@ div.swal2-container {
 #password .saas-form-group i.fa-key,
 #password .saas-form-group i.fa-check-double {
     position: absolute;
-    left: 16px;            /* Precise left alignment */
+    left: 16px;            
     top: 50%;
     transform: translateY(-50%);
     color: #94a3b8;
-    pointer-events: none;  /* Ensures clicking icon clicks the input */
+    pointer-events: none;  
     z-index: 5;
 }
 
 #password .saas-form-group i.fa-eye,
 #password .saas-form-group i.fa-eye-slash {
     position: absolute;
-    right: 16px;           /* Precise right alignment */
+    right: 16px;           
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
     color: #94a3b8;
-    z-index: 10;           /* Keep above lock for clicking */
+    z-index: 10;           
 }
 
 .logout-item-sidebar:hover {
-      background: rgba(251, 113, 133, 0.1) !important; /* Subtle soft red background */
-      color: #ff4d6d !important; /* Brightens the red on hover */
-      padding-left: 25px; /* Slight slide effect */
-  }
+    background: rgba(251, 113, 133, 0.1) !important; 
+    color: #ff4d6d !important; 
+    padding-left: 25px; 
+}
 
-  /* Makes the mini-scrollbars inside calendar days very thin and clean */
 .calendar-day div::-webkit-scrollbar {
     width: 4px;
 }
 .calendar-day div::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1; /* Light gray */
+    background-color: #cbd5e1; 
     border-radius: 10px;
 }
 
-/* 🚀 NUCLEAR OPTION: Force the Confirmation Modal to the absolute top layer */
 #universalModal, .modal-overlay, .swal2-container {
-    z-index: 2147483647 !important; /* Max integer value */
+    z-index: 2147483647 !important; 
 }
 
-/* Ensure the white card content is also at the max layer */
 #universalModal .modal-content {
     position: relative;
     z-index: 2147483647 !important;
 }
 
-/* Standardizes SweetAlert buttons to be the same width */
 .swal-btn-standard {
-    width: 140px !important; /* Adjust width as needed */
+    width: 140px !important; 
     padding: 10px 0 !important;
     font-weight: 600 !important;
     border-radius: 8px !important;
@@ -2354,41 +3355,43 @@ html.dark .loading-pulse {
     box-sizing: border-box !important;
 }
 
-/* 2. CARD HOUSINGS FLAT-EDGE PROFILE SYSTEM */
-#manager_action_center > div[style*="display: grid"] > div {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 0px !important; /* Strips rounded corners completely */
-    box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.04) !important;
-    padding: 20px !important;
-    height: 340px !important;
-    position: relative !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    /* Smooth cubic tracking ease for micro-lifts on mouse hover */
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
-                box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.25s ease !important;
+/* 2. CARD HOUSINGS FLAT-EDGE PROFILE SYSTEM (DESKTOP ISOLATION CANVAS) */
+/* 🚀 THE FIXED FIX: Wrapping these in min-width stops them from running on mobile viewports completely,
+   while cleanly neutralizing the inline HTML 1rem radius on web browser screens! */
+@media (min-width: 769px) {
+    #manager_action_center > div[style*="display: grid"] > div {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 0px !important; /* 🛡️ Pristine flat edges on web screens */
+        box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.04) !important;
+        padding: 20px !important;
+        height: 340px !important;
+        position: relative !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+                    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                    border-color 0.25s ease !important;
+    }
+
+    /* Premium micro-interaction lift elevation on mouse hover */
+    #manager_action_center > div[style*="display: grid"] > div:hover {
+        transform: translateY(-4px) !important;
+        box-shadow: 0 12px 25px -5px rgba(15, 23, 42, 0.08) !important;
+        border-color: #cbd5e1 !important;
+    }
 }
 
-/* Premium micro-interaction lift elevation on mouse hover */
-#manager_action_center > div[style*="display: grid"] > div:hover {
-    transform: translateY(-4px) !important;
-    box-shadow: 0 12px 25px -5px rgba(15, 23, 42, 0.08) !important;
-    border-color: #cbd5e1 !important;
-}
-
-/* 3. CONDITION-SAFE INDEPENDENT LEFT SIDE ACCENT RIBBONS
-   Locks color tags directly to explicit functional container attributes */
-#manager_action_center div:has(> #home_away_list)   { border-left: 4px solid #64748b !important; } /* Who's Away - Muted Slate */
-#manager_action_center div:has(> #tile_leave_inbox) { border-left: 4px solid #2563eb !important; } /* Pending Leaves - Royal Blue */
-#manager_action_center div:has(> #tile_ot_inbox)    { border-left: 4px solid #d97706 !important; } /* 🚀 FIXED: Changed from Red/Orange to Professional Corporate Amber Gold */
+/* 3. CONDITION-SAFE INDEPENDENT LEFT SIDE ACCENT RIBBONS */
+#manager_action_center div:has(> #home_away_list)   { border-left: 4px solid #64748b !important; } 
+#manager_action_center div:has(> #tile_leave_inbox) { border-left: 4px solid #2563eb !important; } 
+#manager_action_center div:has(> #tile_ot_inbox)    { border-left: 4px solid #d97706 !important; } 
 
 /* 4. HEADER COMPONENT CLEANUP & BALANCING */
 #manager_action_center h4 {
     font-size: 0.72rem !important;
     font-weight: 800 !important;
-    color: #475569 !important; /* Premium corporate slate headings configuration */
+    color: #475569 !important; 
     letter-spacing: 0.5px !important;
     text-transform: uppercase !important;
     margin: 0 !important;
@@ -2401,14 +3404,14 @@ html.dark .loading-pulse {
     background: #f1f5f9 !important;
     color: #1e293b !important;
     border: 1px solid #e2e8f0 !important;
-    border-radius: 4px !important; /* Muted corporate tag framing micro-radius */
+    border-radius: 4px !important; 
     padding: 2px 8px !important;
 }
 
 /* Flatten header visual shortcut decorative icon containers boxes */
 #manager_action_center div[style*="width: 28px; height: 28px"],
 #manager_action_center div[style*="width: 26px; height: 26px"] {
-    border-radius: 0px !important; /* Strips circle rounds completely to form sharp normal badges */
+    border-radius: 0px !important; 
     background: #f8fafc !important;
     border: 1px solid #e2e8f0 !important;
     box-sizing: border-box !important;
@@ -2417,11 +3420,11 @@ html.dark .loading-pulse {
 /* 5. FLAT-EDGE ACTION SUBMISSION CONTROLS UPGRADE */
 #manager_action_center button {
     width: 100% !important;
-    height: 40px !important; /* Balanced operational height tracking constraint specs */
-    background: #0f172a !important; /* Deep dark anchoring slate contrast ink color */
+    height: 40px !important; 
+    background: #0f172a !important; 
     color: #ffffff !important;
     border: 1px solid #0f172a !important;
-    border-radius: 0px !important; /* Enforces strict sharp flat edge architecture */
+    border-radius: 0px !important; 
     font-size: 0.75rem !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
@@ -3749,48 +4752,196 @@ html.dark {
    🌓 DARK MODE: MODALS & SWEETALERT REPAIR (View Profile Fix)
    ==================================================================== */
 
-/* 1. Force SweetAlert Popups to adopt the dark background */
-html.dark div.swal2-container div.swal2-popup,
-html.dark .swal2-popup-profile-override-layer {
+/* ... (Keep your existing Steps 1, 2, and 3 exactly as they are) ... */
+
+/* 4. Review Request Modal - Deep Inner Panel Overrides */
+html.dark #reviewModal > div > div,
+html.dark #reviewModal > div > div[style*="background: #ffffff !important;"] {
     background: var(--bg-card) !important;
     background-color: var(--bg-card) !important;
     border-color: var(--border-color) !important;
 }
 
-/* 2. Force native HTML Modals to adopt the dark background */
-html.dark .modal-content,
-html.dark #hrViewProfileModal > div,
-html.dark #hrViewProfileModal > div > div[style*="background: #ffffff"],
-html.dark #leaveDetailModal > div,
-html.dark #reviewModal > div,
-html.dark #userEditModal > div,
-html.dark #draftRecoveryModal > div {
-    background: var(--bg-card) !important;
-    background-color: var(--bg-card) !important;
-    border-color: var(--border-color) !important;
-}
-
-/* 3. Global Profile Modal - Specific Text & Panel Adjustments */
-html.dark .swal2-popup-profile-override-layer h3,
-html.dark .swal2-popup-profile-override-layer h4 {
+/* Fix the Black Text inside the dark panels (Titles, Values, Labels) */
+html.dark #reviewModal h3,
+html.dark #reviewSummary strong,
+html.dark #reviewSummary span[style*="color: #1e293b"],
+html.dark #reviewSummary span[style*="color: #334155"],
+html.dark #reviewModal label {
     color: var(--text-main) !important;
 }
 
-/* Ensure the inner panels match the dark theme */
-html.dark .swal2-popup-profile-override-layer div[style*="background: #f8fafc"] {
+/* Sync the gray info panel blocks to the proper dark mode contrast color */
+html.dark #reviewSummary div[style*="background: #f8fafc"],
+html.dark #l2SelectorContainer {
     background: var(--bg-panel-light) !important;
     border-color: var(--border-color) !important;
 }
 
-/* Fix the "Close" button visibility on dark mode */
-html.dark .swal2-popup-profile-override-layer .swal2-confirm {
-    background: var(--bg-panel-light) !important;
+/* Fix the L2 Dropdown & Manager Remarks Textarea */
+html.dark #l2SelectorContainer p {
+    color: var(--text-muted) !important;
+}
+
+html.dark #mgr_review_remarks,
+html.dark #l2_manager_select {
+    background: var(--bg-input) !important;
     color: var(--text-main) !important;
-    border: 1px solid var(--border-color) !important;
+    border-color: var(--border-color) !important;
 }
-html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
-    background: #334155 !important;
+
+/* Fix the inner timeline note message bubbles */
+html.dark #reviewSummary div[style*="background:#f1f5f9"] {
+    background: var(--bg-input) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border-color) !important;
 }
+
+
+/* ====================================================================
+     🖥️ DESKTOP EXACT FIT: DYNAMIC TABLE HEIGHTS (LEAVE, OT, ENTITLEMENTS)
+     ==================================================================== */
+  
+     @media (min-width: 769px) {
+      /* 1. Lock the card to the screen height with safe breathing room */
+      html body #manager_requests.active .card,
+      html body #manager_ot_requests.active .card,
+      html body #manager_entitlements.active .card {
+          display: flex !important;
+          flex-direction: column !important;
+          /* 🚀 STRETCHED: Exactly the screen height minus the 60px top navigation bar */
+          height: calc(100vh - 60px) !important; 
+          margin-bottom: 0 !important;           /* Reclaimed the wasted margin space */
+          padding-bottom: 25px !important;       /* Keeps the footer from hitting the very bottom edge */
+          box-sizing: border-box !important;
+      }
+
+      /* 2. Protect the header, filters, and column titles from squishing */
+      html body #manager_requests.active .card > div:not(.table-scroll-container),
+      html body #manager_ot_requests.active .card > div:not(.table-scroll-container),
+      html body #manager_entitlements.active .card > div:not(.table-container),
+      html body #manager_entitlements.active .card > h2 {
+          flex-shrink: 0 !important;
+      }
+
+      /* 3. 🚀 THE MAGIC FIX: Allow the table to absorb exactly the remaining space */
+      html body #manager_requests.active .table-scroll-container,
+      html body #manager_ot_requests.active .table-scroll-container,
+      html body #manager_entitlements.active .table-container {
+          flex: 1 1 auto !important;             
+          max-height: none !important;           /* Destroys the broken hardcoded inline calc() */
+          overflow-y: auto !important;           /* Keeps internal scrolling intact */
+          min-height: 0 !important;              /* Critical flexbox rule to allow shrinking */
+      }
+
+      /* 4. Anchor the pagination controls permanently at the bottom */
+      html body #manager_requests.active .pagination-footer,
+      html body #manager_ot_requests.active .pagination-footer,
+      html body #manager_entitlements.active #entitlementPagination {
+          margin-top: 15px !important;
+          flex-shrink: 0 !important;
+      }
+  }
+
+/* ====================================================================
+     🌓 DARK MODE: LEAVE ENTITLEMENTS TABLE TEXT FIX 
+     ==================================================================== */
+
+  /* 1. Fix the Employee Name (Overrides inline #1e293b) */
+  html.dark #manager_entitlements td strong {
+      color: var(--text-main) !important;
+  }
+
+  /* 2. Fix the fraction and percentage text in the progress pills (Overrides inline #475569) */
+  html.dark #manager_entitlements td div[style*="color: #475569"] {
+      color: var(--text-muted) !important;
+  }
+
+  /* ====================================================================
+     🌓 DARK MODE: AUDIT TRAIL DOSSIER MODAL FIX
+     ==================================================================== */
+
+  /* 1. Main Modal Wrapper & Footer */
+  html.dark #balanceLogsModal > div,
+  html.dark #balanceLogsModal > div > div:last-child {
+      background: var(--bg-card) !important;
+      border-color: var(--border-color) !important;
+  }
+  
+  /* Modal Header (Overrides the hardcoded #173F5F navy blue) */
+  html.dark #balanceLogsModal > div > div:first-child {
+      background: var(--bg-panel-light) !important;
+      border-bottom: 1px solid var(--border-color) !important;
+  }
+
+  /* 2. Inner Summary Gray Wrapper */
+  html.dark #logsModalContent > div[style*="background:#f8fafc"] {
+      background: var(--bg-panel-light) !important;
+      border-color: var(--border-color) !important;
+  }
+
+  /* 3. Inner White Stat Cards (Annual, Medical, Emergency, Compassionate) */
+  html.dark #logsModalContent div[style*="background: white"],
+  html.dark #logsModalContent div[style*="background:white"] {
+      background: var(--bg-input) !important;
+      border-color: var(--border-color) !important;
+  }
+
+  /* 4. Carry Forward Light Blue Card */
+  html.dark #logsModalContent div[style*="background:#f0f9ff"] {
+      background: rgba(14, 165, 233, 0.1) !important; /* Soft cyan tint */
+      border-color: rgba(14, 165, 233, 0.3) !important;
+  }
+
+  /* 5. OT & Unpaid Buttons at the bottom of summary */
+  html.dark #logsModalContent span[style*="background:#fff7ed"] {
+      background: rgba(249, 115, 22, 0.1) !important;
+      border-color: rgba(249, 115, 22, 0.3) !important;
+  }
+  html.dark #logsModalContent span[style*="background:#fef2f2"] {
+      background: rgba(239, 68, 68, 0.1) !important;
+      border-color: rgba(239, 68, 68, 0.3) !important;
+  }
+
+  /* 6. Typography Fixes inside the summary */
+  html.dark #logsModalContent div[style*="color:#1e293b"],
+  html.dark #logsModalContent div[style*="color: #334155"] {
+      color: var(--text-main) !important;
+  }
+  html.dark #logsModalContent div[style*="color:#64748b"] {
+      color: var(--text-muted) !important;
+  }
+
+  /* 7. Table Wrapper & Borders */
+  html.dark #logsModalContent div[style*="max-height: 300px"] {
+      border-color: var(--border-color) !important;
+  }
+  
+  html.dark #logsModalContent thead,
+  html.dark #logsModalContent thead[style*="background: #f8fafc"] {
+      background: var(--bg-panel-light) !important;
+  }
+  
+  /* Adjust Table Text and Border Colors */
+  html.dark #logsModalContent th {
+      color: var(--text-main) !important;
+  }
+  
+  html.dark #logsModalContent tr[style*="border-bottom"] {
+      border-bottom-color: var(--border-color) !important;
+  }
+
+  html.dark #logsModalContent td,
+  html.dark #logsModalContent td[style*="color:#64748b"],
+  html.dark #logsModalContent td[style*="color: #94a3b8"] {
+      color: var(--text-muted) !important;
+  }
+  
+  html.dark #logsModalContent td strong {
+      color: var(--text-main) !important;
+  }
+
+
 
     </style>
   </head>
@@ -3941,7 +5092,7 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
                     </div>
                     <div class="menu-item" onclick="showSection('hr_reporting')">
                         <i class="fas fa-chart-line"></i> 
-                        <span class="menu-text">System Reporting</span>
+                        <span class="menu-text">Workforce Management</span>
                     </div>
                     <div class="menu-item" onclick="showSection('hr_audit')">
                         <i class="fas fa-clipboard-list"></i> 
@@ -7508,7 +8659,7 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
             <div id="hr_reporting" class="section">
                 <div class="card" style="padding: 20px">
                     <h2 style="margin-bottom: 20px">
-                        <i class="fas fa-chart-pie"></i> System Analytics & Planning
+                        <i class="fas fa-chart-pie"></i>Workforce Analytics & Planning
                         (<span class="current-year-display"></span>)
                     </h2>
             
@@ -8096,51 +9247,51 @@ html.dark .swal2-popup-profile-override-layer .swal2-confirm:hover {
             ========================================== -->
 
             <div id="reviewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-              <div style="background: #ffffff !important; border-radius: 16px; width: 95%; max-width: 600px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; border: 1px solid #e2e8f0;">
-                  
-                  <div style="padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #ffffff !important;">
-                      <h3 style="margin: 0 !important; padding: 0 !important; background: transparent !important; border: none !important; color: #1e293b !important; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 12px;">
-                          <div style="width: 36px; height: 36px; background-color: #eff6ff !important; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                              <i class="fas fa-gavel" style="color: #2563eb; font-size: 1rem"></i>
-                          </div>
-                          Review Request
-                      </h3>
-          
-                      <button onclick="closeReviewModal()" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; font-size: 1.2rem; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">
-                          <i class="fas fa-times"></i>
-                      </button>
-                  </div>
-          
-                  <div style="padding: 25px; overflow-y: auto; max-height: 80vh; background: #ffffff !important;">
-                      <div id="reviewSummary"></div>
-          
-                      <div id="l2SelectorContainer" style="display: none; margin-top: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
-                          <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">L2 Routing Required</span>
-                          <p style="margin: 10px 0; font-size: 0.85rem; color: #1e40af;">Please select a Level 2 Approver to proceed with this request.</p>
-                          <select id="l2_manager_select" class="saas-form-control" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #bfdbfe;">
-                              <option value="">-- Loading Managers... --</option>
-                          </select>
-                      </div>
-          
-                      <div style="margin-top: 20px; margin-bottom: 25px">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <label style="font-weight: 700; color: #475569; font-size: 0.85rem;">Manager Remarks (Optional)</label>
-                            <span id="mgr_char_count" style="font-size: 0.7rem; color: #94a3b8">0/200</span>
-                        </div>
-                        <textarea id="mgr_review_remarks" rows="3" class="saas-form-control" placeholder="Add a note for the employee..." oninput="updateMgrCharCount()" maxlength="200" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;"></textarea>
-                    </div>
+                <div style="background: #ffffff; border-radius: 16px; width: 95%; max-width: 600px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; border: 1px solid #e2e8f0;">
                     
-                    <div style="display: flex; gap: 15px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
-                        <button id="modalRejectBtn" style="flex: 1; border: 1px solid #fee2e2; background: #fff1f2; color: #dc2626; height: 45px; font-weight: 600; border-radius: 8px; cursor: pointer;">
-                            <i class="fas fa-times-circle"></i> Reject
-                        </button>
-                        <button id="modalApproveBtn" style="flex: 1; background: #16a34a; color: white; border: none; height: 45px; font-weight: 600; border-radius: 8px; cursor: pointer;">
-                            <i class="fas fa-check-circle"></i> Approve
+                    <div style="padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #ffffff;">
+                        <h3 style="margin: 0; padding: 0; background: transparent; border: none; color: #1e293b; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 36px; height: 36px; background-color: #eff6ff; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-gavel" style="color: #2563eb; font-size: 1rem"></i>
+                            </div>
+                            Review Request
+                        </h3>
+            
+                        <button onclick="closeReviewModal()" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; font-size: 1.2rem; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
-                  </div>
-              </div>
-          </div>
+            
+                    <div style="padding: 25px; overflow-y: auto; max-height: 80vh; background: #ffffff;">
+                        <div id="reviewSummary"></div>
+            
+                        <div id="l2SelectorContainer" style="display: none; margin-top: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">L2 Routing Required</span>
+                            <p style="margin: 10px 0; font-size: 0.85rem; color: #1e40af;">Please select a Level 2 Approver to proceed with this request.</p>
+                            <select id="l2_manager_select" class="saas-form-control" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                                <option value="">-- Loading Managers... --</option>
+                            </select>
+                        </div>
+            
+                        <div style="margin-top: 20px; margin-bottom: 25px">
+                          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                              <label style="font-weight: 700; color: #475569; font-size: 0.85rem;">Manager Remarks (Optional)</label>
+                              <span id="mgr_char_count" style="font-size: 0.7rem; color: #94a3b8">0/200</span>
+                          </div>
+                          <textarea id="mgr_review_remarks" rows="3" class="saas-form-control" placeholder="Add a note for the employee..." oninput="updateMgrCharCount()" maxlength="200" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;"></textarea>
+                      </div>
+                      
+                      <div style="display: flex; gap: 15px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+                          <button id="modalRejectBtn" style="flex: 1; border: 1px solid #fee2e2; background: #fff1f2; color: #dc2626; height: 45px; font-weight: 600; border-radius: 8px; cursor: pointer;">
+                              <i class="fas fa-times-circle"></i> Reject
+                          </button>
+                          <button id="modalApproveBtn" style="flex: 1; background: #16a34a; color: white; border: none; height: 45px; font-weight: 600; border-radius: 8px; cursor: pointer;">
+                              <i class="fas fa-check-circle"></i> Approve
+                          </button>
+                      </div>
+                    </div>
+                </div>
+            </div>
 
 
     <!-- ==========================================

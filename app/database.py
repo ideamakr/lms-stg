@@ -29,19 +29,35 @@ if is_sqlite:
         pool_timeout=60,       # ⏱️ Wait 60s before timing out
         pool_recycle=1800      # ♻️ Refresh connections every 30 mins
     )
+
+# # ✅ Production Client Server Settings 
+#     engine = create_engine(
+#         DATABASE_URL, 
+#         pool_pre_ping=True,    
+        
+#         pool_size=50,          # 🪑 50 permanent active connections ready 24/7
+#         max_overflow=30,       # 📈 Allow up to 30 extra connections during morning peak hours
+#         pool_timeout=30,       # ⏱️ Drop back down to 30s (because with 80 slots, nobody should be waiting)
+#         pool_recycle=1800      # ♻️ Increase to 30 mins (production DBs don't drop idle channels aggressively)
+#     )
+
 else:
     # ✅ Cloud PostgreSQL (Supabase/Render) Settings - DATABASE-SAFE CONFIG
     engine = create_engine(
         DATABASE_URL, 
         pool_pre_ping=True,    # 🔄 Checks if connection is alive before using it
         
-        # 🛡️ THE GATEKEEPER FIX:
-        # pool_size + max_overflow = 14 max connections. 
-        # This keeps your app strictly under the database's 16-connection breaking point!
+        # 🛡️ OPTIMIZED FOR MULTI-STAGE LOOPS:
+        # pool_size + max_overflow = 15 max connections.
+        # This maximizes your throughput while staying under the database's 16-connection limit!
         pool_size=10,          # 🪑 Safe permanent connection ceiling
-        max_overflow=4,        # 📈 Small temporary headroom allowance for spikes
+        max_overflow=5,        # 📈 Headroom allowance increased slightly to 5 for multi-stage surges
         
-        pool_timeout=60,       # ⏱️ Crucial! Extra requests wait up to 60s in app memory for a slot
+        # ⏱️ THE MULTI-STAGE SAVIOR:
+        # Increased from 60 to 90. Requests waiting on multi-tier approvals will now happily
+        # wait in memory for a connection slot rather than timing out with a QueuePool error.
+        pool_timeout=90,       
+        
         pool_recycle=300       # ♻️ Recycles connections every 5 minutes to beat cloud idle limits
     )
 
