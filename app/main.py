@@ -28,6 +28,9 @@ from sqlalchemy import text
 # 👇 INITIALIZE ENVIRONMENT
 load_dotenv()
 
+# 🏢 MULTI-TENANT CONFIGURATION
+CLIENT_NAME = os.getenv("CLIENT_NAME", "psyap & co")
+
 # ============================================================
 # 🚀 1. INITIALIZE SUPABASE CLIENT
 # ============================================================
@@ -56,7 +59,8 @@ class LoginRequest(BaseModel):
 # ============================================================
 # 🛠️ APP INITIALIZATION
 # ============================================================
-app = FastAPI(title="Leave System API")
+# 🚀 Dynamic Title Fixed (Removed the duplicate row that was overwriting it)
+app = FastAPI(title=f"{CLIENT_NAME} Leave System API")
 
 # 🚀 MOUNT THE UPLOADS FOLDER
 # serving local fallback images for profiles
@@ -67,19 +71,26 @@ if not os.path.exists("uploads"):
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # 🔒 CORS Configuration
+allowed_origins = [
+    "http://127.0.0.1:5500", 
+    "http://localhost:5500",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "https://ideamakr.github.io", 
+    "https://leave-system-testenv.onrender.com", 
+]
+
+# 🚀 Dynamically whitelist the upcoming Cloudflare domain
+CLIENT_DOMAIN = os.getenv("CLIENT_DOMAIN")
+if CLIENT_DOMAIN:
+    allowed_origins.append(CLIENT_DOMAIN)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5500", 
-        "http://localhost:5500",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-        "https://ideamakr.github.io", 
-        "https://leave-system-testenv.onrender.com", 
-    ], 
+    allow_origins=allowed_origins, 
     allow_credentials=True,
-    allow_methods=["*"], # Allows GET, POST, OPTIONS, etc.
-    allow_headers=["*"], # Allows Content-Type, Authorization, etc.
+    allow_methods=["*"], 
+    allow_headers=["*"], 
 )
 # ============================================================
 # 📸 UTILITIES
