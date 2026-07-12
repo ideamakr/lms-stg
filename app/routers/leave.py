@@ -20,6 +20,12 @@ from app.dependencies import validate_session
 from sqlalchemy import or_, cast, String, extract
 import re
 
+def _find_user_by_name_or_username(db: Session, identifier: str):
+    if not identifier: return None
+    return db.query(models.User).filter(
+        or_(models.User.full_name == identifier.strip(), models.User.username == identifier.strip())
+    ).first()
+
 # 📧 Email Utilities
 # Robust import strategy to handle different environment paths
 try:
@@ -65,6 +71,37 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def _normalize_attachment_url(attachment_path: Optional[str], supabase_url: Optional[str], supabase_bucket: Optional[str]) -> Optional[str]:
+    if not attachment_path:
+        return None
+
+    url = str(attachment_path).strip()
+    if url.startswith("http"):
+        return url
+
+    # Fix broken legacy values from missing environment configuration
+    if "None/storage/v1/object/public/None/" in url:
+        url = url.split("None/storage/v1/object/public/None/")[-1]
+
+    if not url.startswith("/"):
+        url = "/" + url
+
+    if url.startswith("/uploads") or url.startswith("/storage/v1/object/public"):
+        return url
+
+    if supabase_url and supabase_bucket:
+        clean_path = url.lstrip('/')
+        return f"{supabase_url}/storage/v1/object/public/{supabase_bucket}/mcs/{clean_path}"
+
+    if url.startswith("/mcs/"):
+        return f"/uploads{url}"
+
+    if url.startswith("/uploads/"):
+        return url
+
+    return f"/uploads/mcs/{url.lstrip('/')}"
 
 
 # 🚀 V1.5.1: THE ULTIMATE SPLIT-WALLET ENGINE (UNIFIED SYNC)
@@ -294,14 +331,19 @@ async def create_leave(
             detail=f"Insufficient Annual Leave: You only have {balance.get('remaining')} days left."
         )
 
-    # --- 6. FILE HANDLING ---
+# --- 6. FILE HANDLING ---
     attachment_url = None 
     if file and file.filename:
         try:
+            # 🚀 CRITICAL: Reset pointer to 0 before reading
+            await file.seek(0)
+            
             from app.main import compress_and_upload
             attachment_url = compress_and_upload(file, folder="mcs")
         except Exception as e:
-            raise HTTPException(status_code=500, detail="System Error: Failed to upload attachment.")
+            # This will now catch the error and return a clean 500
+            print(f"⚠️ Upload Error: {e}")
+            raise HTTPException(status_code=500, detail="System Error: Failed to process attachment.")
 
     # --- 7. SAVE RECORD ---
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -322,29 +364,33 @@ async def create_leave(
     db.commit()
     db.refresh(new_leave)
 
-    # 📧 --- 8. NOTIFY MANAGER (The Merged Fix) ---
-    manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
-    
-    if manager and manager.email:
-        try:
-            subject = f"Action Required: New Leave Request ({employee_name})"
-            
-            # Check if this was a Natasha "Apply on Behalf" override
-            # We use the 'applied_by' parameter we added to the signature
-            admin_name = applied_by if applied_by and applied_by != employee_name else None
+    # 📧 --- 8. NOTIFY MANAGER & LOG ACTIVITY ---
+    try:
+        # A. LOG ACTIVITY
+        user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
+        if user_record:
+            log_activity(db=db, user_id=user_record.id, action_type="SUBMISSION",
+                         category=leave_type, message=f"You submitted a {leave_type} request for {start_date}",
+                         reference_id=new_leave.id)
 
+        # B. EMAIL MANAGER
+        manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
+        if manager and manager.email:
+            subject = f"Action Required: New Leave Request ({employee_name})"
+            admin_name = applied_by if applied_by and applied_by != employee_name else None
+            
             if leave_type == "Medical Leave":
                 body = template_medical_request(manager.full_name, employee_name, str(start_obj), str(end_obj), days_requested)
             else:
-                # We use the template_new_request which can now accept admin_name
                 body = template_new_request(manager.full_name, employee_name, leave_type, str(start_obj), str(end_obj), days_requested, admin_name)
             
             background_tasks.add_task(send_email, manager.email, subject, body)
             print(f"📧 Manager Notification queued for {manager.email}")
             
-        except Exception as e:
-            print(f"⚠️ Email Trigger Error: {e}")
+    except Exception as e:
+        print(f"⚠️ Post-Submission Error: {e}")
 
+    # 🚀 RETURN ONLY AT THE END
     return {"message": "Leave request submitted successfully", "leave_id": new_leave.id}
 
     # ============================================================
@@ -467,7 +513,6 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
         "cf_total": cf_total
     }
 
-import os # 👈 Make sure this is imported at the top
 
 @router.get("/history")
 def get_leave_history(
@@ -489,7 +534,7 @@ def get_leave_history(
     # 2. Precise Date Filtering
     if start_date and start_date.strip():
         try:
-            target_start = datetime.strptime(start_date, "%Y-%m-%d").date() # Safer parsing
+            target_start = datetime.strptime(start_date, "%Y-%m-%d").date()
             query = query.filter(models.Leave.start_date == target_start)
         except ValueError:
             pass 
@@ -517,41 +562,31 @@ def get_leave_history(
     # 4. Pagination Totals
     total = query.count()
     total_pages = math.ceil(total / page_size) if total > 0 else 1
-    
+
     # 5. Fetch records (Sorted Newest First)
     leaves = query.order_by(
         models.Leave.start_date.desc(), 
         models.Leave.id.desc()
     ).offset(skip).limit(page_size).all()
     
-    # 🛡️ PREPARE SUPABASE CONSTANTS
-    # We grab these once to build the URL efficiently
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
-    
-    # 6. Formatted response
+# 6. Formatted response
     formatted = []
     for l in leaves:
         l_type = l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type)
         l_status = l.status.value if hasattr(l.status, 'value') else str(l.status)
-        
-        # 🚀 FIX: GENERATE FULL CLOUD URL
-        # If the path exists but doesn't start with 'http', we assume it's a filename in the 'mcs' folder
-        full_attachment_url = l.attachment_path
-        if full_attachment_url and not full_attachment_url.startswith("http"):
-            full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{l.attachment_path}"
 
         formatted.append({
             "id": l.id, 
             "employee_name": l.employee_name,
             "approver_name": l.approver_name,
+            "approver_l2": l.approver_l2,  # <--- THIS IS THE FIX
             "days_taken": l.days_taken, 
             "reason": l.reason or "No reason provided",
             "leave_type": l_type,
             "status": l_status,
             "start_date": l.start_date.strftime("%Y-%m-%d") if l.start_date else "N/A",
             "end_date": l.end_date.strftime("%Y-%m-%d") if l.end_date else "N/A",
-            "attachment_path": full_attachment_url, # 👈 Send the fixed URL
+            "attachment_path": l.attachment_path, 
             "status_history": l.status_history or "Pending",
             "approved_at": l.approved_at.strftime("%Y-%m-%d %H:%M") if l.approved_at else None,
             "rejected_at": l.rejected_at.strftime("%Y-%m-%d %H:%M") if l.rejected_at else None,
@@ -687,10 +722,21 @@ def get_manager_pending(
 
     formatted_results = []
     for r in results:
-        # 🚀 FIX: GENERATE FULL CLOUD URL
+        # 🚀 FIX: GENERATE FULL URL for both local uploads and Supabase
         full_attachment_url = r.attachment_path
         if full_attachment_url and not full_attachment_url.startswith("http"):
-            full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{r.attachment_path}"
+            if full_attachment_url.startswith("/uploads") or full_attachment_url.startswith("/storage/v1/object/public"):
+                full_attachment_url = full_attachment_url
+            elif SUPABASE_URL and SUPABASE_BUCKET:
+                clean_path = full_attachment_url.lstrip('/')
+                full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{clean_path}"
+            else:
+                if full_attachment_url.startswith("uploads/"):
+                    full_attachment_url = "/" + full_attachment_url
+                elif full_attachment_url.startswith("mcs/"):
+                    full_attachment_url = f"/uploads/{full_attachment_url}"
+                else:
+                    full_attachment_url = f"/uploads/mcs/{full_attachment_url.lstrip('/')}"
 
         formatted_results.append({
             "id": r.id,
@@ -765,9 +811,12 @@ async def approve_leave(
     is_superuser_override = acting_user and acting_user.role == "superuser"
 
     # --- 2. Identity & Permission Checks ---
-    acting_mgr = db.query(models.User).filter(models.User.full_name == approver_name).first()
+    acting_mgr = _find_user_by_name_or_username(db, approver_name)
     is_senior = acting_mgr.is_senior_manager if acting_mgr else False
-    is_l1 = (approver_name == leave.approver_name)
+    is_l1 = bool(
+        approver_name and leave.approver_name and
+        str(approver_name).strip().lower() == str(leave.approver_name).strip().lower()
+    )
     
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     l2_active = policy.l2_approval_enabled if policy else False
@@ -786,6 +835,8 @@ async def approve_leave(
         display_approver = approver_name
 
     final_response_message = "Request processed successfully"
+    route_to_l2 = False
+    l2_user = None
 
     # =========================================================================
     # 3. HANDLE CANCELLATION LOGIC
@@ -796,10 +847,10 @@ async def approve_leave(
 
             # 🔶 Scenario A: L1 Approves -> Route to L2 (Bypassed entirely if Superuser forces it through)
             if leave.status == "Pending Cancel" and not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2 and not is_superuser_override:
-                l2_user = db.query(models.User).filter(models.User.full_name == leave.approver_l2).first()
+                l2_user = _find_user_by_name_or_username(db, leave.approver_l2)
                 if l2_user and l2_user.is_active:
                     leave.status = "Pending L2 Approval"
-                    leave.status_history += f" > L1 Approved Cancellation. Routed to {leave.approver_l2} ({timestamp}){note_str}"
+                    leave.status_history += f" > L1 Approved Cancellation by {display_approver}. Routed to {leave.approver_l2} ({timestamp}){note_str}"
                     
                     # 🚀 THE FIX: Change 'return' to 'final_response_message'
                     final_response_message = "Cancellation approved by L1. Routed to L2."
@@ -833,13 +884,21 @@ async def approve_leave(
     else:
         if status == "Approved":
             # 👑 Superuser overrides bypass the standard L2 routing step to allow instant clearance
-            if l2_active and leave.status == "Pending" and not is_senior and not is_superuser_override: 
-                if l2_name: 
+            if l2_active and leave.status in ["Pending", "Pending L2 Approval"] and not is_senior and not is_superuser_override:
+                if l2_name:
                     leave.status = "Pending L2 Approval"
                     leave.approver_l2 = l2_name
-                    leave.status_history += f" > L1 Approved. Routed to {l2_name} ({timestamp}){note_str}"
-                    final_response_message = f"L1 Approved. Routed to {l2_name}"
-            else: 
+                    leave.status_history += f" > L1 Approved by {approver_name}. Routed to {l2_name} ({timestamp}){note_str}"
+                    final_response_message = f"L1 Approved. Routed to {l2_name} for final approval"
+                    route_to_l2 = True
+                    l2_user = _find_user_by_name_or_username(db, l2_name)
+                    print(f"📧 Leave routed to L2 approver: {l2_name} ({leave.id})")
+                else:
+                    leave.status = "Approved"
+                    leave.approved_at = datetime.now()
+                    leave.status_history += f" > Fully Approved by {display_approver} ({timestamp}){note_str}"
+                    final_response_message = "Request fully approved"
+            else:
                 leave.status = "Approved"
                 leave.approved_at = datetime.now()
                 leave.status_history += f" > Fully Approved by {display_approver} ({timestamp}){note_str}"
@@ -901,29 +960,58 @@ async def approve_leave(
             except Exception as e:
                 print(f"⚠️ Manager Log Hint: {e}")
 
-        # 📧 --- STEP 2: NOTIFY EMPLOYEE VIA EMAIL ---
-        if emp_record and emp_record.email:
+# 📧 --- STEP 2: NOTIFY NEXT APPROVER OR EMPLOYEE VIA EMAIL ---
+        if status == "Approved":
+            # 🚀 STATE 1: Routing to L2 (Normal Leave)
+            if route_to_l2 and l2_user and l2_user.email:
+                try:
+                    body = template_l2_request(
+                        l2_user.full_name or l2_user.username,
+                        approver_name or display_approver,
+                        leave.employee_name,
+                        l_type_str,
+                        str(leave.start_date),
+                        str(leave.end_date),
+                    )
+                    background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: Final Approval Needed - {leave.employee_name}", body)
+                    print(f"📧 L2 manager notification queued for {l2_user.email}")
+                except Exception as email_err:
+                    print(f"⚠️ L2 Email Notification Warning: {email_err}")
+
+            # 🚀 STATE 2: Fully Approved (Only if NOT routed to L2)
+            elif not route_to_l2 and emp_record and emp_record.email:
+                try:
+                    subject = f"✅ Leave Request Approved - {l_type_str}"
+                    body = template_request_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
+                    background_tasks.add_task(send_email, emp_record.email, subject, body)
+                except Exception as email_err:
+                    print(f"⚠️ Approval Email Warning: {email_err}")
+        
+        # 🔴 STATE 3: Rejected
+        elif status == "Rejected" and emp_record and emp_record.email:
             try:
-                if status == "Approved":
-                    if is_cancellation_journey:
-                        subject = f"✅ Leave Cancellation Approved - {l_type_str}"
-                        body = template_cancellation_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
-                    else:
-                        subject = f"✅ Leave Request Approved - {l_type_str}"
-                        body = template_request_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
-                else:
+                subject = f"❌ Leave Request Rejected - {l_type_str}"
+                body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
+                background_tasks.add_task(send_email, emp_record.email, subject, body)
+            except Exception as email_err:
+                print(f"⚠️ Rejection Email Warning: {email_err}")
+                        
+        # 🔴 STATE 4: REJECTED
+        else:
+            if emp_record and emp_record.email:
+                try:
                     if is_cancellation_journey:
                         subject = f"⚠️ Leave Cancellation Denied - {l_type_str}"
                         body = template_cancellation_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
                     else:
                         subject = f"❌ Leave Request Rejected - {l_type_str}"
                         body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
-                
-                background_tasks.add_task(send_email, emp_record.email, subject, body)
-                print(f"📧 Decision email queued for Julian: {emp_record.email}")
+                    
+                    background_tasks.add_task(send_email, emp_record.email, subject, body)
+                    print(f"📧 Rejection email queued for employee: {emp_record.email}")
 
-            except Exception as email_err:
-                print(f"⚠️ Email Notification Warning: {email_err}")
+                except Exception as email_err:
+                    print(f"⚠️ Email Notification Warning: {email_err}")
 
     except Exception as general_log_error:
         print(f"⚠️ Activity Log System Warning: {general_log_error}")
@@ -974,10 +1062,7 @@ def get_all_manager_leaves(
 
     formatted = []
     for r in results:
-        # 🚀 FIX: GENERATE FULL CLOUD URL
-        full_attachment_url = r.attachment_path
-        if full_attachment_url and not full_attachment_url.startswith("http"):
-            full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{r.attachment_path}"
+        full_attachment_url = _normalize_attachment_url(r.attachment_path, SUPABASE_URL, SUPABASE_BUCKET)
 
         formatted.append({
             "id": r.id,
@@ -1366,10 +1451,7 @@ def get_global_audit_logs(db: Session = Depends(get_db)):
 
     formatted = []
     for l in results:
-        # 🚀 FIX: GENERATE FULL CLOUD URL
-        full_attachment_url = l.attachment_path
-        if full_attachment_url and not full_attachment_url.startswith("http"):
-            full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{l.attachment_path}"
+        full_attachment_url = _normalize_attachment_url(l.attachment_path, SUPABASE_URL, SUPABASE_BUCKET)
 
         formatted.append({
             "id": l.id,
@@ -1563,7 +1645,7 @@ def ensure_leave_balance(db: Session, employee_name: str, year: int):
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"⚠️ ensure_leave_balance error: {e}")
+        print(f"ensure_leave_balance error: {e}")
 
 # 2. Update your existing get_leave_balance endpoint
 

@@ -34,7 +34,7 @@ def send_email(to_email: str, subject: str, body: str):
     # 🎯 FIX: Looks for BREVO_API_KEY first; if empty, automatically grabs BREVO_SMTP_PASS!
     current_api_key = os.getenv("BREVO_API_KEY") or os.getenv("BREVO_SMTP_PASS")
     current_sender = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
-    SYSTEM_URL = "https://ideamakr.github.io/lms-stg/"
+    SYSTEM_URL = "http://leave.psyap.com:8080/"
 
     # 🛑 Crash Prevention Guard
     if not current_api_key:

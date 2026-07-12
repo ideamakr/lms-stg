@@ -1,11 +1,71 @@
-import io
 import os
+import io
 import uuid
 import pytz
+import logging
 import shutil
+import sys
 from pathlib import Path
 from datetime import datetime
 from typing import List, Optional
+
+# 1. Force environment encoding
+os.environ["PYTHONIOENCODING"] = "utf-8"
+
+# 2. Reconfigure standard output/error
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
+# 3. Configure Timezone-aware Logging
+def custom_time(*args):
+    # Renamed to my_dt for clarity
+    my_dt = datetime.now(pytz.timezone('Asia/Kuala_Lumpur'))
+    return my_dt.timetuple()
+
+# Apply the custom time to the standard logging formatter
+logging.Formatter.converter = custom_time
+
+# 4. Add the Uvicorn Logging Config
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "()": "uvicorn.logging.DefaultFormatter",
+            "fmt": "%(asctime)s - %(levelname)s - %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "access": {
+            "()": "uvicorn.logging.AccessFormatter",
+            "fmt": '%(asctime)s - %(levelname)s - "%(request_line)s" %(status_code)s',
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "handlers": {
+        "default": {
+            "formatter": "default",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+        },
+        "access": {
+            "formatter": "access",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "loggers": {
+        "uvicorn": {"handlers": ["default"], "level": "INFO"},
+        "uvicorn.error": {"handlers": ["default"], "level": "INFO", "propagate": False},
+        "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
+    },
+}
+
+# 👇 ADD THESE TWO LINES HERE TO APPLY THE CONFIG IMMEDIATELY
+import logging.config
+logging.config.dictConfig(LOGGING_CONFIG)
+
+# Now proceed with your app initialization...
 
 # 👇 THIRD PARTY IMPORTS
 from fastapi import FastAPI, Depends, HTTPException, Form, File, UploadFile, Header
@@ -14,12 +74,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from PIL import Image
-from supabase import create_client, Client
 from dotenv import load_dotenv
 
 # 👇 LOCAL APPLICATION IMPORTS
 from app.database import engine, Base, get_db
 from app import models, schemas
+from app.utils.security import verify_password
 # 🚀 ADDED 'incidents' to the router imports below:
 from app.routers import leave, user, overtime, system_settings, incidents 
 from fastapi.responses import RedirectResponse, FileResponse
@@ -28,20 +88,10 @@ from sqlalchemy import text
 # 👇 INITIALIZE ENVIRONMENT
 load_dotenv()
 
+
 # 🏢 MULTI-TENANT CONFIGURATION
 CLIENT_NAME = os.getenv("CLIENT_NAME", "psyap & co")
 
-# ============================================================
-# 🚀 1. INITIALIZE SUPABASE CLIENT
-# ============================================================
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("❌ CRITICAL ERROR: SUPABASE_URL or SUPABASE_KEY is missing from .env!")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 🚀 2. SET GLOBAL TIMEZONE
 LOCAL_TZ = pytz.timezone('Asia/Kuala_Lumpur')
@@ -76,14 +126,20 @@ allowed_origins = [
     "http://localhost:5500",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "https://ideamakr.github.io", 
-    "https://leave-system-testenv.onrender.com", 
+    "http://leave.psyap.com:8080"
 ]
 
-# 🚀 Dynamically whitelist the upcoming Cloudflare domain
+# 🚀 Dynamically whitelist the production/Cloudflare domain and its variants
 CLIENT_DOMAIN = os.getenv("CLIENT_DOMAIN")
 if CLIENT_DOMAIN:
+    # Add the base domain
     allowed_origins.append(CLIENT_DOMAIN)
+    
+    # If the domain doesn't already end with a port, add the 8081 variant
+    if ":" not in CLIENT_DOMAIN.split("//")[-1]:
+        # Construct the port 8081 variant
+        port_8081_domain = f"{CLIENT_DOMAIN}:8081"
+        allowed_origins.append(port_8081_domain)
 
 app.add_middleware(
     CORSMiddleware,
@@ -96,35 +152,39 @@ app.add_middleware(
 # 📸 UTILITIES
 # ============================================================
 def compress_and_upload(file: UploadFile, folder: str = "mcs") -> str:
-    """Shrinks images to < 500KB and uploads to Supabase."""
+    """Shrinks images to < 500KB and saves them locally on the server."""
     try:
+        # Read the bytes
         contents = file.file.read()
+        
+        # 🛡️ SAFETY CHECK: Is the file actually empty?
+        if not contents:
+            raise ValueError("File content is empty.")
+
         img = Image.open(io.BytesIO(contents))
 
+        # Convert to standard RGB to drop alpha channels for JPEG
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
         
-        output = io.BytesIO()
-        img.save(output, format="JPEG", quality=60, optimize=True)
-        compressed_data = output.getvalue()
-
+        # Generate the filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         clean_filename = Path(file.filename).stem 
-        
         clean_name = f"{timestamp}_{clean_filename.replace(' ', '_')}.jpg"
-        storage_path = f"{folder}/{clean_name}"
+        
+        # Define the exact path
+        target_dir = f"uploads/{folder}"
+        os.makedirs(target_dir, exist_ok=True)
+        file_path = f"{target_dir}/{clean_name}"
+        
+        # Save with compression
+        img.save(file_path, format="JPEG", quality=60, optimize=True)
 
-        supabase.storage.from_(SUPABASE_BUCKET).upload(
-            path=storage_path,
-            file=compressed_data,
-            file_options={"content-type": "image/jpeg"}
-        )
-
-        return supabase.storage.from_(SUPABASE_BUCKET).get_public_url(storage_path)
+        return f"/uploads/{folder}/{clean_name}"
 
     except Exception as e:
-        print(f"❌ Cloud Upload Error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to upload file to cloud storage")
+        print(f"❌ Local Upload Error: {e}")
+        raise ValueError(f"Failed to process image: {e}")
 
 def is_system_locked(db: Session):
     """Checks if maintenance mode is active within the scheduled window."""
@@ -184,7 +244,7 @@ def get_system_today():
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user_record = db.query(models.User).filter(models.User.username == data.username).first()
     
-    if not user_record or user_record.password != data.password:
+    if not user_record or not verify_password(data.password, user_record.password):
         raise HTTPException(status_code=400, detail="Access Denied: Invalid credentials.")
 
     if is_system_locked(db):
@@ -252,3 +312,16 @@ async def get_version(db: Session = Depends(get_db)):
         # Catch any DB errors (like missing tables) so it doesn't cause a 500 crash
         print(f"⚠️ Version Sync Error: {e}")
         return {"version": "v1.0.0-fallback"}
+    
+    # --- LOGGING SETUP ---
+LOG_DIR = r"C:\leave-system\leave-system\logs"
+LOG_FILE = os.path.join(LOG_DIR, "server_logs.txt")
+
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+logging.basicConfig(
+    filename=LOG_FILE,
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)

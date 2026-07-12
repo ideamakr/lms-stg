@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import models, database  
 from app.database import get_db
+from app.utils.security import hash_password, verify_password
 
 # 🚀 THE ONLY ROUTER DECLARATION WE NEED
 # Using "/users" ensures your existing frontend user & profile features keep working perfectly!
@@ -378,6 +379,31 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
         "session_id": new_session_id
     }
 
+def get_current_active_user(
+    session_id: str = Header(..., alias="X-Session-ID"), 
+    db: Session = Depends(get_db)
+):
+    # 1. Fetch user by the session_id provided in the frontend header
+    user = db.query(models.User).filter(models.User.current_session_id == session_id).first()
+    
+    # 2. If no user matches or the session_id is None, they are "kicked out"
+    if not user:
+        raise HTTPException(
+            status_code=401, 
+            detail="Session expired or replaced by another login."
+        )
+    return user
+
+@router.get("/my-profile")
+def get_my_profile(
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # This logic only runs if the session is valid
+    return {
+        "username": current_user.username,
+        "full_name": current_user.full_name
+    }
+
 
 # # 🚀 Change this from .post to .get
 # @router.get("/setup-superuser")
@@ -500,7 +526,7 @@ async def register_user(
         except Exception as e:
             print(f"⚠️ Avatar Upload Warning: {e}")
 
-    # --- 🚀 4. THE 3-RETRY AUTO-INCREMENT LOOP ---
+# --- 🚀 4. THE 3-RETRY AUTO-INCREMENT LOOP ---
     max_attempts = 4  
     current_emp_id = clean_employee_id
     success = False
@@ -589,8 +615,9 @@ async def register_user(
             success = True
             break
 
-        except IntegrityError:
+        except IntegrityError as e:
             db.rollback() 
+            print(f"DEBUG: IntegrityError details: {str(e.orig)}")
             if attempt < max_attempts - 1:
                 match = re.search(r'(.*?)-(\d+)$', current_emp_id)
                 if match:
@@ -876,7 +903,7 @@ async def update_user_profile(
 
     # 6. 🔓 ADMIN LOCKDOWN ZONE (Safe Update Protected Tier)
     if is_admin:
-        print(f"🔓 [SECURITY] Admin {x_username} updating official employment fields.")
+        print(f"[SECURITY] Admin {x_username} updating official employment fields.")
         
         # Guarded String Blocks
         if job_title and job_title.strip(): 
@@ -1012,12 +1039,18 @@ async def change_user_password( # 🚀 Changed to async
     if not user:
         raise HTTPException(status_code=404, detail="User account not found")
 
+    if not payload.current_password or not payload.new_password:
+        raise HTTPException(status_code=400, detail="Current password and new password are required.")
+
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters long.")
+
     # 2. Verify Current Password
-    if user.password != payload.current_password:
+    if not verify_password(payload.current_password, user.password):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
     # 3. Update Password
-    user.password = payload.new_password
+    user.password = hash_password(payload.new_password)
     
     try:
         db.commit()

@@ -10593,109 +10593,138 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
         // // const API_URL = "https://parenting-substantially-oregon-strongly.trycloudflare.com";
 
 
-        // 📡 DYNAMIC API HANDSHAKE
-        // Automatically switches between Local and Staging based on your browser URL
-    const getApiUrl = () => {
+// 📡 DYNAMIC API HANDSHAKE (HARDENED)
+const getApiUrl = () => {
     const host = window.location.hostname;
+    let url = "";
+
+    // 1. Local Development
     if (host === "127.0.0.1" || host === "localhost") {
-        return "http://127.0.0.1:8000";
+        url = "http://127.0.0.1:8081";
+    } else {
+        // 2. PRODUCTION
+        url = "http://leave.psyap.com:8081"; 
     }
-    // DEFAULT: Staging Environment
-    return "https://leave-system-testenv.onrender.com";
-    };
 
+    // 🛡️ SANITIZER: Ensure we never include the broken "None/storage" path
+    if (url.includes("/None/")) {
+        url = url.split("/None/")[0];
+    }
+    
+    return url;
+};
+
+// Define once. Use "const" so it cannot be changed later.
 const API_URL = getApiUrl();
-console.log("🌐 System Handshake initiated with:", API_URL);
-        
-            // 🌍 1. GLOBAL IDENTITY (FORCE SYNC)
-            // 🚀 Leave Manager Pagination
-            let mgrCurrentPage = 1;
-            const mgrPageSize = 10;
+console.log("🌐 System Handshake confirmed with:", API_URL);
 
-            const processedActionIds = new Set();
+// ============================================================
+// 🛡️ UNIVERSAL IDENTITY RESOLVER (0-BUG SECURITY)
+// ============================================================
+const getSafeUserName = () => {
+    // Check Local/Session Storage permutations safely
+    let userName = localStorage.getItem("currentUser") 
+        || sessionStorage.getItem("currentUser") 
+        || localStorage.getItem("employee_name") 
+        || localStorage.getItem("full_name") 
+        || "";
         
-            // 🚀 Overtime Manager Pagination
-            let mgrOTCurrentPage = 1;
-            const mgrOTPageSize = 10;
-        
-            let otCurrentPage = 1;
-            const otPageSize = 10;
-            let mgrHistCurrentPage = 1;
-            const mgrHistPageSize = 10;
-            let entCurrentPage = 1;
-            const entPageSize = 50;
-        
-            // 🚀 GLOBAL CONFIG (HYBRID STORAGE ENGINE SYNC)
-            let ENABLE_CARRY_FORWARD = false;
-            let lastFetchedAuditLogs = [];
-            
-            // Evaluates persistent store first, then falls back to session-only storage context cleanly
-            let SESSION_ID = localStorage.getItem("sessionId") || sessionStorage.getItem("sessionId");
-            let CURRENT_USER = localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser");
-            let USER_ROLES = JSON.parse(
-                localStorage.getItem("userRoles") || sessionStorage.getItem("userRoles") || '["employee"]'
-            );
-            let teamEntitlementCache = [];
-            let historyCache = [];
-            let currentSort = { key: null, direction: 'asc' }
-            let historySort = { key: 'start_date', direction: 'desc' };
-            let rawHistoryData = []; // Stores the current list (filtered)
-            let historySortState = { key: 'id', direction: 'desc' }; // Default: Newest First
-            let mgrOTSortState = { key: 'ot_date', direction: 'desc' };
-            let historyPageSize = 10;
-            let historyCurrentPage = 1;
+    // Catch literal string "null" or "undefined"
+    if (userName === "null" || userName === "undefined") {
+        return "";
+    }
+    
+    return userName.trim();
+};
+// ============================================================
 
+// 🌍 1. GLOBAL IDENTITY (FORCE SYNC)
+// 🚀 Leave Manager Pagination
+let mgrCurrentPage = 1;
+const mgrPageSize = 10;
+const processedActionIds = new Set();
 
-            var masterAuditData = [];      // Holds ALL fetched data (Leaves + OT)
-            var filteredAuditData = [];    // Holds data after Search/Filter is applied
-            var auditSortState = { key: 'id', direction: 'desc' }; 
-            var auditCurrentPage = 1;
-            var auditPageSize = 10;
+// 🚀 Overtime Manager Pagination
+let mgrOTCurrentPage = 1;
+const mgrOTPageSize = 10;
 
-            // UI Aliases
-            let currentUser = CURRENT_USER;
-            let userRoles = USER_ROLES;
-            let isKickedOut = false;
-            let isRefreshing = false;
-            let initialPermissionState = {};
-            let isEditingUser = false;
+let otCurrentPage = 1;
+const otPageSize = 10;
+let mgrHistCurrentPage = 1;
+const mgrHistPageSize = 10;
+let entCurrentPage = 1;
+const entPageSize = 50;
 
-            // 🔒 HEADCOUNT CAPACITY & SYSTEM FAIL-SAFE LOCKS
-            window.MAX_SEATS = 0;
-            window.REGISTRATION_LOCK = false;
-            window.CURRENT_HEADCOUNT = 0;
-            // ============================================================
-            // 🚀 NEW INSERTION: GLOBAL INITIALIZERS (Must be here!)
-            // ============================================================
-        
-            // 1. Fixes the "currentCalDate is not defined" error in the calendar
-            let currentCalDate = new Date();
-        
-            // 2. Fixes the "saveLeaveDraft is not defined" error in the draft listeners
-    window.saveLeaveDraft = function() {
+// 🚀 GLOBAL CONFIG (HYBRID STORAGE ENGINE SYNC)
+let ENABLE_CARRY_FORWARD = false;
+let lastFetchedAuditLogs = [];
+
+// Evaluates persistent store first, then falls back to session-only storage context cleanly
+let SESSION_ID = localStorage.getItem("sessionId") || sessionStorage.getItem("sessionId");
+
+// ✅ APPLYING THE FIX: Use our new utility to secure the global state immediately!
+let CURRENT_USER = getSafeUserName(); 
+
+let USER_ROLES = JSON.parse(
+    localStorage.getItem("userRoles") || sessionStorage.getItem("userRoles") || '["employee"]'
+);
+let teamEntitlementCache = [];
+let historyCache = [];
+let currentSort = { key: null, direction: 'asc' }
+let historySort = { key: 'start_date', direction: 'desc' };
+let rawHistoryData = []; // Stores the current list (filtered)
+let historySortState = { key: 'id', direction: 'desc' }; // Default: Newest First
+let mgrOTSortState = { key: 'ot_date', direction: 'desc' };
+let historyPageSize = 10;
+let historyCurrentPage = 1;
+
+var masterAuditData = [];      // Holds ALL fetched data (Leaves + OT)
+var filteredAuditData = [];    // Holds data after Search/Filter is applied
+var auditSortState = { key: 'id', direction: 'desc' }; 
+var auditCurrentPage = 1;
+var auditPageSize = 10;
+
+// UI Aliases
+let currentUser = CURRENT_USER; // 👈 Now strictly protected against "null"
+let userRoles = USER_ROLES;
+let isKickedOut = false;
+let isRefreshing = false;
+let initialPermissionState = {};
+let isEditingUser = false;
+
+// 🔒 HEADCOUNT CAPACITY & SYSTEM FAIL-SAFE LOCKS
+window.MAX_SEATS = 0;
+window.REGISTRATION_LOCK = false;
+window.CURRENT_HEADCOUNT = 0;
+
+// ============================================================
+// 🚀 NEW INSERTION: GLOBAL INITIALIZERS (Must be here!)
+// ============================================================
+
+// 1. Fixes the "currentCalDate is not defined" error in the calendar
+let currentCalDate = new Date();
+
+// 2. Fixes the "saveLeaveDraft is not defined" error in the draft listeners
+window.saveLeaveDraft = function() {
     // 1. Detect Mode
     const isCF = document.getElementById("carry_forward_ui")?.style.display === "block";
 
     if (isCF) {
         // 🟢 CARRY FORWARD MODE
-        // Saves to its own 'leave_draft_cf' bucket
-        // 🚀 FIX: Reads from 'cf_reason' (Unique ID) so it doesn't conflict
         const draft = {
             days: document.getElementById("cf_days_input")?.value,
-            reason: document.getElementById("cf_reason")?.value, // <--- CHANGED THIS
+            reason: document.getElementById("cf_reason")?.value,
             approver: document.getElementById("dash_approver_cf")?.value,
             timestamp: new Date().getTime()
         };
         localStorage.setItem("leave_draft_cf", JSON.stringify(draft));
     } else {
         // 🔵 STANDARD LEAVE MODE
-        // Saves to 'leave_draft_std' bucket
-        // Logic remains UNTOUCHED to ensure no regression
         const draft = {
             type: document.getElementById("dash_leave_type")?.value,
             start: document.getElementById("dash_start")?.value,
             end: document.getElementById("dash_end")?.value,
-            reason: document.getElementById("dash_reason")?.value, // Standard ID
+            reason: document.getElementById("dash_reason")?.value,
             approver: document.getElementById("dash_approver")?.value,
             half_day: document.getElementById("dash_half_day")?.checked,
             timestamp: new Date().getTime()
@@ -10708,7 +10737,9 @@ console.log("🌐 System Handshake initiated with:", API_URL);
 // ✅ MAKE THIS GLOBAL (Put at the top of your script)
 const getFullPath = (path) => {
     if (!path || path === "NULL" || path === "" || path === "undefined" || path === "null") return null;
-    return path.startsWith('http') ? path : `${API_URL}${path}`;
+    if (path.startsWith('http')) return path;
+    if (!path.startsWith('/')) path = `/${path}`;
+    return `${API_URL}${path}`;
 };
             // ============================================================
             // END NEW INSERTION
@@ -10791,11 +10822,10 @@ window.updateCharCount = function(textarea, specificId) {
     const navSettings = document.getElementById("nav_hr_settings"); 
     const superToggle = document.getElementById("superuser_toggle_container"); 
     
-    // 👑 1. BULLETPROOF SUPERUSER CHECK
+// 👑 1. BULLETPROOF SUPERUSER CHECK
     const masterRole = localStorage.getItem("userMasterRole") || "";
     const loggedInUser = localStorage.getItem("username") || "";
-    const currentUserName = typeof currentUser !== 'undefined' ? currentUser : (localStorage.getItem("currentUser") || "");
-    
+    const currentUserName = getSafeUserName(); // ✅ Using the universal utility!
     const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
 
     // 🚀 1.5 Show Command Center Toggle if Superuser
@@ -11313,12 +11343,26 @@ async function loadGlobalOverrideQueue() {
 const leaveEntitlements = {};
 let annualRemainingGlobal = 0;
 
+function getStoredValue(key) {
+    const localValue = localStorage.getItem(key);
+    if (localValue && localValue !== "null" && localValue !== "undefined") {
+        return localValue;
+    }
+
+    const sessionValue = sessionStorage.getItem(key);
+    if (sessionValue && sessionValue !== "null" && sessionValue !== "undefined") {
+        return sessionValue;
+    }
+
+    return "";
+}
+
 // 🛡️ 5. THE BULLETPROOF AUTH FETCH (Updated for Superuser Security & Abort Signals)
 async function fetchWithAuth(url, options = {}) {
     // 1. Sync High-speed RAM if empty
     if (!SESSION_ID || SESSION_ID === "null") {
-        SESSION_ID = localStorage.getItem("sessionId");
-        CURRENT_USER = localStorage.getItem("currentUser");
+        SESSION_ID = getStoredValue("sessionId");
+        CURRENT_USER = getStoredValue("currentUser");
     }
 
     // 2. 🛑 HARD STOP: Prevent the "EMPTY ID" race condition
@@ -11331,7 +11375,7 @@ async function fetchWithAuth(url, options = {}) {
  options.headers = options.headers || {};
     
     // 👑 DYNAMIC IDENTITY & ROLE EXTRACTION (Zero Hardcoded Names)
-    let realUsernameToken = localStorage.getItem("username") || "";
+    let realUsernameToken = getStoredValue("username") || "";
     let systemObjectRole = "";
     
     try {
@@ -11350,7 +11394,8 @@ async function fetchWithAuth(url, options = {}) {
         if (CURRENT_USER === "System Administrator") {
             realUsernameToken = "superuser";
         } else {
-            // Converts "Jack Jalos" -> "jack", "Natasha Romanoff" -> "natasha", etc.
+            // Converts "Jack Jalos" -> "jack", "Natasha Romanoff" -> "nata
+            // sha", etc.
             realUsernameToken = CURRENT_USER.trim().split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
         }
     }
@@ -13012,10 +13057,11 @@ function viewLeaveDetails(leave) {
         statusColor = "#ef4444"; 
     }
 
-    let attachmentHtml = "";
+let attachmentHtml = "";
     if (leave.attachment_path) {
         const rawPath = leave.attachment_path;
-        let fileUrl = rawPath.startsWith("http") ? rawPath : `${API_URL}/uploads/${rawPath.split("/").pop()}`;
+        const fileUrl = getFullPath(rawPath);
+
         attachmentHtml = `
         <div style="margin-top: 10px; padding: 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-file-alt" style="color: #0ea5e9; font-size: 1.2rem;"></i>
@@ -13033,18 +13079,19 @@ function viewLeaveDetails(leave) {
     let timelineHtml = `<div style="position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 8px; margin-top: 10px;">`;
 
     historySteps.forEach((step, index) => {
-        const isLast = index === historySteps.length - 1;
         const isFirst = index === 0;
         const dateRegex = /\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)/;
         const timeMatch = step.match(dateRegex);
         let timeText = timeMatch ? timeMatch[1] : (isFirst ? leave.start_date : "");
 
+        // Extract the raw status text (removing the timestamp)
         let stepStatus = step.replace(dateRegex, "").trim();
         let stepRemark = isFirst ? employeeReason : "";
 
-        // 🚀 TIMELINE ALIAS: Make history items match the header
-        if (stepStatus === "Pending L2 Approval") stepStatus = "Final Approval";
+        // 🚀 TIMELINE ALIAS: Map system statuses to readable UI labels
+        if (stepStatus === "Pending L2 Approval") stepStatus = "Awaiting Final Approval";
 
+        // Logic to extract remarks/notes from the log string if present
         if (!isFirst) {
             if (stepStatus.includes("| Note:")) {
                 const splitParts = stepStatus.split("| Note:");
@@ -13059,12 +13106,13 @@ function viewLeaveDetails(leave) {
             }
         }
 
+        // Define status colors
         let dotColor = "#cbd5e1"; 
-        if (stepStatus.includes("Approved")) dotColor = "#10b981";
-        else if (stepStatus.includes("Rejected")) dotColor = "#ef4444";
-        else if (stepStatus.includes("Cancelled") || stepStatus.includes("Withdrawn")) dotColor = "#64748b";
-        else if (stepStatus === "Final Approval") dotColor = "#8b5cf6"; // Purple dot for timeline
-        else if (isLast && leave.status.includes("Pending")) dotColor = "#f59e0b";
+        if (stepStatus.toLowerCase().includes("approved")) dotColor = "#10b981"; // Green
+        else if (stepStatus.toLowerCase().includes("rejected")) dotColor = "#ef4444"; // Red
+        else if (stepStatus.toLowerCase().includes("cancelled") || stepStatus.toLowerCase().includes("withdrawn")) dotColor = "#64748b"; // Grey
+        else if (stepStatus === "Awaiting Final Approval") dotColor = "#8b5cf6"; // Purple
+        else if (index === historySteps.length - 1 && leave.status.includes("Pending")) dotColor = "#f59e0b"; // Orange
 
         timelineHtml += `
         <div style="margin-bottom: 20px; position: relative;">
@@ -13105,7 +13153,7 @@ function viewLeaveDetails(leave) {
     // ---------------------------------------------------------
     // 📜 3. RENDER FINAL HTML
     // ---------------------------------------------------------
-    content.innerHTML = `
+content.innerHTML = `
         ${proxyBannerHtml}
         <div style="margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 12px;">
             ${avatarHTML}
@@ -13138,13 +13186,19 @@ function viewLeaveDetails(leave) {
             </div>
         </div>
 
-        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-            <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Current Approver</label><br>
-            <span style="color: #2563eb; font-weight: 600;">
-                <i class="fas fa-user-tie"></i> 
-                ${leave.status === "Pending L2 Approval" ? (leave.approver_l2 || "Department Head") : (leave.approver_name || "Line Manager")}
-            </span>
-        </div>
+<div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+    <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">
+        ${leave.status === "Approved" ? "Approved By" : (leave.status === "Pending L2 Approval" ? "Final Approver" : "Approver")}
+    </label><br>
+    <span style="color: #2563eb; font-weight: 600;">
+        <i class="fas fa-user-tie"></i> 
+        ${leave.status === "Approved" 
+            ? (leave.approver_l2 || leave.approver_name || "Manager") 
+            : (leave.status === "Pending L2 Approval" 
+                ? (leave.approver_l2 || "Awaiting Assignment") 
+                : (leave.approver_name || "Line Manager"))}
+    </span>
+</div>
 
         ${attachmentHtml ? `<div style="margin-bottom: 20px;">${attachmentHtml}</div>` : ""}
 
@@ -13153,7 +13207,7 @@ function viewLeaveDetails(leave) {
             ${timelineHtml}
         </div>`;
 
-    modal.style.display = "flex";
+modal.style.display = "flex";
 }
 
       function closeLeaveModal() {
@@ -15827,11 +15881,7 @@ function changeMgrHistoryPage(direction) {
 let attachmentHtml = "";
     if (leaveRecord && leaveRecord.attachment_path) {
         const rawPath = leaveRecord.attachment_path;
-        
-        // 🛠️ SMART URL LOGIC: Use Supabase if available, fallback to local
-        const fileUrl = rawPath.startsWith("http") 
-            ? rawPath 
-            : `${API_URL}/uploads/${rawPath.split("/").pop()}`;
+        const fileUrl = getFullPath(rawPath);
 
         attachmentHtml = `
             <div style="margin-top: 15px; padding: 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
@@ -16137,17 +16187,19 @@ async function populateL2ManagerDropdown(applicantName) {
  * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
  * This function is called by the modal buttons in processApproval()
  */
- async function submitDecision(leaveId, status) {
+async function submitDecision(leaveId, status) {
     const remarks = document.getElementById("mgr_review_remarks").value;
     const l2Container = document.getElementById("l2SelectorContainer");
     
     // 🛡️ Safe Access
     const l2Select = document.getElementById("l2_manager_select");
-    let l2Name = l2Select ? l2Select.value : ""; // 🚀 Changed to 'let' so we can safely mutate it
-    const approverName = localStorage.getItem("currentUser");
+    let l2Name = l2Select ? l2Select.value : ""; 
+
+    // ✅ STEP 1 FIX: Use our new centralized identity resolver
+    // This guarantees we never send "null" or "undefined" strings to the backend.
+    const approverName = getSafeUserName() || "System Administrator";
 
     // 🚀 THE FAILSAFE: If L2 is OFF (Container Hidden), wipe the L2 name 
-    // so it doesn't accidentally trigger a multi-level approval backend route!
     if (l2Container && l2Container.style.display === "none") {
         l2Name = "";
     }
@@ -20921,7 +20973,7 @@ function updateCurrentYearLabels() {
         }
       }
 
-      async function submitPasswordChange() {
+async function submitPasswordChange() {
     const slots = ["p1_error", "p2_error", "p3_error"];
     slots.forEach((id) => clearError(id));
     
@@ -20938,8 +20990,22 @@ function updateCurrentYearLabels() {
     if (hasError) return;
 
     try {
-        // 🚀 THE FIX: Pull the unique 'username' (e.g., natasha) stored during login
-        const storedUsername = localStorage.getItem("username"); 
+        // 🚀 THE FIX: Bulletproof User Identifier Lookup (Zero Domino Effect)
+        // Safely checks multiple storage layers to guarantee we find the username
+        let storedUsername = null;
+        
+        // 1. Try your existing helper function first
+        if (typeof getStoredValue === 'function') {
+            storedUsername = getStoredValue("employee_name") || getStoredValue("username");
+        }
+        
+        // 2. Fallback to direct Storage checks if the helper returns null
+        if (!storedUsername) {
+            storedUsername = localStorage.getItem("employee_name") || 
+                             localStorage.getItem("username") || 
+                             sessionStorage.getItem("employee_name") || 
+                             sessionStorage.getItem("username");
+        }
 
         if (!storedUsername) {
             showInlineError("p1_error", "User session error. Please re-login.");
@@ -21552,21 +21618,20 @@ function clearPolicySearch() {
         window.currentAdjustingUser = null;
       }
 
-
-      async function loadHomeLeadershipInsights(signal) {
-    // 1. Setup Role Access
+    async function loadHomeLeadershipInsights(signal) {
+    // 1. Role Access Configuration
     const isHR = userRoles.includes("hr_admin");
     const isManager = userRoles.includes("manager");
     
-    // 👑 SUPERUSER IDENTITY SENTRY
+    // 👑 0-BUG IDENTITY RESOLVER
+    const currentUserName = getSafeUserName();
     const masterRole = localStorage.getItem("userMasterRole") || "";
     const loggedInUser = localStorage.getItem("username") || "";
     
-    // ✅ FIXED: Reference the global currentUser or check both storage options to prevent session bypass bugs
-    const currentUserName = typeof currentUser !== 'undefined' ? currentUser : (localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "");
     const isSuperuser = (masterRole === "superuser" || loggedInUser === "superuser" || currentUserName === "System Administrator");
     
-    const isBoss = isHR || isManager || isSuperuser; // Preserved to keep backend array unpack index alignment fully stable
+    // Preserved to keep backend array unpack index alignment fully stable
+    const isBoss = isHR || isManager || isSuperuser; 
 
     // 2. Get DOM Elements
     const panel = document.getElementById("leadership_panel");
@@ -21577,11 +21642,11 @@ function clearPolicySearch() {
     const leaveInbox = document.getElementById("tile_leave_inbox");
     const otInbox = document.getElementById("tile_ot_inbox");
 
-    // 🚀 SECTION 3 FIXED: Instant personal layout rendering; let dynamic block handle the boss containers below
-    // 🚀 Hide the schedule permanently if the user is a superadmin
+    // 🚀 SECTION 3: Layout Logic
+    // Hide schedule permanently if the user is a superadmin
     if (panel) {
         if (isSuperuser) {
-            // ✅ FIXED: Hard-enforce the display drop using !important so no downstream logic can reset it
+            // Hard-enforce display drop so no downstream logic resets it
             panel.style.setProperty("display", "none", "important");
         } else {
             panel.style.display = "block";
@@ -24357,176 +24422,106 @@ async function updateL2Policy(isEnabled) {
           typeSelector.value = "Regular";
         }
       }
-
-      // 1. Unified Employee-side View Details (Robust Mapper)
-      function viewOTDetails(ot) {
-        // 🛡️ Data Sanitization: Hunt for the date and amount
-        // This checks multiple fields because History table and Manager table use different keys
-        const safeDate =
-          ot.ot_date || ot.start_date || ot.display_start || "N/A";
-        const safeAmount =
-          ot.total_value ||
-          (ot.display_amount ? ot.display_amount.split(" ")[0] : "0");
-        const safeUnit =
-          ot.ot_unit ||
-          (ot.display_amount ? ot.display_amount.split(" ")[1] : "hours");
-
-        // Maps History field names to OT Modal field names
-        const mappedOT = {
-          ...ot,
-          total_value: safeAmount,
-          ot_unit: safeUnit,
-          ot_date: safeDate, // 👈 This fixes the "undefined" date at the top
-          ot_type: ot.ot_type || ot.leave_type || "Overtime",
-        };
-
-        viewOTDetailsModal(mappedOT);
-      }
-
-      function viewOTDetailsModal(ot) {
+// This replaces your two functions. 
+// Any button calling 'viewOTDetails(ot)' will work perfectly.
+function viewOTDetails(ot) {
     const modal = document.getElementById("leaveDetailModal");
     const content = document.getElementById("modalContent");
 
-    // Header
+    // 1. Data Mapping & Sanitization
+    const safeDate = ot.ot_date || ot.start_date || ot.display_start || "N/A";
+    const safeAmount = ot.total_value || (ot.display_amount ? ot.display_amount.split(" ")[0] : "0");
+    const safeUnit = ot.ot_unit || (ot.display_amount ? ot.display_amount.split(" ")[1] : "hours");
+    
+    // Header Setup
     const headerTitle = modal.querySelector("h3");
-    if (headerTitle) {
-        headerTitle.innerHTML = `<i class="fas fa-stopwatch"></i> Overtime Details`;
-    }
+    if (headerTitle) headerTitle.innerHTML = `<i class="fas fa-stopwatch"></i> Overtime Details`;
 
-    // 🚀 THE ALIAS MERGE: Status Colors & Labels
+    // Status Styling
     const rawStatus = ot.status || "Pending";
     let statusLabel = rawStatus;
-    let statusColor = "#854d0e"; // Default amber
+    let statusColor = "#854d0e"; 
 
     if (rawStatus === "Pending L2 Approval") {
         statusLabel = "Final Approval";
-        statusColor = "#8b5cf6"; // 🎨 Purple for Final Approval
+        statusColor = "#8b5cf6"; 
     } else if (rawStatus === "Approved") {
-        statusColor = "#166534"; // Green
+        statusColor = "#166534";
     } else if (rawStatus === "Rejected") {
-        statusColor = "#991b1b"; // Red
+        statusColor = "#991b1b";
     } else if (rawStatus === "Withdrawn" || rawStatus === "Cancelled") {
         statusColor = "#475569";
     }
 
     // Clean Reason
-    let cleanReason = ot.reason || "No reason provided.";
-    cleanReason = cleanReason.split("| Manager Note:")[0].trim();
+    let cleanReason = (ot.reason || "No reason provided.").split("| Manager Note:")[0].trim();
 
-    // ============================================================
-    // 🚀 ATTACHMENT FIX (SUPABASE COMPATIBLE)
-    // ============================================================
+    // Attachments
     let attachmentHtml = "";
     if (ot.attachment_path) {
-        const rawPath = ot.attachment_path;
-        let fileUrl = rawPath;
-        if (!rawPath.startsWith("http")) {
-            fileUrl = `${API_URL}/uploads/${rawPath.split("/").pop()}`;
-        }
+        const fileUrl = typeof getFullPath === "function" ? getFullPath(ot.attachment_path) : ot.attachment_path;
         attachmentHtml = `
-        <div style="margin-top: 10px; padding: 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-file-alt" style="color: #0ea5e9; font-size: 1.2rem;"></i>
-            <div style="flex: 1;">
-                <label style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block;">Your Attached Document</label>
-                <a href="${fileUrl}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: none; font-size: 0.85rem;">
-                    <i class="fas fa-external-link-alt"></i> View Attachment
-                </a>
-            </div>
-        </div>`;
+            <div style="margin-top: 10px; padding: 12px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-file-alt" style="color: #0ea5e9; font-size: 1.2rem;"></i>
+                <div style="flex: 1;">
+                    <label style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block;">Your Attached Document</label>
+                    <a href="${fileUrl}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: none; font-size: 0.85rem;"><i class="fas fa-external-link-alt"></i> View Attachment</a>
+                </div>
+            </div>`;
     }
 
-    // 🚀 HISTORY LOGIC
+    // Timeline History
     let rawHistory = ot.status_history || "Pending";
-    if ((ot.status === "Withdrawn" || ot.status === "Cancelled") &&
-        !rawHistory.includes("Withdrawn") && !rawHistory.includes("Cancelled")) {
-        let actionTime = "Date N/A";
-        if (ot.updated_at) {
-            try {
-                const d = new Date(ot.updated_at);
-                actionTime = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-            } catch (e) { console.error("Date parse error", e); }
-        }
-        rawHistory += ` > ${ot.status} (${actionTime})`;
+    if ((ot.status === "Withdrawn" || ot.status === "Cancelled") && !rawHistory.includes("Withdrawn") && !rawHistory.includes("Cancelled")) {
+        rawHistory += ` > ${ot.status} (${ot.updated_at || "Date N/A"})`;
     }
 
     const historySteps = rawHistory.split(" > ");
     let timelineHtml = `<div style="position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 8px; margin-top: 10px;">`;
 
     historySteps.forEach((step, index) => {
-        const isLast = index === historySteps.length - 1;
         const isFirst = index === 0;
         const dateRegex = /\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)/;
         const timeMatch = step.match(dateRegex);
-
-        let timeText = timeMatch ? timeMatch[1] : (isFirst ? ot.ot_date || "N/A" : "N/A");
+        let timeText = timeMatch ? timeMatch[1] : (isFirst ? safeDate : "N/A");
         let stepStatus = step.replace(dateRegex, "").trim();
         let stepRemark = isFirst ? cleanReason : "";
 
-        // 🚀 TIMELINE ALIAS: Make history items match the header terminology
         if (stepStatus === "Pending L2 Approval") stepStatus = "Final Approval";
 
-        if (!isFirst) {
-            if (stepStatus.includes("| Note:")) {
-                const splitParts = stepStatus.split("| Note:");
-                stepStatus = splitParts[0].trim();
-                stepRemark = splitParts[1].trim();
-            } else {
-                const noteMatch = stepStatus.match(/\{Note:\s*(.*?)\}/i) || stepStatus.match(/\(Reason:\s*(.*?)\)/i);
-                if (noteMatch) {
-                    stepRemark = noteMatch[1];
-                    stepStatus = stepStatus.replace(noteMatch[0], "").trim();
-                }
-            }
+        if (!isFirst && stepStatus.includes("| Note:")) {
+            const splitParts = stepStatus.split("| Note:");
+            stepStatus = splitParts[0].trim();
+            stepRemark = splitParts[1].trim();
         }
         stepStatus = stepStatus.replace(/\(\s*\)/g, "").trim();
 
- // 🎨 Dot Color Logic (Merged with Purple Stage)
- let dotColor = "#cbd5e1";
+        let dotColor = "#cbd5e1";
         if (stepStatus.includes("Approved")) dotColor = "#10b981";
         else if (stepStatus.includes("Rejected")) dotColor = "#ef4444";
-        else if (stepStatus.includes("Cancelled") || stepStatus.includes("Withdrawn")) dotColor = "#64748b";
-        else if (stepStatus === "Final Approval") dotColor = "#8b5cf6"; // Purple dot
-        else if (isLast && ot.status.includes("Pending")) dotColor = "#f59e0b";
-
+        else if (stepStatus === "Final Approval") dotColor = "#8b5cf6";
+        
         timelineHtml += `
-        <div style="margin-bottom: 20px; position: relative; padding-left: 2px;">
-            <div style="position: absolute; left: -26px; top: 3px; width: 12px; height: 12px; background: white; border: 3px solid ${dotColor}; border-radius: 50%; box-sizing: border-box; z-index: 5;"></div>
-            <div style="font-weight: 700; font-size: 0.88rem; color: #1e293b; line-height: 1.2; margin: 0; padding: 0;">${stepStatus.toUpperCase()}</div>
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">${timeText}</div>
-            ${stepRemark ? `<div style="margin-top:4px; font-size:0.85rem; color:#475569; background:#f1f5f9; padding:6px 10px; border-radius:6px; border-left:3px solid ${dotColor};"><i class="fas fa-comment-dots" style="opacity:0.5; margin-right:4px;"></i> ${stepRemark}</div>` : ""}
-        </div>`;
+            <div style="margin-bottom: 20px; position: relative;">
+                <div style="position: absolute; left: -26px; top: 3px; width: 12px; height: 12px; background: white; border: 3px solid ${dotColor}; border-radius: 50%;"></div>
+                <div style="font-weight: 700; font-size: 0.88rem; color: #1e293b;">${stepStatus.toUpperCase()}</div>
+                <div style="font-size: 0.75rem; color: #94a3b8;">${timeText}</div>
+                ${stepRemark ? `<div style="margin-top:4px; font-size:0.85rem; color:#475569; background:#f1f5f9; padding:6px 10px; border-radius:6px; border-left:3px solid ${dotColor};">${stepRemark}</div>` : ""}
+            </div>`;
     });
     timelineHtml += `</div>`;
 
-    // 📸 OVERTIME HEADER AVATAR ENGINE: Cross-reference identities with user array cache
+    // Avatar Logic
     const empName = ot.employee_name || "Staff Member";
     const initials = empName.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
-    
-    let rawPath = null;
-    if (window.allUsersList && window.allUsersList.length > 0) {
-        const linkedUser = window.allUsersList.find(u => 
-            (u.full_name || "").trim().toLowerCase() === empName.trim().toLowerCase()
-        );
-        if (linkedUser) {
-            rawPath = linkedUser.profile_pic_url || linkedUser.avatar_url;
-        }
-    }
+    const reviewAvatarHTML = `<div style="width: 35px; height: 35px; background: #eff6ff; color: #1d4ed8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; border: 1px solid #dbeafe;">${initials}</div>`;
 
-    let finalPhotoUrl = "";
-    if (rawPath && rawPath !== "null" && rawPath !== "") {
-        finalPhotoUrl = typeof getFullPath === "function" ? getFullPath(rawPath) : rawPath;
-    }
-
-    const reviewHasAvatar = finalPhotoUrl !== "" && !finalPhotoUrl.includes("undefined") && !finalPhotoUrl.includes("null");
-    const reviewAvatarHTML = reviewHasAvatar 
-        ? `<img src="${finalPhotoUrl}" alt="Profile" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">`
-        : `<div style="width: 35px; height: 35px; background: #eff6ff; color: #1d4ed8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; border: 1px solid #dbeafe; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">${initials}</div>`;
-
+    // Render HTML
     content.innerHTML = `
         <div style="margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 12px;">
             ${reviewAvatarHTML}
             <div>
-                <label style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; display: block;">Employee Name</label>
+                <label style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; font-weight: bold; display: block;">Employee Name</label>
                 <strong style="font-size: 1.05rem; color: #1e293b;">${empName}</strong>
             </div>
         </div>
@@ -24534,7 +24529,7 @@ async function updateL2Policy(isEnabled) {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
             <div>
                 <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Duration</label><br>
-                <strong style="font-size: 1rem;">${ot.total_value} ${ot.ot_unit}</strong>
+                <strong style="font-size: 1rem;">${safeAmount} ${safeUnit}</strong>
             </div>
             <div>
                 <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Status</label><br>
@@ -24546,29 +24541,35 @@ async function updateL2Policy(isEnabled) {
             </div>
             <div>
                 <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">OT Date</label><br>
-                <span>${formatDateNice(ot.ot_date)}</span>
+                <span>${typeof formatDateNice === 'function' ? formatDateNice(safeDate) : safeDate}</span>
             </div>
             <div>
                 <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">OT Type</label><br>
-                <span>${ot.ot_type}</span>
+                <span>${ot.ot_type || 'Regular'}</span>
             </div>
         </div>
 
-        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-            <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Current Approver</label><br>
-            <span style="color: #2563eb; font-weight: 600;">
-                <i class="fas fa-user-tie"></i> 
-                ${ot.status === "Pending L2 Approval" ? (ot.approver_l2 || "Department Head") : (ot.approver_name || "Line Manager")}
-            </span>
-        </div>
+<div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+    <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">
+        ${ot.status === "Approved" ? "Approved By" : (ot.status === "Pending L2 Approval" ? "Final Approver" : "Approver")}
+    </label><br>
+    <span style="color: #2563eb; font-weight: 600;">
+        <i class="fas fa-user-tie"></i> 
+        ${ot.status === "Approved" 
+            ? (ot.approver_l2 || ot.approver_name || "Manager") 
+            : (ot.status === "Pending L2 Approval" 
+                ? (ot.approver_l2 || "Awaiting Assignment") 
+                : (ot.approver_name || "Line Manager"))}
+    </span>
+</div>
 
-        ${attachmentHtml ? `<div style="margin-bottom: 20px;">${attachmentHtml}</div>` : ""}
+        ${attachmentHtml}
 
         <div style="margin-top: 10px; border-top: 2px solid #f1f5f9; padding-top: 15px;">
             <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold; margin-bottom: 10px; display: block;">Activity Log</label>
             ${timelineHtml}
-        </div>
-    `;
+        </div>`;
+
     modal.style.display = "flex";
 }
 
@@ -24883,7 +24884,7 @@ function renderManagerOTTable() {
             </div>
 
             <div style="width: 20%; display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                <button class="tooltip-trigger" title="Review Details" onclick='viewOTDetailsModal(${otJson})' 
+                <button class="tooltip-trigger" title="Review Details" onclick='viewOTDetails(${otJson})'
                     style="height: 38px; width: 38px; border-radius: 10px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
                     <i class="fas fa-eye"></i>
                 </button>
@@ -25001,7 +25002,7 @@ function sortManagerOTQueue(key) {
     let attachmentHtml = "";
     if (otRecord && otRecord.attachment_path) {
         const rawPath = otRecord.attachment_path;
-        const fileUrl = rawPath.startsWith("http") ? rawPath : `${API_URL}/uploads/${rawPath.split("/").pop()}`;
+        const fileUrl = getFullPath(rawPath);
         attachmentHtml = `<div style="margin-top: 15px; padding: 12px; background: #fffbeb; border: 1px dashed #d97706; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
                 <div style="background: #fef3c7; padding: 8px; border-radius: 6px;"><i class="fas fa-file-invoice" style="color: #d97706;"></i></div>
                 <div style="flex: 1;">
@@ -25160,18 +25161,29 @@ function sortManagerOTQueue(key) {
     modal.style.display = "flex";
 }
 
- // ✅ 0-BUG VERSION: Overtime Execution with Phantom Data Guard & UX Auto-Switch
+// ✅ 0-BUG VERSION: Overtime Execution with Phantom Data Guard & UX Auto-Switch
 async function executeOTFinalDecision(otId, status) {
     const remarks = document.getElementById("mgr_review_remarks").value;
     const l2Container = document.getElementById("l2SelectorContainer");
     let l2Name = document.getElementById("l2_manager_select").value;
-    const approverName = localStorage.getItem("currentUser");
+    
+    // 🛡️ SECURITY GUARD 1: Safely grab the name from various possible local storage keys
+    let approverName = localStorage.getItem("currentUser") 
+        || localStorage.getItem("employee_name") 
+        || localStorage.getItem("full_name") 
+        || "";
 
-    // 🛡️ SECURITY GUARD: If L2 container is hidden, strip the value so we never route by accident
+    // 🛡️ SECURITY GUARD 2: Explicitly strip if by any chance a "null" string was returned
+    if (approverName === "null" || approverName === null) {
+        approverName = "";
+    }
+
+    // 🛡️ SECURITY GUARD 3: If L2 container is hidden, strip the value so we never route by accident
     if (l2Container && l2Container.style.display === "none") {
         l2Name = "";
     }
 
+    // 🛡️ Construct URL with encoded, sanitized values
     let url = `${API_URL}/overtime/manager-action/${otId}?status=${status}&remarks=${encodeURIComponent(
       remarks
     )}&approver_name=${encodeURIComponent(approverName)}`;
@@ -25240,7 +25252,7 @@ async function executeOTFinalDecision(otId, status) {
                 refreshManagerBadges();
             }
             
-            // 🚀 FIX: Instantly refresh the Activity Log so Ned sees his approval immediately!
+            // 🚀 FIX: Instantly refresh the Activity Log so the manager sees their approval immediately!
             if (typeof loadHomeLeadershipInsights === "function") {
                 loadHomeLeadershipInsights();
             }
@@ -25335,6 +25347,8 @@ async function executeOTFinalDecision(otId, status) {
           }
         }
       });
+
+
 
       window.onclick = function (event) {
         const modal = document.getElementById("leaveDetailModal");
@@ -25942,13 +25956,21 @@ function checkAndDisplayGlobalBanner(data) {
             `;
             
             const icon = isLockMode ? "fa-tools" : "fa-bullhorn";
-            const timeStr = end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const endLabel = end.toLocaleString([], {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
             
             banner.innerHTML = `
                 <i class="fas ${icon}" style="font-size: 1.1rem;"></i>
                 <span>${data.broadcast_message}</span>
                 <small style="opacity: 0.85; font-weight: 600; margin-left: 10px;">
-                    (Until: ${timeStr})
+                    (Until: ${endLabel})
                 </small>
             `;
             
@@ -26335,6 +26357,7 @@ window.addEventListener('click', function(e) {
         dropdown.style.display = 'none';
     }
 });
+
 // 🛠️ THE ACTIVITY ENGINE (Includes LEAVE + OVERTIME + Smart Overrides & Icons)
 function updateActivityLogUI(myLeaves = [], mgrLeaves = [], mgrOT = [], holidays = [], myOT = []) {
     
@@ -26426,43 +26449,62 @@ function updateActivityLogUI(myLeaves = [], mgrLeaves = [], mgrOT = [], holidays
         }
     });
 
-    // 🔵 3. Capture My Managerial Actions (Tony/Sarah's View)
-    // 🚀 THE FIX: Manager feed should ONLY show actions the manager actually TOOK.
-    // We only allow "Approved", "Rejected", and "Pending L2 Approval" (Sarah's L1 action).
+// 🔵 3. Capture My Managerial Actions (All Levels)
+    // 🚀 THE FIX: Now captures Line Manager, L2, and HOD for HR or specific Managers.
+    const isHR = (typeof userRoles !== 'undefined' && userRoles.includes('hr_admin'));
+    
     const myDecisions = [...mgrLeaves, ...mgrOT].filter(item => {
         if (!item.status) return false;
-        const s = item.status;
 
-        // 1. If it's waiting for L2, it's because the Line Manager (Sarah) APPROVED it.
-        // We show this in Sarah's log, but NOT in Tony's log yet.
-        if (s === "Pending L2 Approval") {
+        // HR Admin sees EVERYTHING finalized or pending L2
+        if (isHR) return item.status === "Approved" || item.status === "Rejected" || item.status === "Pending L2 Approval";
+
+        // Regular Managers see only actions where they are the designated approver
+        const isMyAction = (
+            item.approver_name === currentUser || 
+            item.approver_l2 === currentUser || 
+            (item.approver_hod && item.approver_hod === currentUser)
+        );
+        
+        // 1. If it's waiting for L2, we show it to the Line Manager (L1)
+        if (item.status === "Pending L2 Approval") {
             return item.approver_name === currentUser;
         }
 
-        // 2. 🛡️ THE GUARD: Strictly allow only finalized Manager actions.
-        // This automatically HIDES "Withdrawn" and "Cancelled" from the manager's feed.
-        return s === "Approved" || s === "Rejected";
+        // 2. 🛡️ For Approved/Rejected, show if it matches any of the user's management roles
+        return (item.status === "Approved" || item.status === "Rejected") && isMyAction;
     });
+
     
-    myDecisions.forEach(action => {
+myDecisions.forEach(action => {
         const isOT = action.hasOwnProperty('ot_date') || action.hasOwnProperty('total_value') || (action.leave_type && action.leave_type.includes("OT"));
         
         // 🚀 THE ONE-LINE FIX: Use shorter nouns ("Leave" / "OT Claim")
         const shortType = isOT ? 'OT Claim' : 'Leave';
         
+        // 🟢 HIERARCHICAL ACTOR DETECTION
+        // We prioritize the HOD or L2 if it's a finalized approval, otherwise default to L1 (approver_name)
+        const actualApprover = action.approver_hod || action.approver_l2 || action.approver_name || "Manager";
+        
+        // HR Admin sees the real name; Managers see "You"
+        const isHR = (typeof userRoles !== 'undefined' && userRoles.includes('hr_admin'));
+        const actorName = isHR ? actualApprover : "You";
+        
         const actionTs = getHistoryTime(action.status_history, action.ot_date || action.start_date, true);
         
         let decision = action.status.toUpperCase();
         let uiType = action.status.toLowerCase();
-        let actionTitle = `You ${decision} ${shortType}`;
+        
+        // Use actorName instead of hardcoded "You"
+        let actionTitle = `${actorName} ${decision} ${shortType}`;
         
         // 🚀 SMART LABELS: Replaced "Sent to L2" with "Final Stage"
         if (action.status === "Pending L2 Approval") {
             uiType = "approved";
-            actionTitle = `You APPROVED ${shortType} (Final Approval)`;
+            actionTitle = `${actorName} APPROVED ${shortType} (Final Approval)`;
         } 
         else if (action.status === "Approved" && (action.status_history || "").includes("Cancellation REJECTED")) {
-            actionTitle = `You REJECTED a cancellation`;
+            actionTitle = `${actorName} REJECTED a cancellation`;
             uiType = "rejected"; 
         }
         
@@ -30486,11 +30528,7 @@ function resetConsoleFilters() {
         
         if (ticket.attachment_path) {
             // 🛠️ SMART URL ENGINE: Safe lookup routing for Cloud Storage strings vs local relative file paths
-            let fileUrl = ticket.attachment_path;
-            if (!fileUrl.startsWith("http")) {
-                // Strips raw nested directory levels to isolate the exact trailing filename string seamlessly
-                fileUrl = `${API_URL}/uploads/${fileUrl.split("/").pop()}`;
-            }
+            const fileUrl = getFullPath(ticket.attachment_path);
             
             // Extract the original filename string dynamically instead of hardcoding entries
             const cleanFileName = ticket.attachment_path.split("/").pop() || "Evidence_Snapshot.png";

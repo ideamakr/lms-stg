@@ -19,15 +19,10 @@ if DATABASE_URL.startswith("postgres://"):
 is_sqlite = DATABASE_URL.startswith("sqlite")
 
 if is_sqlite:
-    # ✅ Local SQLite Settings - UPGRADED POOL HEADROOM
+    # ✅ Local SQLite Settings - Removed Postgres-specific pool arguments
     engine = create_engine(
         DATABASE_URL, 
-        connect_args={"check_same_thread": False},
-        pool_pre_ping=True,    
-        pool_size=30,          
-        max_overflow=20,       
-        pool_timeout=60,       
-        pool_recycle=1800      
+        connect_args={"check_same_thread": False}
     )
 
 elif ENVIRONMENT == "production":

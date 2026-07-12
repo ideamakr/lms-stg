@@ -631,14 +631,16 @@
        * 📡 DYNAMIC API URL DETECTION
        * This centralizes your API endpoint configuration.
        */
-      const getApiUrl = () => {
+const getApiUrl = () => {
         const host = window.location.hostname;
-        // Check for local development environments
+        
+        // 1. Local Development (Updated to port 8081)
         if (host === "127.0.0.1" || host === "localhost") {
-          return "http://127.0.0.1:8000";
+          return "http://127.0.0.1:8081";
         }
-        // Staging/Production Environment
-        return "https://leave-system-testenv.onrender.com";
+        
+        // 2. PRODUCTION: Official Client Domain
+        return "http://leave.psyap.com:8081";
       };
 
       const API_URL = getApiUrl();
