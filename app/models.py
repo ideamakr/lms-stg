@@ -50,9 +50,18 @@ class Leave(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     employee_name = Column(String, index=True)
+    
+    # 🚀 LEGACY (Keep these for now so existing UI doesn't break)
     approver_name = Column(String, index=True)
-    # 🚀 Workflow Columns (CRITICAL FOR L2)
     approver_l2 = Column(String, nullable=True)  
+    
+    # 🚀 NEW ID-BASED RELATIONSHIPS
+    approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approver_l2_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # 🚀 ORM RELATIONSHIPS (Makes querying "leave.approver.full_name" easy)
+    approver = relationship("User", foreign_keys=[approver_id])
+    approver_l2_ref = relationship("User", foreign_keys=[approver_l2_id])
     
     # Standard Data
     leave_type = Column(String) 
@@ -79,7 +88,8 @@ class Leave(Base):
 
 class PublicHoliday(Base):
     __tablename__ = "public_holidays"
-    id = Column(Integer, primary_key=True, index=True)
+    # Added autoincrement=True to ensure the DB knows to generate the ID
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String)
     holiday_date = Column(Date, unique=True, index=True)
     
@@ -206,14 +216,24 @@ class GlobalPolicy(Base):
     registration_lock = Column(Boolean, default=False)
 
 class Overtime(Base):
-    __tablename__ = "overtime_claims" # Changed table name to match consistency
+    __tablename__ = "overtime_claims"
+    
     id = Column(Integer, primary_key=True, index=True)
     employee_name = Column(String, index=True)
-    approver_name = Column(String, index=True)
     
-    # 🚀 Workflow Columns (CRITICAL FOR L2)
+    # 🚀 LEGACY (Keep these for now)
+    approver_name = Column(String, index=True)
     approver_l2 = Column(String, nullable=True) 
     
+    # 🚀 NEW ID-BASED RELATIONSHIPS
+    approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approver_l2_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # 🚀 ORM RELATIONSHIPS
+    approver = relationship("User", foreign_keys=[approver_id])
+    approver_l2_ref = relationship("User", foreign_keys=[approver_l2_id])
+    
+    # Data Fields
     ot_date = Column(Date)
     ot_type = Column(String)    
     ot_unit = Column(String)    

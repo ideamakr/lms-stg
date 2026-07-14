@@ -5776,7 +5776,8 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
     </div> 
 </div> 
 </div> 
-<section id="apply" class="section saas-canvas" style="background: #f1f5f9; min-height: 50vh; width: 100%; padding: 0; margin: 0; display: none;">                                        <div style="max-width: 800px; margin: 0 auto; padding: 10px 10px; width: 100%; box-sizing: border-box;">
+<section id="apply" class="section saas-canvas" style="background: #f1f5f9; min-height: 100vh; width: 100%; padding: 40px 20px; margin: 0; box-sizing: border-box; display: none; overflow-y: auto; justify-content: center;">
+    <div style="max-width: 800px; width: 100%; margin: 0 auto; box-sizing: border-box;">                                        <div style="max-width: 800px; margin: 0 auto; padding: 10px 10px; width: 100%; box-sizing: border-box;">
                                         <!-- Header -->
                                         <div style="text-align: center; margin-bottom: 25px;">
                                             <h2 style="margin: 0; font-size: 1.8rem; color: #1e293b; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: 900; border: none;">
@@ -5788,7 +5789,7 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
                                         </div>
                                 
                                         <!-- Mode Switcher Tabs -->
-                                        <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                                        <div style="display: flex; justify-content: center; margin-bottom: 10px;">
                                             <div style="display: inline-flex; background: #e2e8f0; padding: 5px; border-radius: 12px; border: 1px solid #cbd5e1;">
                                                 <button id="tab_leave" onclick="switchApplyMode('leave')" style="padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: white; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;">
                                                     <i class="fas fa-calendar-plus"></i> Leave Request
@@ -5803,7 +5804,7 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
                                         </div>
                                 
                                         <!-- 🎠 SMART BALANCE SLIDER -->
-                                        <div id="balance_slider_wrapper" style="position: relative; width: 100%; margin-bottom: 30px; padding: 0 5px;">
+                                        <div id="balance_slider_wrapper" style="position: relative; width: 100%; margin-bottom: 10px; padding: 0 5px;">
                                             
                                             <!-- Left Navigation Arrow -->
                                             <button id="btn_bal_left" onclick="scrollBalances(-1)" style="position: absolute; left: -15px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; color: #2563eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: pointer; z-index: 100; display: none; align-items: center; justify-content: center; transition: 0.2s; opacity: 0.9;">
@@ -6181,14 +6182,14 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
                                         </button>
                                     </div> 
                                 </div> 
-                            </div> 
+                            </div>  
                         </section>
 <!-- 
             # =========================================================
                 NEW EMPLOYEE REGISTRATION FORM - ENHANCED
             # ========================================================= -->
-            <section id="registration" class="section saas-canvas" style="background: #f8fafc; min-height: 100vh; width: 100%; padding: 40px 20px; margin: 0;">
-                <div style="max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box;">
+            <section id="registration" class="section saas-canvas" style="background: #f8fafc; min-height: 100vh; width: 100%; padding: 40px 20px; margin: 0; box-sizing: border-box; display: none; overflow-y: auto;">
+                <div style="max-width: 800px; width: 100%; box-sizing: border-box; margin: 0 auto;">
                     
                     <div class="stepper-wrapper" style="display: flex; align-items: flex-start; justify-content: center; max-width: 600px; margin: 0 auto 60px auto; width: 100%;">
     
@@ -12486,6 +12487,33 @@ async function loadHistory(page = 1, size = 10) {
         if (refreshIcon) setTimeout(() => refreshIcon.classList.remove("fa-spin"), 600);
     }
 }
+
+// 1. Memory cache object
+const approverCache = {}; 
+
+// 2. Lookup function
+async function getApproverName(approverId) {
+    if (!approverId || approverId === "null") return "N/A";
+
+    // Return from cache if we already fetched it
+    if (approverCache[approverId]) {
+        return approverCache[approverId];
+    }
+
+    // Otherwise, fetch from your new endpoint
+    try {
+        const response = await fetch(`/users/get-by-id/${approverId}`);
+        if (!response.ok) return "Unknown";
+        
+        const data = await response.json();
+        approverCache[approverId] = data.full_name; // Save to cache
+        return data.full_name;
+    } catch (err) {
+        console.error("Error fetching approver name:", err);
+        return "Unknown";
+    }
+}
+
 
 // 🚀 3. RENDER FUNCTION (Focus: Type Badges, Unified Sorting & Hardened Status Aliases)
 function sortAndRenderHistory() {
@@ -20285,8 +20313,23 @@ async function submitNewUser(event) {
         return el && el.value.trim() !== "" ? el.value.trim() : '<span style="color: #94a3b8; font-style: italic;">Not Provided</span>';
     };
 
-    const summaryManagers = getSelectedNamesFromCheckboxes("reg_mgr_container");
-    const summaryHODs = getSelectedNamesFromCheckboxes("reg_hod_container");
+    // 1. Get raw lists as arrays using your existing helper
+    let mgrList = JSON.parse(getJsonListFromCheckboxes("reg_mgr_container") || "[]");
+    let hodList = JSON.parse(getJsonListFromCheckboxes("reg_hod_container") || "[]");
+
+    // 2. 🚀 SANITIZER: Data-Level Swap (Fixes the "Ghost Name" issue reliably)
+    if (window.isEditingUser && window.originalFullName && fullName !== window.originalFullName) {
+        const oldName = window.originalFullName.trim();
+        mgrList = mgrList.map(name => name.trim() === oldName ? fullName : name);
+        hodList = hodList.map(name => name.trim() === oldName ? fullName : name);
+    }
+
+    // 3. Convert to display strings for the template
+    const sanitizedSummaryManagers = mgrList.length > 0 ? mgrList.join(", ") : '<span style="color: #94a3b8; font-style: italic;">Not Assigned</span>';
+    const sanitizedSummaryHODs = hodList.length > 0 ? hodList.join(", ") : '<span style="color: #94a3b8; font-style: italic;">Not Assigned</span>';
+
+    // 🔍 DEBUG: Check the result
+    console.log("DEBUG - Final Manager List for Display:", sanitizedSummaryManagers);
 
     let summaryHtml = `
         <div style="text-align: left; font-family: 'Inter', sans-serif; color: #334155; padding: 5px;">
@@ -20318,8 +20361,10 @@ async function submitNewUser(event) {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem;">
                         <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">COMPANY / DEPT</b>${getDisplayVal("reg_company")} <br> <span style="color:#64748b;">${getDisplayVal("reg_dept_new")}</span></div>
                         <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">BIZ UNIT / LOCATION</b>${getDisplayVal("reg_biz_unit_new")} <br> <span style="color:#64748b;">${getDisplayVal("reg_location_new")}</span></div>
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">LINE MANAGER(S)</b>${summaryManagers}</div>
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HOD / DEPT HEAD(S)</b>${summaryHODs}</div>
+                        
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">LINE MANAGER(S)</b>${sanitizedSummaryManagers}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HOD / DEPT HEAD(S)</b>${sanitizedSummaryHODs}</div>
+                        
                         <div style="grid-column: span 2;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HIERARCHY (L0 / L1 / L2)</b>${getDisplayVal("reg_level_0")} / ${getDisplayVal("reg_level_1")} / ${getDisplayVal("reg_level_2")}</div>
                     </div>
                 </div>
@@ -20331,43 +20376,8 @@ async function submitNewUser(event) {
                     </div>
                 </div>
             </div>
-
-            <div id="sum_step_2" style="display: none;">
-                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.85rem;">
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">PREFERRED NAME</b>${getDisplayVal("reg_pref_name_new")}</div>
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">IC / PASSPORT NO</b>${getDisplayVal("reg_ic_new")}</div>
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">DATE / PLACE OF BIRTH</b>${getDisplayVal("reg_dob_new")} <br> <span style="color:#64748b;">${getDisplayVal("reg_place_of_birth")}</span></div>
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">GENDER / MARITAL STATUS</b>${getDisplayVal("reg_gender_new")} / ${getDisplayVal("reg_marital_new")}</div>
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">NATIONALITY / RACE</b>${getDisplayVal("reg_nat_new")} / ${getDisplayVal("reg_race_new")}</div>
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">RELIGION</b>${getDisplayVal("reg_religion_new")}</div>
-                        <div style="grid-column: span 2; border-top: 1px dashed #e2e8f0; padding-top: 12px; margin-top: 5px;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HIGHEST QUALIFICATION</b>${getDisplayVal("reg_highest_qualification")}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="sum_step_3" style="display: none;">
-                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
-                    <h5 style="margin: 0 0 10px 0; font-size: 0.75rem; color: #f59e0b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Logistics & Emergency</h5>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem;">
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">PERSONAL MOBILE</b>${mobile}</div>
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">PERSONAL EMAIL</b>${getDisplayVal("reg_personal_email_new")}</div>
-                        <div style="grid-column: span 2;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HOME ADDRESS</b>${getDisplayVal("reg_home_address_new")}</div>
-                        <div style="grid-column: span 2;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">CURRENT ADDRESS</b>${getDisplayVal("reg_current_address_new")}</div>
-                        <div style="grid-column: span 2; background: #ffffff; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">EMERGENCY RELIEF CONTACT</b>${getDisplayVal("reg_em_name")} (${getDisplayVal("reg_em_rel")}) • <span style="font-family:monospace; font-weight:700;">${getDisplayVal("reg_em_mobile")}</span></div>
-                    </div>
-                </div>
-                <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fde68a;">
-                    <h5 style="margin: 0 0 10px 0; font-size: 0.75rem; color: #b45309; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Disbursal Salary Bank Node</h5>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem;">
-                        <div><b style="color: #b45309; font-size: 0.65rem; display:block;">BANK NAME</b>${getDisplayVal("reg_bank_name")}</div>
-                        <div><b style="color: #b45309; font-size: 0.65rem; display:block;">ACCOUNT NUMBER / STATUS</b>${getDisplayVal("reg_bank_account_number")} <br> <span style="font-weight:700; color:#10b981;">${getDisplayVal("reg_bank_account_status")}</span></div>
-                        <div style="grid-column: span 2;"><b style="color: #b45309; font-size: 0.65rem; display:block;">ACCOUNT HOLDER NAME</b>${getDisplayVal("reg_bank_holder_name")}</div>
-                    </div>
-                </div>
-            </div>
-
-        </div>`;
+            
+            </div>`;
 
         const confirmReview = await Swal.fire({
         title: window.isEditingUser ? 'Verify Profile Changes' : 'Final Review: New Onboarding',
@@ -23034,10 +23044,14 @@ otsToday.forEach((o) => {
  * 🌉 THE BRIDGE: Locates user data by ID and triggers the Edit Wizard
  * This is called directly by the "Pencil" icon in User Management.
  */
- async function openFullProfileEditModal(userJsonRaw, targetStep = 1) {
+async function openFullProfileEditModal(userJsonRaw, targetStep = 1) {
     // 🖋️ 1. DATA PREP & CONTEXT
     const user = typeof userJsonRaw === 'string' ? JSON.parse(userJsonRaw) : userJsonRaw;
-    window.originalUserDataSnapshot = JSON.stringify(user); 
+
+    // 🚀 FIX: Initialize the original name so the sanitizer can compare it later
+    window.originalFullName = user.full_name; 
+
+    window.originalUserDataSnapshot = JSON.stringify(user);
 
     // 🛡️ FORENSIC FIX: Do NOT hardcode "SELF_EDIT" here! 
     // We only set HR_EDIT if the caller hasn't explicitly set a context yet.

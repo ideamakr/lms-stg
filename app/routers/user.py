@@ -223,6 +223,17 @@ def get_all_users(
         "page_size": page_size
     }
 
+
+# 🚀 NEW HELPER: Fetch a user's name by their ID for frontend caching
+@router.get("/get-by-id/{user_id}")
+def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # We only return the ID and Name to keep the payload tiny
+    return {"id": user.id, "full_name": user.full_name}
+
+
 @router.put("/{user_id}/roles-update")
 async def update_user_roles_multiple( # 🚀 Changed to async
     user_id: int, 
@@ -810,18 +821,54 @@ async def update_user_profile(
     final_line_managers = parse_manager_list(line_manager)
     final_hod_names = parse_manager_list(hod_name)
 
-    # 2. 🚀 CASCADING NAME SYNC (Identity Protection)
+# 2. 🚀 CASCADING NAME SYNC (Identity Protection)
     old_name = user.full_name
     new_name = full_name.strip()
 
     if old_name != new_name:
-        # Update every table that uses employee_name or approver_name
+        # 🚀 PRE-FLIGHT PATCH: Sanitize the lists BEFORE they touch the user object.
+        # This ensures that even if the UI sends the "old" name in the form, 
+        # we correct it to the "new" name in memory before assigning it to the database.
+        if isinstance(final_line_managers, list):
+            final_line_managers = [new_name if n == old_name else n for n in final_line_managers]
+        if isinstance(final_hod_names, list):
+            final_hod_names = [new_name if n == old_name else n for n in final_hod_names]
+        
+        # Now assign the cleaned/patched variables to the user object
+        user.line_manager = final_line_managers
+        user.hod_name = final_hod_names
+
+        # 🚀 TABLE UPDATES: Update every table that uses employee_name or approver_name
+        # This keeps your leave and overtime history perfectly in sync with the new name
         db.query(models.LeaveBalance).filter(models.LeaveBalance.employee_name == old_name).update({"employee_name": new_name})
         db.query(models.Leave).filter(models.Leave.employee_name == old_name).update({"employee_name": new_name})
         db.query(models.Overtime).filter(models.Overtime.employee_name == old_name).update({"employee_name": new_name})
         db.query(models.Leave).filter(models.Leave.approver_name == old_name).update({"approver_name": new_name})
         db.query(models.Overtime).filter(models.Overtime.approver_name == old_name).update({"approver_name": new_name})
         db.query(models.Leave).filter(models.Leave.approver_l2 == old_name).update({"approver_l2": new_name})
+
+        # 🚀 ROBUST CASCADE: Update all other users
+        # We perform this after the user object is patched to ensure consistency
+        all_users = db.query(models.User).all()
+        for u in all_users:
+            if u.id == user.id: continue # Skip the user we just patched
+            
+            updated_any = False
+            
+            # Update Line Manager List
+            if isinstance(u.line_manager, list) and old_name in u.line_manager:
+                u.line_manager = [new_name if n == old_name else n for n in u.line_manager]
+                updated_any = True
+            
+            # Update HOD List
+            if isinstance(u.hod_name, list) and old_name in u.hod_name:
+                u.hod_name = [new_name if n == old_name else n for n in u.hod_name]
+                updated_any = True
+            
+            # Only add to the session if changes were made
+            if updated_any:
+                db.add(u)
+                print(f"🔄 Syncing manager reference for: {u.full_name}")
 
     # 3. 📸 AVATAR UPDATE
     if profile_pic:

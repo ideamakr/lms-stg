@@ -1,36 +1,48 @@
 import os
-import io # 👈 Added for image processing
+import io
 import re
 import tempfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone # 👈 UPDATED IMPORTS
 from typing import Any, Optional
-from pathlib import Path # 👈 Added for filename handling
+from pathlib import Path
 
-# 🚀 CLEAN FASTAPI IMPORTS (Combined into one line)
 from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Query, BackgroundTasks, Body, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from pydantic import BaseModel
-from PIL import Image # 👈 Added for image compression
+from PIL import Image
 
 from app.database import get_db
 from app import models
 
+# 🛠️ HELPERS (FIXED: Offset-based for cross-platform stability)
 
+# Use this helper instead of the old ZoneInfo version
+def get_local_timestamp():
+    # Force UTC+8 manually
+    return (datetime.now(timezone.utc) + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M")
+
+# Use this convert function (No ZoneInfo, uses manual math)
+def convert_utc_string_to_kl(history_str: str) -> str:
+    if not history_str: return "Pending"
+    
+    def replacer(match):
+        try:
+            utc_dt = datetime.strptime(match.group(1), "%Y-%m-%d %H:%M")
+            utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+            kl_dt = utc_dt + timedelta(hours=8) # Manual Malaysia Offset
+            return f"({kl_dt.strftime('%Y-%m-%d %H:%M')})"
+        except:
+            return match.group(0)
+
+    return re.sub(r"\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)", replacer, history_str)
 
 def _find_user_by_name_or_username(db: Session, name: Optional[str]):
-    if not name:
-        return None
-
+    if not name: return None
     cleaned = str(name).strip()
-    if not cleaned:
-        return None
-
+    if not cleaned: return None
     return db.query(models.User).filter(
-        or_(
-            models.User.full_name.ilike(cleaned),
-            models.User.username.ilike(cleaned),
-        )
+        or_(models.User.full_name.ilike(cleaned), models.User.username.ilike(cleaned))
     ).first()
 
 # ============================================================
@@ -62,7 +74,7 @@ router = APIRouter(prefix="/overtime", tags=["Overtime"])
 class CancelRequestSchema(BaseModel):
     reason: Optional[str] = None
 
-# 1. APPLY FOR OVERTIME (Cloud Native)
+# 1. APPLY FOR OVERTIME (Refactored for ID-First Architecture)
 @router.post("/apply")
 async def apply_overtime(
     background_tasks: BackgroundTasks, 
@@ -74,13 +86,17 @@ async def apply_overtime(
     reason: str = Form(...),
     start_time: str = Form(None),
     end_time: str = Form(None),
-    applied_by: Optional[str] = Form(None), # 🚀 NEW: Captures HR Admin name
+    applied_by: Optional[str] = Form(None),
     file: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
     employee_name = employee_name.strip()
     approver_name = approver_name.strip()
     ot_date_obj = date.fromisoformat(ot_date)
+
+    # 🚀 NEW: Resolve Approver ID safely before any DB operations
+    manager_user = _find_user_by_name_or_username(db, approver_name)
+    approver_id = manager_user.id if manager_user else None
 
     # A. Check Duplicates
     existing_ot = db.query(models.Overtime).filter(
@@ -93,7 +109,7 @@ async def apply_overtime(
     if existing_ot:
         raise HTTPException(status_code=400, detail=f"Duplicate Request: {existing_ot.status} claim exists.")
 
-# B. Local Upload Logic
+    # B. Local Upload Logic (Kept exactly same)
     saved_filename = None
     if file and file.filename:
         try:
@@ -106,22 +122,16 @@ async def apply_overtime(
             clean_filename = Path(file.filename).stem 
             clean_name = f"{timestamp}_{clean_filename.replace(' ', '_')}.jpg"
             
-            # Ensure the local directory exists
             target_dir = "uploads/mcs"
             os.makedirs(target_dir, exist_ok=True)
-            
-            # Define full path and save directly to disk with same compression
             file_path = f"{target_dir}/{clean_name}"
             img.save(file_path, format="JPEG", quality=60, optimize=True)
-            
-            # Keep exact assignment to prevent breaking Step D (Create Record)
             saved_filename = clean_name
-            
         except Exception as e:
             print(f"❌ Upload Failed: {e}")
             raise HTTPException(status_code=500, detail="Could not upload attachment locally.")
 
-    # C. Calculate Value
+    # C. Calculate Value (Kept exactly same)
     total_val = 1.0 
     if ot_unit == "hours" and start_time and end_time:
         try:
@@ -134,10 +144,11 @@ async def apply_overtime(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid time format.")
 
-    # D. Create Record
+    # D. Create Record (🚀 UPDATED: Includes approver_id)
     new_ot = models.Overtime(
         employee_name=employee_name,
         approver_name=approver_name,
+        approver_id=approver_id, # Link the database ID here
         ot_date=ot_date_obj,
         ot_type=ot_type,
         ot_unit=ot_unit,
@@ -147,29 +158,26 @@ async def apply_overtime(
         reason=reason,
         attachment_path=saved_filename,
         status="Pending",
-        status_history=f"Submitted ({datetime.now().strftime('%Y-%m-%d %H:%M')})"
+        status_history=f"Submitted ({get_local_timestamp()})"
     )
     db.add(new_ot)
     db.commit()
     db.refresh(new_ot)
 
-    # E. Email Manager (🚀 UPDATED FOR PROXY CONTEXT)
-    manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
-    if manager and manager.email:
+    # E. Email Manager (Kept logic same, reused manager_user)
+    if manager_user and manager_user.email:
         try:
-            # Determine if this was an override by Natasha/HR
             admin_name = applied_by if (applied_by and applied_by != employee_name) else None
-            
             body = template_new_ot_request(
-                manager_name=manager.full_name, 
+                manager_name=manager_user.full_name, 
                 employee_name=employee_name, 
                 ot_type=ot_type, 
                 ot_date=ot_date, 
                 duration=f"{total_val} {ot_unit}",
-                admin_name=admin_name # Pass the HR Admin name to the template
+                admin_name=admin_name
             )
-            background_tasks.add_task(send_email, manager.email, f"Action Required: OT Claim - {employee_name}", body)
-            print(f"📧 OT Manager Notification queued for {manager.email}")
+            background_tasks.add_task(send_email, manager_user.email, f"Action Required: OT Claim - {employee_name}", body)
+            print(f"📧 OT Manager Notification queued for {manager_user.email}")
         except Exception as e:
             print(f"⚠️ OT Email Trigger Warning: {e}")
 
@@ -180,20 +188,29 @@ async def apply_overtime(
 @router.get("/all-requests")
 def get_all_overtime_requests(db: Session = Depends(get_db)):
     results = db.query(models.Overtime).order_by(models.Overtime.id.desc()).all()
-    return [{
-        "id": o.id,
-        "employee_name": o.employee_name,
-        "approver_name": o.approver_name,
-        "ot_date": o.ot_date.strftime("%Y-%m-%d"),
-        "ot_type": o.ot_type,
-        "ot_unit": o.ot_unit,
-        "total_value": o.total_value,
-        "status": o.status,
-        "reason": o.reason,
-        "attachment_path": f"/uploads/mcs/{o.attachment_path}" if o.attachment_path else None,
-        "manager_remarks": o.manager_remarks or "",
-        "status_history": o.status_history or "Pending"
-    } for o in results]
+    
+    formatted = []
+    for o in results:
+        # 🚀 CLEANED: Local path normalization consistent with your other modules
+        url = o.attachment_path
+        if url and not url.startswith(("/uploads", "http")):
+             url = f"/uploads/mcs/{url.lstrip('/')}"
+
+        formatted.append({
+            "id": o.id,
+            "employee_name": o.employee_name,
+            "approver_name": o.approver_name,
+            "ot_date": o.ot_date.strftime("%Y-%m-%d"),
+            "ot_type": o.ot_type,
+            "ot_unit": o.ot_unit,
+            "total_value": o.total_value,
+            "status": o.status,
+            "reason": o.reason,
+            "attachment_path": url,
+            "manager_remarks": o.manager_remarks or "",
+            "status_history": convert_utc_string_to_kl(o.status_history) # 👈 FIXED
+        })
+    return formatted
 
 # 3. GET MANAGER PENDING & HISTORY REQUESTS (Unified)
 @router.get("/manager-requests")
@@ -225,10 +242,7 @@ def get_manager_ot_requests(
         
     results = query.order_by(models.Overtime.id.desc()).all()
     
-    # 1. Initialize the empty list FIRST
     formatted_results = []
-    
-    # 2. START THE LOOP: This ensures 'o' is defined for every record
     for o in results:
         # 🚀 FIX: GENERATE LOCAL URL (Supabase code completely removed)
         full_attachment_url = o.attachment_path
@@ -237,7 +251,6 @@ def get_manager_ot_requests(
         if full_attachment_url and not full_attachment_url.startswith(("/uploads", "http")):
             full_attachment_url = f"/uploads/mcs/{o.attachment_path}"
 
-        # 3. APPEND TO LIST: Must be indented inside the loop
         formatted_results.append({
             "id": o.id,
             "employee_name": o.employee_name,
@@ -250,18 +263,15 @@ def get_manager_ot_requests(
             "reason": o.reason,
             "attachment_path": full_attachment_url,
             "manager_remarks": o.manager_remarks or "",
-            "status_history": o.status_history or "Pending",
+            "status_history": convert_utc_string_to_kl(o.status_history), # 👈 FIXED: Localized timestamp
             
-            # 👑 CRITICAL MATRIX INTERLOCK: Force 'is_my_turn' to True for Superusers 
-            # This ensures they bypass frontend layout button-hiding filters completely!
+            # 👑 CRITICAL MATRIX INTERLOCK
             "is_my_turn": True if is_super else (o.approver_name == approver_name.strip() if approver_name else False)
         })
         
-    # 4. RETURN OUTSIDE THE LOOP: Un-indent this line so it returns the full list
     return formatted_results
 
-
-# 4. PROCESS MANAGER ACTION
+# 4. PROCESS MANAGER ACTION (Forensically Fixed)
 @router.post("/manager-action/{ot_id}")
 async def process_ot_action( 
     ot_id: int, 
@@ -271,7 +281,7 @@ async def process_ot_action(
     approver_name: str = "", 
     l2_name: str = Query(None), 
     db: Session = Depends(get_db),
-    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
+    x_username: Optional[str] = Header(None) 
 ):
     try:
         from app.routers.leave import log_activity
@@ -282,48 +292,54 @@ async def process_ot_action(
     if not ot:
         raise HTTPException(status_code=404, detail="OT record not found")
 
-    # 👑 Identify if an authoritative Superuser is executing this action
     acting_user = db.query(models.User).filter(models.User.username == x_username).first()
     is_superuser_override = acting_user and acting_user.role == "superuser"
 
+    # --- 🛡️ SECURITY SCAN: Hybrid Authorization ---
+    is_authorized = is_superuser_override
+    if not is_authorized and acting_user:
+        is_l1_match = (ot.approver_id and acting_user.id == ot.approver_id) or \
+                      (approver_name and ot.approver_name and approver_name.strip().lower() == ot.approver_name.strip().lower())
+        is_l2_match = (ot.approver_l2_id and acting_user.id == ot.approver_l2_id) or \
+                      (approver_name and ot.approver_l2 and approver_name.strip().lower() == ot.approver_l2.strip().lower())
+        if is_l1_match or is_l2_match:
+            is_authorized = True
+    
+    if not is_authorized:
+        raise HTTPException(status_code=403, detail="You are not authorized to approve this request.")
+
+    # Contextual flags
     acting_mgr = _find_user_by_name_or_username(db, approver_name)
     is_senior = getattr(acting_mgr, 'is_senior_manager', False)
-    is_l1 = bool(
-        approver_name and ot.approver_name and
-        str(approver_name).strip().lower() == str(ot.approver_name).strip().lower()
-    )
+    
+    is_l1 = (ot.approver_id and acting_user and acting_user.id == ot.approver_id) or \
+            (approver_name and ot.approver_name and approver_name.strip().lower() == ot.approver_name.strip().lower())
 
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     l2_active = policy.l2_approval_enabled if policy else False
     
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    timestamp = get_local_timestamp()
     current_status = ot.status
     route_to_l2 = False
     l2_user = None
     
-    # 🛡️ THE AUDIT FIX: Pre-compile clean remarks tracking string to append into histories
     note_str = f" | Note: {remarks.strip()}" if remarks and remarks.strip() else ""
     
-    user_record = db.query(models.User).filter(models.User.full_name == ot.employee_name).first()
+    # 🚀 FIXED: Robust lookup checking Name OR Username
+    user_record = db.query(models.User).filter(
+        or_(models.User.full_name == ot.employee_name, models.User.username == ot.employee_name)
+    ).first()
 
-    is_cancellation_journey = (
-        current_status == "Pending Cancel" or 
-        "Cancellation" in (ot.status_history or "")
-    )
+    if not user_record:
+        print(f"DEBUG: Could not find user record for {ot.employee_name}. Check spelling/username.")
 
-# 👑 Set audit trail naming context based on authority level
-    if is_superuser_override:
-        display_approver = f"System Administrator (Override on behalf of {ot.approver_name or 'Manager'})"
-    else:
-        # Fallback Logic: Use parameter, else DB record, else generic "Manager"
-        display_approver = (approver_name or ot.approver_name or "Manager").strip()
+    display_approver = f"System Administrator (Override on behalf of {ot.approver_name or 'Manager'})" if is_superuser_override else (approver_name or ot.approver_name or "Manager").strip()
 
-    # =========================================================
-    # A. CANCELLATION LOGIC
-    # =========================================================
+    # --- PROCESSING ---
+    is_cancellation_journey = (current_status == "Pending Cancel" or "Cancellation" in (ot.status_history or ""))
+
     if is_cancellation_journey:
         if status == "Approved":
-            # 👑 Superuser overrides bypass standard multi-stage routing loops to force instant resolution
             if current_status == "Pending Cancel" and l2_active and is_l1 and not is_senior and ot.approver_l2 and not is_superuser_override:
                 ot.status = "Pending L2 Approval"
                 ot.status_history += f" > L1 Approved Cancellation by {display_approver}. Routed to {ot.approver_l2} ({timestamp}){note_str}"
@@ -331,80 +347,60 @@ async def process_ot_action(
                 return {"message": "Cancellation approved by L1. Routed to L2."}
             
             if user_record:
-                current_bank = float(user_record.overtime_bank or 0.0)
-                user_record.overtime_bank = max(0, current_bank - float(ot.total_value or 0.0))
-
+                user_record.overtime_bank = max(0, float(user_record.overtime_bank or 0.0) - float(ot.total_value or 0.0))
             ot.status = "Cancelled"
             ot.status_history += f" > Cancellation FINALIZED by {display_approver} ({timestamp}){note_str}"
-
         else:
             ot.status = "Approved"
             ot.status_history += f" > Cancellation REJECTED by {display_approver} ({timestamp}){note_str}"
-
-# =========================================================
-    # B. NORMAL APPROVAL LOGIC
-    # =========================================================
     else:
         if status == "Approved":
-            # 👑 Superuser overrides bypass the standard L2 routing step to allow instant clearance
             if l2_active and current_status in ["Pending", "Pending L2 Approval"] and not is_senior and not is_superuser_override:
                 if l2_name:
                     ot.approver_name = l2_name 
                     ot.approver_l2 = l2_name
+                    l2_user = _find_user_by_name_or_username(db, l2_name)
+                    if l2_user:
+                        ot.approver_l2_id = l2_user.id
                     ot.status = "Pending L2 Approval"
-                    # FIXED: Corrected the log string below
                     ot.status_history += f" > L1 Approved by {display_approver}. Routed to L2: {l2_name} ({timestamp}){note_str}"
                     route_to_l2 = True
-                    l2_user = _find_user_by_name_or_username(db, l2_name)
                 else:
-                    # Final Approval Path when no L2 manager is supplied
                     if user_record:
-                        current_bank = float(user_record.overtime_bank or 0.0)
-                        user_record.overtime_bank = current_bank + float(ot.total_value or 0.0)
-
+                        user_record.overtime_bank = float(user_record.overtime_bank or 0.0) + float(ot.total_value or 0.0)
                     ot.status = "Approved"
                     ot.status_history += f" > Final Approval by {display_approver} ({timestamp}){note_str}"
             else:
-                # Final Approval Path (No L2 needed, Senior Manager acting, or Admin Override)
                 if user_record:
-                    current_bank = float(user_record.overtime_bank or 0.0)
-                    user_record.overtime_bank = current_bank + float(ot.total_value or 0.0)
-
+                    user_record.overtime_bank = float(user_record.overtime_bank or 0.0) + float(ot.total_value or 0.0)
                 ot.status = "Approved"
                 ot.status_history += f" > Final Approval by {display_approver} ({timestamp}){note_str}"
-
         elif status == "Rejected":
             ot.status = "Rejected"
             ot.status_history += f" > Rejected by {display_approver} ({timestamp}){note_str}"
             
     ot.manager_remarks = remarks
-    db.commit() # 💾 Commit changes to the OT record
+    db.commit()
 
-# 📧 --- 🚀 NOTIFY NEXT APPROVER OR EMPLOYEE OF THE DECISION ---
+    # 📧 --- EMAIL NOTIFICATION FLOW ---
+    print(f"DEBUG: Status={status}, route_to_l2={route_to_l2}, target_email={user_record.email if user_record else 'N/A'}")
+    
     if status == "Approved":
         # 🚀 STATE 1: L2 Routing
         if route_to_l2 and l2_user and l2_user.email:
             try:
-                body = template_l2_ot_request(
-                    l2_manager_name=l2_user.full_name or l2_user.username,
-                    l1_manager_name=approver_name or display_approver,
-                    employee_name=ot.employee_name,
-                    ot_type=ot.ot_type,
-                    ot_date=str(ot.ot_date),
-                    duration=str(ot.total_value)
-                )
+                body = template_l2_ot_request(l2_manager_name=l2_user.full_name or l2_user.username, l1_manager_name=approver_name or display_approver, employee_name=ot.employee_name, ot_type=ot.ot_type, ot_date=str(ot.ot_date), duration=str(ot.total_value))
                 background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: Final Approval Needed - {ot.employee_name}", body)
-            except Exception as e:
-                print(f"⚠️ OT L2 Email Error: {e}")
+            except Exception as e: print(f"⚠️ OT L2 Email Error: {e}")
         
         # 🚀 STATE 2: Final Approval (Employee Notification)
         elif not route_to_l2 and user_record and user_record.email:
             try:
+                print(f"DEBUG: Triggering Final Approval email to {user_record.email}")
                 subject = f"✅ OT Claim APPROVED - {ot.ot_date}"
                 body = template_ot_decision(ot.employee_name, display_approver, "Approved", ot.ot_type, str(ot.ot_date), remarks or "No remarks provided.")
                 background_tasks.add_task(send_email, user_record.email, subject, body)
-            except Exception as e:
-                print(f"⚠️ OT Approval Email Error: {e}")
+            except Exception as e: print(f"⚠️ OT Approval Email Error: {e}")
 
     # 🔴 STATE 3: Rejection (Employee Notification)
     elif status == "Rejected" and user_record and user_record.email:
@@ -412,23 +408,7 @@ async def process_ot_action(
             subject = f"❌ OT Claim REJECTED - {ot.ot_date}"
             body = template_ot_decision(ot.employee_name, display_approver, "Rejected", ot.ot_type, str(ot.ot_date), remarks or "No remarks provided.")
             background_tasks.add_task(send_email, user_record.email, subject, body)
-        except Exception as e:
-            print(f"⚠️ OT Rejection Email Error: {e}")
-
-    # 🚀 Activity Log Sync
-    if log_activity:
-        try:
-            act_type = "APPROVAL" if status == "Approved" else "REJECTION"
-            msg_mgr = f"You {status.upper()} {ot.employee_name}'s OT Claim"
-            actor_id = acting_user.id if is_superuser_override else (acting_mgr.id if acting_mgr else None)
-            if actor_id:
-                log_activity(db=db, user_id=actor_id, action_type=act_type, category="OT Claim", message=msg_mgr, reference_id=ot.id)
-            if user_record:
-                msg_emp = f"Your OT Claim was approved via administrative override" if is_superuser_override else f"Your OT Claim was {status.upper()}"
-                log_activity(db=db, user_id=user_record.id, action_type=act_type, category="OT Claim", message=msg_emp, reference_id=ot.id, actor_id=actor_id)
-            db.commit() 
-        except Exception as e:
-            print(f"⚠️ Activity Logging Failed: {e}")
+        except Exception as e: print(f"⚠️ OT Rejection Email Error: {e}")
 
     return {"message": "Action processed and OT bank updated.", "status": ot.status, "routed_to_l2": route_to_l2}
 
@@ -457,7 +437,7 @@ async def cancel_overtime_request( # 👈 Renamed to match leave.py style
     if not current_user or (ot.employee_name != current_user.full_name and current_user.role != "superuser"):
         raise HTTPException(status_code=403, detail="You do not have permission to cancel this request.")
 
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    timestamp = get_local_timestamp()
     current_status = ot.status
     
     # Extract Reason safely
@@ -518,7 +498,6 @@ def get_my_overtime_requests(employee_name: str, db: Session = Depends(get_db)):
         formatted_results = []
         for o in results:
             # 🚀 FIX: GENERATE LOCAL URL
-            # If the path exists but doesn't start with 'http' or '/uploads', prepend local folder
             full_attachment_url = o.attachment_path
             if full_attachment_url and not full_attachment_url.startswith(("/uploads", "http")):
                 full_attachment_url = f"/uploads/mcs/{o.attachment_path}"
@@ -535,7 +514,7 @@ def get_my_overtime_requests(employee_name: str, db: Session = Depends(get_db)):
                 "approver_name": o.approver_name,
                 "attachment_path": full_attachment_url,
                 "manager_remarks": o.manager_remarks or "",
-                "status_history": o.status_history or "Pending"
+                "status_history": convert_utc_string_to_kl(o.status_history) # 👈 FIXED: Localized timestamp
             })
             
         return formatted_results
@@ -580,7 +559,7 @@ def get_all_manager_overtime(
         # 🚀 FIX: GENERATE LOCAL URL
         full_attachment_url = o.attachment_path
         if full_attachment_url and not full_attachment_url.startswith(("/uploads", "http")):
-            full_attachment_url = f"/uploads/mcs/{o.attachment_path}"
+            full_attachment_url = f"/uploads/mcs/{o.attachment_path.lstrip('/')}"
 
         formatted_results.append({
             "id": o.id,
@@ -594,7 +573,7 @@ def get_all_manager_overtime(
             "reason": o.reason,
             "attachment_path": full_attachment_url,
             "manager_remarks": o.manager_remarks or "",
-            "status_history": o.status_history or "Pending"
+            "status_history": convert_utc_string_to_kl(o.status_history) # 👈 FIXED: Localized timestamp
         })
         
     return formatted_results

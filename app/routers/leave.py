@@ -4,7 +4,7 @@ import pandas as pd
 import re
 import tempfile
 from typing import Union, Optional, List
-from datetime import date, datetime 
+from datetime import date, datetime, timedelta, timezone 
 
 # 🚀 FastAPI, Security & Background Tasks
 from fastapi import APIRouter, Depends, HTTPException, Form, Query, Body, UploadFile, File, BackgroundTasks, Header
@@ -17,14 +17,54 @@ from app import models
 from app.database import SessionLocal
 from app.dependencies import validate_session
 
-from sqlalchemy import or_, cast, String, extract
-import re
+# ============================================================
+# 🕒 TIMEZONE UTILITIES (FIXED: Offset-based for cross-platform stability)
+# ============================================================
+
+# Use this helper instead of the old ZoneInfo version
+def get_local_timestamp():
+    """Returns the current UTC time for logs."""
+    # STOP adding 8 hours here. Save the actual UTC time.
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+def convert_utc_string_to_kl(history_str: str) -> str:
+    if not history_str: return "Pending"
+    
+    def replacer(match):
+        try:
+            # Parse the UTC time saved in the DB
+            utc_dt = datetime.strptime(match.group(1), "%Y-%m-%d %H:%M")
+            utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+            
+            # Apply the +8 shift here (The single source of truth)
+            kl_dt = utc_dt + timedelta(hours=8)
+            return f"({kl_dt.strftime('%Y-%m-%d %H:%M')})"
+        except Exception as e:
+            print(f"DEBUG: Conversion error: {e}")
+            return match.group(0)
+
+    return re.sub(r"\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)", replacer, history_str)
 
 def _find_user_by_name_or_username(db: Session, identifier: str):
-    if not identifier: return None
-    return db.query(models.User).filter(
-        or_(models.User.full_name == identifier.strip(), models.User.username == identifier.strip())
+    if not identifier: 
+        return None
+        
+    # Clean the input thoroughly
+    cleaned = identifier.strip()
+    
+    # Use 'ilike' for case-insensitive matching
+    # Use .first() to return exactly one match
+    user = db.query(models.User).filter(
+        or_(
+            models.User.full_name.ilike(cleaned),
+            models.User.username.ilike(cleaned)
+        )
     ).first()
+    
+    if not user:
+        print(f"DEBUG: Lookup failed for: '{cleaned}'")
+        
+    return user
 
 # 📧 Email Utilities
 # Robust import strategy to handle different environment paths
@@ -331,26 +371,29 @@ async def create_leave(
             detail=f"Insufficient Annual Leave: You only have {balance.get('remaining')} days left."
         )
 
-# --- 6. FILE HANDLING ---
+    # --- 6. FILE HANDLING ---
     attachment_url = None 
     if file and file.filename:
         try:
-            # 🚀 CRITICAL: Reset pointer to 0 before reading
             await file.seek(0)
-            
             from app.main import compress_and_upload
             attachment_url = compress_and_upload(file, folder="mcs")
         except Exception as e:
-            # This will now catch the error and return a clean 500
             print(f"⚠️ Upload Error: {e}")
             raise HTTPException(status_code=500, detail="System Error: Failed to process attachment.")
 
-    # --- 7. SAVE RECORD ---
+    # --- 🚀 7. NEW: MANAGER ID RESOLUTION ---
+    # Convert the string name into the secure user_id for the new database architecture
+    manager = _find_user_by_name_or_username(db, approver_name)
+    approver_id = manager.id if manager else None
+
+    # --- 8. SAVE RECORD ---
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     
     new_leave = models.Leave(
         employee_name=employee_name, 
-        approver_name=approver_name, 
+        approver_name=approver_name, # Keep legacy string for UI safety
+        approver_id=approver_id,     # 🚀 NEW: Save the secure ID!
         leave_type=leave_type,
         start_date=start_obj, 
         end_date=end_obj, 
@@ -364,17 +407,21 @@ async def create_leave(
     db.commit()
     db.refresh(new_leave)
 
-    # 📧 --- 8. NOTIFY MANAGER & LOG ACTIVITY ---
+    # 📧 --- 9. NOTIFY MANAGER & LOG ACTIVITY ---
     try:
         # A. LOG ACTIVITY
         user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
         if user_record:
-            log_activity(db=db, user_id=user_record.id, action_type="SUBMISSION",
-                         category=leave_type, message=f"You submitted a {leave_type} request for {start_date}",
-                         reference_id=new_leave.id)
+            log_activity(
+                db=db, 
+                user_id=user_record.id, 
+                action_type="SUBMISSION",
+                category=leave_type, 
+                message=f"You submitted a {leave_type} request for {start_date}",
+                reference_id=new_leave.id
+            )
 
         # B. EMAIL MANAGER
-        manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
         if manager and manager.email:
             subject = f"Action Required: New Leave Request ({employee_name})"
             admin_name = applied_by if applied_by and applied_by != employee_name else None
@@ -390,38 +437,38 @@ async def create_leave(
     except Exception as e:
         print(f"⚠️ Post-Submission Error: {e}")
 
-    # 🚀 RETURN ONLY AT THE END
+    # 🚀 SINGLE, CLEAN RETURN
     return {"message": "Leave request submitted successfully", "leave_id": new_leave.id}
 
     # ============================================================
     # 🚀 RECORD TO ACTIVITY LOG (STEP 3)
     # ============================================================
-    try:
-        # 1. Find the user ID based on the employee name
-        user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
+    # try:
+    #     # 1. Find the user ID based on the employee name
+    #     user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
         
-        if user_record:
-            log_activity(
-                db=db,
-                user_id=user_record.id,
-                action_type="SUBMISSION",
-                category=leave_type,
-                message=f"You submitted a {leave_type} request for {start_date}",
-                reference_id=new_leave.id
-            )
-    except Exception as log_error:
-        print(f"⚠️ Activity Log Warning: {log_error}")
+    #     if user_record:
+    #         log_activity(
+    #             db=db,
+    #             user_id=user_record.id,
+    #             action_type="SUBMISSION",
+    #             category=leave_type,
+    #             message=f"You submitted a {leave_type} request for {start_date}",
+    #             reference_id=new_leave.id
+    #         )
+    # except Exception as log_error:
+    #     print(f"⚠️ Activity Log Warning: {log_error}")
 
-    # --- 8. EMAIL NOTIFICATION ---
-    manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
-    if manager and manager.email:
-        display_type = "Carry Forward" if is_cf_request else leave_type
-        subject = f"ACTION REQUIRED: New {display_type} Request - {employee_name}"
-        # (Using standard template for both to keep it clean)
-        body = template_new_request(manager.full_name, employee_name, display_type, start_date, end_date, days_requested)
-        background_tasks.add_task(send_email, manager.email, subject, body)
+    # # --- 8. EMAIL NOTIFICATION ---
+    # manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
+    # if manager and manager.email:
+    #     display_type = "Carry Forward" if is_cf_request else leave_type
+    #     subject = f"ACTION REQUIRED: New {display_type} Request - {employee_name}"
+    #     # (Using standard template for both to keep it clean)
+    #     body = template_new_request(manager.full_name, employee_name, display_type, start_date, end_date, days_requested)
+    #     background_tasks.add_task(send_email, manager.email, subject, body)
 
-    return new_leave
+    # return new_leave
 
 # --- 3. MISSING ENDPOINT: BALANCE HISTORY ---
 @router.get("/manager/balance-history")
@@ -488,7 +535,7 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
         elif raw_status == "Cancelled" and "Approved" not in history_str:
             action_type = "Withdrawn Request"
 
-        # Determine Display Status
+# Determine Display Status
         display_status = raw_status
         if raw_status == "Cancelled" and "Approved" not in history_str:
             display_status = "Withdrawn"
@@ -503,7 +550,8 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
             "days": display_days,
             "status": display_status,
             "reason": l.reason,
-            "is_cf": is_cf 
+            "is_cf": is_cf,
+            "status_history": convert_utc_string_to_kl(l.status_history) # 👈 FIXED: Localized timestamp
         })
 
     return {
@@ -569,25 +617,30 @@ def get_leave_history(
         models.Leave.id.desc()
     ).offset(skip).limit(page_size).all()
     
-# 6. Formatted response
+    # 6. Formatted response
     formatted = []
-    for l in leaves:
+    for l in leaves:  # 👈 FIXED: Changed 'results' to 'leaves'
+        # Determine types once
         l_type = l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type)
         l_status = l.status.value if hasattr(l.status, 'value') else str(l.status)
+        
+        # 🚀 FIXED: Supabase removed. Assuming local path is in attachment_path or simple normalization
+        # You can adjust this helper to just return the path if you don't need fancy URL building anymore
+        full_attachment_url = l.attachment_path if (l.attachment_path or "").startswith("/") else f"/uploads/mcs/{l.attachment_path or ''}"
 
         formatted.append({
             "id": l.id, 
             "employee_name": l.employee_name,
             "approver_name": l.approver_name,
-            "approver_l2": l.approver_l2,  # <--- THIS IS THE FIX
+            "approver_l2": l.approver_l2, 
             "days_taken": l.days_taken, 
             "reason": l.reason or "No reason provided",
             "leave_type": l_type,
             "status": l_status,
             "start_date": l.start_date.strftime("%Y-%m-%d") if l.start_date else "N/A",
             "end_date": l.end_date.strftime("%Y-%m-%d") if l.end_date else "N/A",
-            "attachment_path": l.attachment_path, 
-            "status_history": l.status_history or "Pending",
+            "attachment_path": full_attachment_url, 
+            "status_history": convert_utc_string_to_kl(l.status_history), # 👈 Timezone conversion applied
             "approved_at": l.approved_at.strftime("%Y-%m-%d %H:%M") if l.approved_at else None,
             "rejected_at": l.rejected_at.strftime("%Y-%m-%d %H:%M") if l.rejected_at else None,
             "cancelled_at": l.cancelled_at.strftime("%Y-%m-%d %H:%M") if l.cancelled_at else None
@@ -624,7 +677,7 @@ async def cancel_leave_request(
         raise HTTPException(status_code=403, detail="You do not have permission to cancel this leave.")
 
     current_status = leave.status
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    timestamp = get_local_timestamp()
     
     # Format reason
     reason_val = payload.reason if (payload and payload.reason) else "No reason provided"
@@ -698,13 +751,21 @@ def get_manager_pending(
             models.Leave.status.in_(["Pending", "Pending Cancel", "Pending L2 Approval"])
         )
     else:
-        # 1. Base Query: Matches Lane 1 (L1) and Lane 2 (L2) logic
+        # --- 🚀 NEW ID-BASED LOOKUP START ---
+        # 1. Resolve the string name to a secure user ID to prevent name-change bugs.
+        manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
+        
+        # If manager isn't found, use -1 to safely return an empty list rather than breaking
+        manager_id = manager.id if manager else -1 
+        
+        # 2. Base Query: Matches Lane 1 (L1) and Lane 2 (L2) logic using the robust IDs
         query = db.query(models.Leave).filter(
             or_(
-                and_(models.Leave.approver_name == approver_name, models.Leave.status.in_(["Pending", "Pending Cancel"])),
-                and_(models.Leave.approver_l2 == approver_name, models.Leave.status == "Pending L2 Approval")
+                and_(models.Leave.approver_id == manager_id, models.Leave.status.in_(["Pending", "Pending Cancel"])),
+                and_(models.Leave.approver_l2_id == manager_id, models.Leave.status == "Pending L2 Approval")
             )
         )
+        # --- 🚀 NEW ID-BASED LOOKUP END ---
 
     # 2. Filters
     if name: query = query.filter(models.Leave.employee_name.ilike(f"%{name}%"))
@@ -715,49 +776,40 @@ def get_manager_pending(
     
     total_count = query.count()
     results = query.order_by(models.Leave.id.desc()).offset((page-1)*page_size).limit(page_size).all()
-    
-    # 🛡️ PREPARE SUPABASE CONSTANTS
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
 
     formatted_results = []
     for r in results:
-        # 🚀 FIX: GENERATE FULL URL for both local uploads and Supabase
+        # 🚀 CLEANED UP: Local Storage URL Builder (Supabase Removed)
         full_attachment_url = r.attachment_path
         if full_attachment_url and not full_attachment_url.startswith("http"):
-            if full_attachment_url.startswith("/uploads") or full_attachment_url.startswith("/storage/v1/object/public"):
-                full_attachment_url = full_attachment_url
-            elif SUPABASE_URL and SUPABASE_BUCKET:
-                clean_path = full_attachment_url.lstrip('/')
-                full_attachment_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/mcs/{clean_path}"
+            if full_attachment_url.startswith("/uploads"):
+                pass # It is already perfectly formatted
+            elif full_attachment_url.startswith("uploads/"):
+                full_attachment_url = "/" + full_attachment_url
+            elif full_attachment_url.startswith("mcs/"):
+                full_attachment_url = f"/uploads/{full_attachment_url}"
             else:
-                if full_attachment_url.startswith("uploads/"):
-                    full_attachment_url = "/" + full_attachment_url
-                elif full_attachment_url.startswith("mcs/"):
-                    full_attachment_url = f"/uploads/{full_attachment_url}"
-                else:
-                    full_attachment_url = f"/uploads/mcs/{full_attachment_url.lstrip('/')}"
+                full_attachment_url = f"/uploads/mcs/{full_attachment_url.lstrip('/')}"
 
         formatted_results.append({
             "id": r.id,
             "employee_name": r.employee_name,
-            "approver_name": r.approver_name,
-            "approver_l2": r.approver_l2, # Critical for UI to show "Routed to..."
+            "approver_name": r.approver_name, 
+            "approver_l2": r.approver_l2,     
             "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
             "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
             "days_taken": r.days_taken,
             "start_date": r.start_date.strftime("%Y-%m-%d"),
             "end_date": r.end_date.strftime("%Y-%m-%d"),
             "reason": r.reason,
-            "attachment_path": full_attachment_url, # 👈 Send the fixed URL
-            "status_history": r.status_history or "Pending"
+            "attachment_path": full_attachment_url, 
+            "status_history": convert_utc_string_to_kl(r.status_history) # 👈 FIXED: Localized timestamp
         })
     
     return {
         "total": total_count,
         "requests": formatted_results
     }
-
 
 
 @router.get("/admin/fix-db-schema")
@@ -791,14 +843,14 @@ def fix_db_schema(db: Session = Depends(get_db)):
 async def approve_leave( 
     leave_id: int, 
     background_tasks: BackgroundTasks, 
-    status: str = Query(...),       
-    remarks: str = Query(""),       
+    status: str = Query(...),        
+    remarks: str = Query(""),        
     approver_name: str = Query(""), 
     l2_name: str = Query(None), 
     db: Session = Depends(get_db),
     x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
-    # --- 🛡️ 1. SANITIZE NAMES (The Fix for Sarah Connor's empty feed) ---
+    # --- 🛡️ 1. SANITIZE NAMES ---
     approver_name = approver_name.strip()
     if l2_name: l2_name = l2_name.strip()
 
@@ -806,22 +858,39 @@ async def approve_leave(
     if not leave:
         raise HTTPException(status_code=404, detail="Leave request not found")
 
-    # 👑 Identify if an authoritative Superuser is executing this action
+    # 👑 Identify the acting user from header
     acting_user = db.query(models.User).filter(models.User.username == x_username).first()
     is_superuser_override = acting_user and acting_user.role == "superuser"
 
-    # --- 2. Identity & Permission Checks ---
+    # --- 🚀 2. IDENTITY & PERMISSION CHECKS (HYBRID ID/NAME LOGIC) ---
+    is_authorized = is_superuser_override
+    if not is_authorized and acting_user:
+        # Check if acting user is L1 (by ID or Name fallback)
+        is_l1_match = (leave.approver_id and acting_user.id == leave.approver_id) or \
+                      (approver_name and leave.approver_name and approver_name.strip().lower() == leave.approver_name.strip().lower())
+        
+        # Check if acting user is L2 (by ID or Name fallback) - FIXES TONY STARK ISSUE
+        is_l2_match = (leave.approver_l2_id and acting_user.id == leave.approver_l2_id) or \
+                      (approver_name and leave.approver_l2 and approver_name.strip().lower() == leave.approver_l2.strip().lower())
+
+        if is_l1_match or is_l2_match:
+            is_authorized = True
+            
+    if not is_authorized:
+        raise HTTPException(status_code=403, detail="You are not authorized to approve this request.")
+
+    # Manager context
     acting_mgr = _find_user_by_name_or_username(db, approver_name)
     is_senior = acting_mgr.is_senior_manager if acting_mgr else False
-    is_l1 = bool(
-        approver_name and leave.approver_name and
-        str(approver_name).strip().lower() == str(leave.approver_name).strip().lower()
-    )
+    
+    # Is the user acting as L1?
+    is_l1 = (leave.approver_id and acting_user and acting_user.id == leave.approver_id) or \
+            (approver_name and leave.approver_name and approver_name.strip().lower() == leave.approver_name.strip().lower())
     
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     l2_active = policy.l2_approval_enabled if policy else False
 
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    timestamp = get_local_timestamp()
     note_str = f" | Note: {remarks}" if remarks else ""
     l_type_str = str(leave.leave_type.value) if hasattr(leave.leave_type, 'value') else str(leave.leave_type)
     
@@ -845,37 +914,24 @@ async def approve_leave(
         if status == "Approved":
             is_hr_admin = acting_mgr and (acting_mgr.role == "hr_admin" or any(r.role_name == "hr_admin" for r in acting_mgr.assigned_roles))
 
-            # 🔶 Scenario A: L1 Approves -> Route to L2 (Bypassed entirely if Superuser forces it through)
             if leave.status == "Pending Cancel" and not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2 and not is_superuser_override:
                 l2_user = _find_user_by_name_or_username(db, leave.approver_l2)
                 if l2_user and l2_user.is_active:
                     leave.status = "Pending L2 Approval"
                     leave.status_history += f" > L1 Approved Cancellation by {display_approver}. Routed to {leave.approver_l2} ({timestamp}){note_str}"
-                    
-                    # 🚀 THE FIX: Change 'return' to 'final_response_message'
                     final_response_message = "Cancellation approved by L1. Routed to L2."
-                    
-                    # (Keep your email logic here...)
                     try:
                         if l2_user.email:
                             body = template_l2_cancellation_request(l2_user.full_name, approver_name, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
                             background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: L2 Cancellation - {leave.employee_name}", body)
                     except Exception as e: print(f"⚠️ Email Error: {e}")
-
-            # 🟢 Scenario B: Final Cancellation
             else:
                 leave.status = "Cancelled"
                 leave.status_history += f" > Cancellation FINALIZED by {display_approver} ({timestamp}){note_str}"
-                
-                # 🚀 THE FIX: Change 'return' to 'final_response_message'
                 final_response_message = "Cancellation finalized"
-
         else:
-            # 🔴 Scenario C: Cancellation Rejected
             leave.status = "Approved" 
             leave.status_history += f" > Cancellation REJECTED by {display_approver} ({timestamp}){note_str}"
-            
-            # 🚀 THE FIX: Change 'return' to 'final_response_message'
             final_response_message = "Cancellation rejected"
 
     # =========================================================================
@@ -883,16 +939,17 @@ async def approve_leave(
     # =========================================================================
     else:
         if status == "Approved":
-            # 👑 Superuser overrides bypass the standard L2 routing step to allow instant clearance
             if l2_active and leave.status in ["Pending", "Pending L2 Approval"] and not is_senior and not is_superuser_override:
                 if l2_name:
                     leave.status = "Pending L2 Approval"
                     leave.approver_l2 = l2_name
+                    # 🚀 ID-MAPPING: Capture L2 ID
+                    l2_user = _find_user_by_name_or_username(db, l2_name)
+                    if l2_user: leave.approver_l2_id = l2_user.id
+                    
                     leave.status_history += f" > L1 Approved by {approver_name}. Routed to {l2_name} ({timestamp}){note_str}"
                     final_response_message = f"L1 Approved. Routed to {l2_name} for final approval"
                     route_to_l2 = True
-                    l2_user = _find_user_by_name_or_username(db, l2_name)
-                    print(f"📧 Leave routed to L2 approver: {l2_name} ({leave.id})")
                 else:
                     leave.status = "Approved"
                     leave.approved_at = datetime.now()
@@ -909,23 +966,15 @@ async def approve_leave(
             leave.status_history += f" > Rejected by {display_approver} ({timestamp}){note_str}"
             final_response_message = "Request rejected"
 
-    # --- 💾 COMMIT CHANGES (Saves the Leave Status first - Safe!) ---
     db.commit()
 
     # ============================================================
-    # 🚀 5. RECORD TO ACTIVITY LOG (MANAGER & EMPLOYEE)
+    # 5. LOGGING & EMAIL (PRESERVED LOGIC)
     # ============================================================
     try:
-        # ✅ SMART LOOKUP
-        emp_record = db.query(models.User).filter(
-            or_(models.User.full_name == leave.employee_name, models.User.username == leave.employee_name)
-        ).first()
+        emp_record = db.query(models.User).filter(or_(models.User.full_name == leave.employee_name, models.User.username == leave.employee_name)).first()
+        mgr_record = db.query(models.User).filter(or_(models.User.full_name == approver_name, models.User.username == approver_name)).first()
 
-        mgr_record = db.query(models.User).filter(
-            or_(models.User.full_name == approver_name, models.User.username == approver_name)
-        ).first()
-
-        # Prepare log strings
         if status == "Approved":
             suffix = " (Pending L2)" if "Pending L2" in leave.status else ""
             log_msg_emp = f"Your {l_type_str} request was approved via administrative override" if is_superuser_override else f"Your {l_type_str} request was APPROVED{suffix}"
@@ -936,85 +985,25 @@ async def approve_leave(
             log_msg_mgr = f"You REJECTED {leave.employee_name}'s {l_type_str}"
             act_type = "REJECTION"
 
-        # 🅰️ LOG FOR EMPLOYEE (Julian)
         if emp_record:
-            try:
-                log_activity(
-                    db=db, user_id=emp_record.id, action_type=act_type, 
-                    category=l_type_str, message=log_msg_emp, 
-                    reference_id=leave.id, actor_id=acting_user.id if acting_user else (mgr_record.id if mgr_record else None)
-                )
-                db.commit() 
-            except Exception as e:
-                print(f"⚠️ Employee Log Hint: {e}")
-
-        # 🅱️ LOG FOR MANAGER (Ned Stark - Skipped on Superuser administrative overrides)
+            log_activity(db=db, user_id=emp_record.id, action_type=act_type, category=l_type_str, message=log_msg_emp, reference_id=leave.id, actor_id=acting_user.id if acting_user else (mgr_record.id if mgr_record else None))
         if mgr_record and not is_superuser_override:
-            try:
-                log_activity(
-                    db=db, user_id=mgr_record.id, action_type=act_type, 
-                    category=l_type_str, message=log_msg_mgr, 
-                    reference_id=leave.id
-                )
-                db.commit() 
-            except Exception as e:
-                print(f"⚠️ Manager Log Hint: {e}")
+            log_activity(db=db, user_id=mgr_record.id, action_type=act_type, category=l_type_str, message=log_msg_mgr, reference_id=leave.id)
 
-# 📧 --- STEP 2: NOTIFY NEXT APPROVER OR EMPLOYEE VIA EMAIL ---
+        # Emails
         if status == "Approved":
-            # 🚀 STATE 1: Routing to L2 (Normal Leave)
             if route_to_l2 and l2_user and l2_user.email:
-                try:
-                    body = template_l2_request(
-                        l2_user.full_name or l2_user.username,
-                        approver_name or display_approver,
-                        leave.employee_name,
-                        l_type_str,
-                        str(leave.start_date),
-                        str(leave.end_date),
-                    )
-                    background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: Final Approval Needed - {leave.employee_name}", body)
-                    print(f"📧 L2 manager notification queued for {l2_user.email}")
-                except Exception as email_err:
-                    print(f"⚠️ L2 Email Notification Warning: {email_err}")
-
-            # 🚀 STATE 2: Fully Approved (Only if NOT routed to L2)
+                body = template_l2_request(l2_user.full_name or l2_user.username, approver_name or display_approver, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: Final Approval Needed - {leave.employee_name}", body)
             elif not route_to_l2 and emp_record and emp_record.email:
-                try:
-                    subject = f"✅ Leave Request Approved - {l_type_str}"
-                    body = template_request_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
-                    background_tasks.add_task(send_email, emp_record.email, subject, body)
-                except Exception as email_err:
-                    print(f"⚠️ Approval Email Warning: {email_err}")
-        
-        # 🔴 STATE 3: Rejected
+                body = template_request_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
+                background_tasks.add_task(send_email, emp_record.email, f"✅ Leave Request Approved - {l_type_str}", body)
         elif status == "Rejected" and emp_record and emp_record.email:
-            try:
-                subject = f"❌ Leave Request Rejected - {l_type_str}"
-                body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
-                background_tasks.add_task(send_email, emp_record.email, subject, body)
-            except Exception as email_err:
-                print(f"⚠️ Rejection Email Warning: {email_err}")
-                        
-        # 🔴 STATE 4: REJECTED
-        else:
-            if emp_record and emp_record.email:
-                try:
-                    if is_cancellation_journey:
-                        subject = f"⚠️ Leave Cancellation Denied - {l_type_str}"
-                        body = template_cancellation_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
-                    else:
-                        subject = f"❌ Leave Request Rejected - {l_type_str}"
-                        body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
-                    
-                    background_tasks.add_task(send_email, emp_record.email, subject, body)
-                    print(f"📧 Rejection email queued for employee: {emp_record.email}")
+             body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
+             background_tasks.add_task(send_email, emp_record.email, f"❌ Leave Request Rejected - {l_type_str}", body)
 
-                except Exception as email_err:
-                    print(f"⚠️ Email Notification Warning: {email_err}")
-
-    except Exception as general_log_error:
-        print(f"⚠️ Activity Log System Warning: {general_log_error}")
+    except Exception as e:
+        print(f"⚠️ Activity/Email Error: {e}")
 
     return {"message": final_response_message}
 
@@ -1037,13 +1026,18 @@ def get_all_manager_leaves(
     # 1. RBAC: Managers only see what they touched. Admins and Superusers see all.
     if not is_admin_or_super:
         if approver_name:
+            # --- 🚀 NEW ID-BASED LOOKUP START ---
+            manager = db.query(models.User).filter(models.User.full_name == approver_name.strip()).first()
+            manager_id = manager.id if manager else -1
+            
             query = query.filter(
                 or_(
-                    models.Leave.approver_name.ilike(approver_name.strip()),
-                    models.Leave.approver_l2.ilike(approver_name.strip()),
+                    models.Leave.approver_id == manager_id,
+                    models.Leave.approver_l2_id == manager_id,
                     models.Leave.status_history.ilike(f"%{approver_name.strip()}%") 
                 )
             )
+            # --- 🚀 NEW ID-BASED LOOKUP END ---
         else:
             return {"requests": []}
     
@@ -1055,27 +1049,32 @@ def get_all_manager_leaves(
         query = query.filter(models.Leave.status == status)
         
     results = query.order_by(models.Leave.id.desc()).all()
-    
-    # 🛡️ PREPARE SUPABASE CONSTANTS
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
-
     formatted = []
     for r in results:
-        full_attachment_url = _normalize_attachment_url(r.attachment_path, SUPABASE_URL, SUPABASE_BUCKET)
+        # 🚀 CLEANED UP: Local Storage URL Builder (Supabase Removed)
+        full_attachment_url = r.attachment_path
+        if full_attachment_url and not full_attachment_url.startswith("http"):
+            if full_attachment_url.startswith("/uploads"):
+                pass # It is already perfectly formatted
+            elif full_attachment_url.startswith("uploads/"):
+                full_attachment_url = "/" + full_attachment_url
+            elif full_attachment_url.startswith("mcs/"):
+                full_attachment_url = f"/uploads/{full_attachment_url}"
+            else:
+                full_attachment_url = f"/uploads/mcs/{full_attachment_url.lstrip('/')}"
 
         formatted.append({
             "id": r.id,
             "employee_name": r.employee_name,
-            "approver_name": r.approver_name,
-            "approver_l2": r.approver_l2,
+            "approver_name": r.approver_name, # Legacy string retained for UI stability
+            "approver_l2": r.approver_l2,     
             "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
             "days_taken": r.days_taken,
             "start_date": r.start_date.strftime("%Y-%m-%d"),
             "end_date": r.end_date.strftime("%Y-%m-%d"),
             "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
-            "attachment_path": full_attachment_url, # 👈 Send the fixed URL
-            "status_history": r.status_history or "Pending"
+            "attachment_path": full_attachment_url, 
+            "status_history": convert_utc_string_to_kl(r.status_history) # 👈 FIXED: Localized timestamp
         })
 
     return {"requests": formatted}
@@ -1445,13 +1444,13 @@ def get_global_audit_logs(db: Session = Depends(get_db)):
     """Fetches all leave requests for the System Audit Log (HR Admin only)."""
     results = db.query(models.Leave).order_by(models.Leave.id.desc()).all()
     
-    # 🛡️ PREPARE SUPABASE CONSTANTS
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
-
     formatted = []
     for l in results:
-        full_attachment_url = _normalize_attachment_url(l.attachment_path, SUPABASE_URL, SUPABASE_BUCKET)
+        # 🚀 CLEANED: Removed Supabase constants and _normalize_attachment_url
+        # Direct local path construction
+        full_attachment_url = l.attachment_path
+        if full_attachment_url and not full_attachment_url.startswith(("/uploads", "http")):
+             full_attachment_url = f"/uploads/mcs/{full_attachment_url.lstrip('/')}"
 
         formatted.append({
             "id": l.id,
@@ -1462,8 +1461,8 @@ def get_global_audit_logs(db: Session = Depends(get_db)):
             "start_date": l.start_date.strftime("%Y-%m-%d"),
             "end_date": l.end_date.strftime("%Y-%m-%d"),
             "status": l.status.value if hasattr(l.status, 'value') else str(l.status),
-            "attachment_path": full_attachment_url, # 👈 Sends the valid link now
-            "status_history": l.status_history or "Pending"
+            "attachment_path": full_attachment_url,
+            "status_history": convert_utc_string_to_kl(l.status_history) # 👈 Fixed
         })
     
     return formatted
