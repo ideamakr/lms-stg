@@ -43,3 +43,5 @@ __pycache__/
 fix_db.py
 upgrade_db.py
 inspect_db.py
+
+logs/

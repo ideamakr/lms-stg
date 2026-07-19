@@ -5944,34 +5944,40 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
                                             </div>
                                         </div>
                                 
-                                        <div id="form_workspace" style="flex: 1;">
-                                            
-                                            <div id="form_leave_container">
-                                                <form id="applyLeaveForm" onsubmit="return false;">
-                                                    
-                                                    <div id="carry_forward_ui" style="display: none; background: #ffffff; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);">
-                                                        <div style="background: #eff6ff; border-left: 3px solid #3b82f6; padding: 12px 15px; border-radius: 6px; margin-bottom: 12px; font-size: 0.8rem; color: #1e3a8a; display: flex; justify-content: space-between; align-items: center;">
-                                                            <div><i class="fas fa-info-circle" style="margin-right: 4px"></i><strong>Policy Limit:</strong> Max <span id="cf_display_limit" style="font-weight: 800">--</span> Days</div>
-                                                            <div><strong>Expires:</strong> <span id="cf_display_date" style="font-weight: 800">--</span></div>
-                                                        </div>
-                                    
-                                                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding: 0 2px; font-size: 0.85rem;">
-                                                            <span style="color: #64748b; font-weight: bold">Current Annual Balance</span>
-                                                            <strong id="cf_current" style="color: #1e293b;">Checking...</strong>
-                                                        </div>
-                                    
-                                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; align-items: start;">
-                                                            <div class="saas-form-group" style="margin: 0;">
-                                                                <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Days to Carry Forward</label>
-                                                                <input type="number" id="cf_days_input" class="saas-form-control" step="0.5" min="0.5" oninput="updateCarryForwardMath()" placeholder="e.g. 5.0" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;" />
-                                                            </div>
-                                                            <div class="saas-form-group" style="margin: 0;">
-                                                                <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Assign Approver</label>
-                                                                <select id="dash_approver_cf" class="saas-form-control" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
-                                                                    <option value="" disabled selected hidden>-- Select Manager --</option>
-                                                                </select>
-                                                            </div>
-                                                        </div>
+<div id="form_workspace" style="flex: 1;">
+    <div id="form_leave_container">
+        <form id="applyLeaveForm" onsubmit="return false;">
+            
+            <div id="carry_forward_ui" style="display: none; background: #ffffff; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);">
+                <div style="background: #eff6ff; border-left: 3px solid #3b82f6; padding: 12px 15px; border-radius: 6px; margin-bottom: 12px; font-size: 0.8rem; color: #1e3a8a; display: flex; justify-content: space-between; align-items: center;">
+                    <div><i class="fas fa-info-circle" style="margin-right: 4px"></i><strong>Policy Limit:</strong> Max <span id="cf_display_limit" style="font-weight: 800">--</span> Days</div>
+                    <div><strong>Expires:</strong> <span id="cf_display_date" style="font-weight: 800">--</span></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding: 0 2px; font-size: 0.85rem;">
+                    <span style="color: #64748b; font-weight: bold">Current Annual Balance</span>
+                    <strong id="cf_current" style="color: #1e293b;">Checking...</strong>
+                </div>
+
+                <!-- NEW MERGED LINE -->
+                <div id="cf_requested_row" style="display: none; justify-content: space-between; margin-bottom: 10px; padding: 0 2px; font-size: 0.85rem;">
+                    <span style="color: #64748b; font-weight: bold">Carry Forward Banked Requested</span>
+                    <strong id="cf_requested_val" style="color: #3b82f6;">0.0</strong>
+                </div>
+                <!-- END NEW LINE -->
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; align-items: start;">
+                    <div class="saas-form-group" style="margin: 0;">
+                        <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Days to Carry Forward</label>
+                        <input type="number" id="cf_days_input" class="saas-form-control" step="0.5" min="0.5" oninput="updateCarryForwardMath()" placeholder="e.g. 5.0" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;" />
+                    </div>
+                    <div class="saas-form-group" style="margin: 0;">
+                        <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Assign Approver</label>
+                        <select id="dash_approver_cf" class="saas-form-control" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
+                            <option value="" disabled selected hidden>-- Select Manager --</option>
+                        </select>
+                    </div>
+                </div>
                                     
                                                         <div style="margin-top: 12px; display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 8px; padding-left: 2px; padding-right: 2px; font-size: 0.85rem;">
                                                             <span style="color: #64748b">Remaining after request</span>
@@ -6938,36 +6944,36 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
               </div>
           </div>
  <!-- ==========================================
-             PUBLIC HOLIDAYS - id="holidays" (Filterable Archive Version)
-            ========================================== -->
-            <div id="holidays" class="section">
-                <div class="card" style="padding: 0; overflow: hidden; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                    
-                    <div style="padding: 25px 30px; border-bottom: 1px solid #f1f5f9; background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                        <div>
-                            <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b; display: flex; align-items: center; gap: 10px; border: none; padding: 0;">
-                                <i class="fas fa-umbrella-beach" style="color: #0ea5e9"></i>
-                                Public Holidays
-                            </h2>
-                            <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.9rem">
-                                View official corporate office closures and reference historical cycles.
-                            </p>
-                        </div>
-                        
-                        <!-- 🚀 NEW INTERACTIVE FILTER HOUSING: Places the year selection dropdown right next to the refresh button -->
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <label for="emp_holiday_year_filter" style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Year:</label>
-                                <select id="emp_holiday_year_filter" onchange="renderEmployeeHolidaysTable()" style="height: 38px !important; width: 110px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; color: #1e293b; cursor: pointer; outline: none; padding: 0 8px;">
-                                    <!-- Dynamically populated by JavaScript later -->
-                                </select>
-                            </div>
-                            
-                            <button onclick="loadPublicHolidays()" style="height: 38px; padding: 0 15px; font-size: 0.85rem; font-weight: 600; color: #475569; background: white; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'; this.style.color='#1e293b';" onmouseout="this.style.background='white'; this.style.color='#475569';">
-                                <i class="fas fa-sync-alt"></i> Refresh
-                            </button>
-                        </div>
-                    </div>
+     PUBLIC HOLIDAYS - id="holidays" (Filterable Archive Version)
+     ========================================== -->
+<div id="holidays" class="section" style="height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 20px;">
+    <div class="card" style="padding: 0; overflow: hidden; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+        
+        <div style="padding: 25px 30px; border-bottom: 1px solid #f1f5f9; background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b; display: flex; align-items: center; gap: 10px; border: none; padding: 0;">
+                    <i class="fas fa-umbrella-beach" style="color: #0ea5e9"></i>
+                    Public Holidays
+                </h2>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.9rem">
+                    View official corporate office closures and reference historical cycles.
+                </p>
+            </div>
+            
+            <!-- Filter Housing -->
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label for="emp_holiday_year_filter" style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Year:</label>
+                    <select id="emp_holiday_year_filter" onchange="renderEmployeeHolidaysTable()" style="height: 38px !important; width: 110px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; color: #1e293b; cursor: pointer; outline: none; padding: 0 8px;">
+                        <!-- Dynamically populated by JavaScript later -->
+                    </select>
+                </div>
+                
+                <button onclick="loadPublicHolidays()" style="height: 38px; padding: 0 15px; font-size: 0.85rem; font-weight: 600; color: #475569; background: white; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'; this.style.color='#1e293b';" onmouseout="this.style.background='white'; this.style.color='#475569';">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
     
                     <!-- High-density tabular layout container replacing the loose timeline layout -->
                     <div class="table-container" style="max-height: 60vh; overflow-y: auto; background: white; margin-top: 0; border: none; border-radius: 0;">
@@ -6995,29 +7001,29 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
                 </div>
             </div>
         
-        <!-- ==========================================
-             MY PROFILE - id="profile"
-            ========================================== -->
-            <div id="profile" class="section saas-canvas" style="background: #f8fafc; padding: 40px 24px 80px 24px; width: 100%; height: auto; box-sizing: border-box; margin: 0;">
-                <div style="max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; width: 100%;">
-            
-                    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: #0f172a;">My Profile</h2>
-            
-                    <div class="prof-card" style="padding: 0; overflow: hidden; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                        <div style="height: 140px; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); position: relative;"></div>
-                        <div style="padding: 0 30px 25px 30px; position: relative; display: flex; align-items: flex-end; gap: 24px; margin-top: -65px;">
-                            <div style="position: relative; cursor: pointer; transition: transform 0.2s; flex-shrink: 0; z-index: 10;" 
-                                 onclick="openAvatarEditor('profile')" 
-                                 onmouseover="this.style.transform='scale(1.02)'" 
-                                 onmouseout="this.style.transform='scale(1)'">
-                                <img id="prof_avatar_img" src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff" 
-                                     style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 5px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: white;">
-                                <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.2s;" 
-                                     onmouseover="this.style.opacity=1" 
-                                     onmouseout="this.style.opacity=0">
-                                    <i class="fas fa-camera" style="color: white; font-size: 1.2rem;"></i>
-                                </div>
-                            </div>
+<!-- ==========================================
+     MY PROFILE - id="profile"
+    ========================================== -->
+<div id="profile" class="section saas-canvas" style="background: #f8fafc; padding: 40px 24px 80px 24px; width: 100%; height: 100vh; overflow-y: auto; box-sizing: border-box; margin: 0;">
+    <div style="max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; width: 100%;">
+
+        <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: #0f172a;">My Profile</h2>
+
+        <div class="prof-card" style="padding: 0; overflow: hidden; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="height: 140px; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); position: relative;"></div>
+            <div style="padding: 0 30px 25px 30px; position: relative; display: flex; align-items: flex-end; gap: 24px; margin-top: -65px;">
+                <div style="position: relative; cursor: pointer; transition: transform 0.2s; flex-shrink: 0; z-index: 10;" 
+                     onclick="openAvatarEditor('profile')" 
+                     onmouseover="this.style.transform='scale(1.02)'" 
+                     onmouseout="this.style.transform='scale(1)'">
+                    <img id="prof_avatar_img" src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff" 
+                         style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 5px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: white;">
+                    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.2s;" 
+                         onmouseover="this.style.opacity=1" 
+                         onmouseout="this.style.opacity=0">
+                        <i class="fas fa-camera" style="color: white; font-size: 1.2rem;"></i>
+                    </div>
+                </div>
                             <div style="flex: 1; padding-bottom: 5px;">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
                                     <div>
@@ -12394,10 +12400,28 @@ async function loadHistory(page = 1, size = 10) {
             fetchWithAuth(`${API_URL}/overtime/my-requests?employee_name=${encodeURIComponent(currentUser)}&ot_date=${filterDate}`)
         ]);
 
-        if (!leaveRes || !otRes) return;
+ if (!leaveRes || !otRes) return;
 
         const leaveData = await leaveRes.json();
         const otData = await otRes.json();
+
+        // ==========================================
+        // 🆕 STEP 2: CALCULATE & DISPLAY BANKED CF
+        // ==========================================
+        // Safety: calculateBankedCarryForward handles empty data gracefully
+        const bankedCF = calculateBankedCarryForward(leaveData);
+        const reqRow = document.getElementById("cf_requested_row");
+        const reqValEl = document.getElementById("cf_requested_val");
+
+        // Safety: Only manipulate the DOM if the form UI actually exists on screen
+        if (reqRow && reqValEl) {
+            reqValEl.innerText = bankedCF.toFixed(1);
+            reqRow.style.display = bankedCF > 0 ? "flex" : "none"; 
+        }
+        
+        // Store globally so the math validation function can read it in Step 3
+        window.currentBankedCF = bankedCF;
+        // ==========================================
 
         // 🚀 THE FIX: Extract exact timestamp from the history string to use as the ultimate sort key
         const extractTime = (histStr, fallbackDate) => {
@@ -12606,40 +12630,47 @@ function sortAndRenderHistory() {
         }
 
         // 5. Build the Row
-        tbody.innerHTML += `
-            <tr style="border-bottom: 1px solid #f1f5f9; transition: all 0.2s ease;" onmouseover="this.style.background='#f8fafc';" onmouseout="this.style.background='transparent';">
-                <td style="padding: 14px 15px; vertical-align: middle;">
-                    ${typeBadge}
-                </td>
-                <td style="padding: 14px 15px; vertical-align: middle;">
-                    <div style="display:flex; flex-direction:column; line-height: 1.3;">
-                        <strong style="color: #1e293b; font-size: 0.9rem;">${item.display_label || item.leave_type}</strong>
-                        <span style="color:#64748b; font-family: monospace; font-size: 0.7rem; font-weight:700;">${getDisplayID(item.id, item.leave_type)}</span>
-                    </div>
-                </td>
-                <td class="text-center" style="padding: 14px 15px; vertical-align: middle;">
-                    <span style="background: #f1f5f9; color: #1e293b; font-weight: 800; font-size: 0.8rem; padding: 5px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${item.display_amount}</span>
-                </td>
-                <td style="padding: 14px 15px; vertical-align: middle; color: #475569; font-size: 0.85rem;">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+tbody.innerHTML += `
+    <tr style="border-bottom: 1px solid #f1f5f9; transition: all 0.2s ease;" onmouseover="this.style.background='#f8fafc';" onmouseout="this.style.background='transparent';">
+        <td style="padding: 14px 15px; vertical-align: middle;">
+            ${typeBadge}
+        </td>
+        <td style="padding: 14px 15px; vertical-align: middle;">
+            <div style="display:flex; flex-direction:column; line-height: 1.3;">
+                <strong style="color: #1e293b; font-size: 0.9rem;">${item.display_label || item.leave_type}</strong>
+                <span style="color:#64748b; font-family: monospace; font-size: 0.7rem; font-weight:700;">${getDisplayID(item.id, item.leave_type)}</span>
+            </div>
+        </td>
+        <td class="text-center" style="padding: 14px 15px; vertical-align: middle;">
+            <span style="background: #f1f5f9; color: #1e293b; font-weight: 800; font-size: 0.8rem; padding: 5px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${item.display_amount}</span>
+        </td>
+<td style="padding: 14px 15px; vertical-align: middle; color: #475569; font-size: 0.85rem;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                ${(String(item.display_label || item.leave_type).trim().toUpperCase() === "CARRY FORWARD" || String(item.display_label || item.leave_type).trim().toUpperCase() === "CF") 
+                    ? `
+                        <div style="display: flex; align-items: center; min-width: 95px; justify-content: center;">
+                            <i class="far fa-calendar-alt" style="margin-right: 6px; opacity: 0.4;"></i>${item.display_start.substring(0, 4)}
+                        </div>` 
+                    : `
                         <div style="display: flex; align-items: center; min-width: 95px;">
                             <i class="far fa-calendar-alt" style="margin-right: 6px; opacity: 0.4;"></i>${item.display_start}
                         </div>
                         <div style="color: #cbd5e1; font-weight: 300;">-</div>
                         <div style="display: flex; align-items: center; min-width: 95px;">
                             <i class="far fa-calendar-alt" style="margin-right: 6px; opacity: 0.4;"></i>${item.display_end}
-                        </div>
-                    </div>
-                </td>
-                <td class="text-center" style="padding: 14px 15px; vertical-align: middle;">
-                    <span class="status-badge ${statusClass}" style="font-size:0.7rem; padding: 5px 12px; font-weight: 800; border-radius: 20px; text-transform: uppercase; ${customStyle}">
-                        ${statusLabel.toUpperCase()}
-                    </span>
-                </td>
-                <td class="text-center" style="padding: 14px 15px; vertical-align: middle;">
-                    <div style="display:flex; gap:8px; justify-content:center; align-items:center;">${actionButtons}</div>
-                </td>
-            </tr>`;
+                        </div>`
+                }
+            </div>
+        </td>
+        <td class="text-center" style="padding: 14px 15px; vertical-align: middle;">
+            <span class="status-badge ${statusClass}" style="font-size:0.7rem; padding: 5px 12px; font-weight: 800; border-radius: 20px; text-transform: uppercase; ${customStyle}">
+                ${statusLabel.toUpperCase()}
+            </span>
+        </td>
+        <td class="text-center" style="padding: 14px 15px; vertical-align: middle;">
+            <div style="display:flex; gap:8px; justify-content:center; align-items:center;">${actionButtons}</div>
+        </td>
+    </tr>`;
     });
 
     // D. UPDATE PAGINATION UI
@@ -12731,43 +12762,147 @@ function changeHistoryPage(newPage) {
     sortAndRenderHistory();
 }
 
- // 2. MATH LOGIC: Real-time calculation for the Carry Forward Blue Box
-function updateCarryForwardMath() {
-    // 🛡️ DOMINO-PROOF SAFETY NET:
-    // If the global variable is 0, try to pull directly from the cached Annual Leave object
-    let annualBal = window.annualRemainingGlobal;
+function calculateBankedCarryForward(leaveData) {
+    let totalBanked = 0;
+    const cfRegex = /\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]/i;
 
-    if ((!annualBal || annualBal === 0) && window.leaveEntitlements && window.leaveEntitlements["Annual Leave"]) {
-        annualBal = parseFloat(window.leaveEntitlements["Annual Leave"].remaining) || 0;
-        // Sync it back to the global variable for other functions to use
-        window.annualRemainingGlobal = annualBal;
-        console.log("🔄 Math Guard: Restored balance from cache:", annualBal);
+    if (!leaveData || !leaveData.leaves) return 0;
+
+    leaveData.leaves.forEach(leave => {
+        // Only count leaves that are fully Approved
+        // Note: You may also want to include "Pending" here so they don't over-request while a previous request is in limbo
+        if (leave.status === "Approved" && leave.reason) {
+            const match = leave.reason.match(cfRegex);
+            if (match) {
+                totalBanked += parseFloat(match[1]);
+            }
+        }
+    });
+
+    return totalBanked;
+}
+
+
+function updateCarryForwardMath() {
+    // ==========================================
+    // 🛡️ THE ORIGINAL CRASH-PROOF BASELINE
+    // ==========================================
+    
+    const cfContainer = document.getElementById("carry_forward_ui");
+    if (!cfContainer || window.getComputedStyle(cfContainer).display === "none") {
+        return; 
     }
 
-    const inputVal = document.getElementById("cf_days_input").value;
-    const reqDays = parseFloat(inputVal) || 0;
+    // 1. DATA GUARD: Ensure annualBal is a valid number
+    let annualBal = window.annualRemainingGlobal;
+
+    // Attempt restoration from cache
+    if ((annualBal === undefined || annualBal === null) && window.leaveEntitlements && window.leaveEntitlements["Annual Leave"]) {
+        annualBal = parseFloat(window.leaveEntitlements["Annual Leave"].remaining);
+        if (!isNaN(annualBal)) {
+            window.annualRemainingGlobal = annualBal;
+            console.log("🔄 Math Guard: Restored balance from cache:", annualBal);
+        }
+    }
+
+    // 2. EXIT GUARD: If data is still loading, just return silently 
+    // This stops the 'toFixed' crash while waiting for the server
+    if (typeof annualBal !== 'number' || isNaN(annualBal)) {
+        console.warn("DEBUG: Data not ready. Skipping calculation.");
+        return; 
+    }
+
+    // 3. DOM GUARD: Ensure the input exists before reading .value
+    const inputEl = document.getElementById("cf_days_input");
+    if (!inputEl) return; 
+
+    const reqDays = parseFloat(inputEl.value) || 0;
 
     // Display Current Balance
     const currEl = document.getElementById("cf_current");
-    if (currEl) currEl.innerText = annualBal.toFixed(1) + " Days";
+    if (currEl) {
+        currEl.innerText = annualBal.toFixed(1) + " Days";
+    }
 
     // Calculate Result
     const remaining = annualBal - reqDays;
     const resultEl = document.getElementById("cf_result");
 
+    // ==========================================
+    // 🛑 NEW: LAYER 1 VALIDATION & BUTTON LOCK
+    // ==========================================
+    
+    // 1. Fetch the limit directly from the UI element ("cf_display_limit")
+    const limitEl = document.getElementById("cf_display_limit");
+    // Parse the innerText. If for some reason it's missing or "--", default to 8.
+    const maxLimit = (limitEl && !isNaN(parseFloat(limitEl.innerText))) ? parseFloat(limitEl.innerText) : 8;
+
+    // 2. RETRIEVE BANKED DAYS (Populated globally during history load)
+    const bankedCF = window.currentBankedCF || 0;
+
+    let hasError = false;
+    let errorMsg = "";
+
+    // 🔍 Rule 1: Cannot exceed the Policy Limit (Banked + New Request)
+    if ((reqDays + bankedCF) > maxLimit) {
+        hasError = true;
+        const availableToRequest = maxLimit - bankedCF;
+        errorMsg = `🚨 Policy Error: You have already banked ${bankedCF} days. You can only request up to ${availableToRequest > 0 ? availableToRequest : 0} more days.`;
+    } 
+    // 🔍 Rule 2: Cannot carry forward more than they actually have in Annual Leave
+    else if (reqDays > annualBal) {
+        hasError = true;
+        errorMsg = `🚨 Insufficient Balance: You only have ${annualBal.toFixed(1)} Annual days available.`;
+    }
+
+    // 🎨 INLINE ERROR UI CREATION/UPDATE
+    let errorEl = document.getElementById("cf_inline_error");
+    if (!errorEl) {
+        // Dynamically create the error text if it doesn't exist yet
+        errorEl = document.createElement("div");
+        errorEl.id = "cf_inline_error";
+        errorEl.style.color = "#ef4444"; // Standard Red
+        errorEl.style.fontSize = "0.85rem";
+        errorEl.style.marginTop = "8px";
+        errorEl.style.fontWeight = "600";
+        errorEl.style.display = "none"; 
+        
+        // Insert it right below the input box safely
+        inputEl.parentNode.insertBefore(errorEl, inputEl.nextSibling);
+    }
+
+    // Update Error Text visibility
+    if (hasError) {
+        errorEl.innerText = errorMsg;
+        errorEl.style.display = "block";
+    } else {
+        errorEl.style.display = "none";
+    }
+
+    // 🎨 ORIGINAL RESULT UI UPDATE
     if (resultEl) {
-        // 🚀 UPDATE: Use toFixed(1) to handle half-days neatly
+        // SAFE MATH: Only .toFixed() if everything is valid
         resultEl.innerText = remaining.toFixed(1) + " Days";
 
-        // Visual Feedback: Red if negative, Green if valid
-        if (remaining < 0) {
-            resultEl.style.color = "#ef4444"; // Red (Negative)
+        // Visual Feedback: Turn red if remaining is negative OR if a policy rule was broken
+        resultEl.style.color = (remaining < 0 || hasError) ? "#ef4444" : "#15803d";
+    }
+
+    // 🔒 SUBMIT BUTTON LOCKING
+    const submitBtn = document.getElementById("dash_submit_btn");
+    if (submitBtn) {
+        // Lock if there is an error OR if the user hasn't requested any days yet (<= 0)
+        if (hasError || reqDays <= 0) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = "0.5";
+            submitBtn.style.cursor = "not-allowed";
         } else {
-            resultEl.style.color = "#15803d"; // Green (Valid)
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = "1";
+            submitBtn.style.cursor = "pointer";
         }
     }
 }
-
       /**
        * 💾 Step 2: Saves the updated roles to the database
        */
@@ -13210,7 +13345,16 @@ content.innerHTML = `
             </div>
             <div>
                 <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Dates</label><br>
-                <span>${leave.start_date} to ${leave.end_date}</span>
+                <span>
+                    ${(String(leaveTypeDisplay).includes("Carry Forward") || String(leaveTypeDisplay).includes("CF")) && leave.start_date
+                        ? leave.start_date.substring(0, 4) 
+                        : !leave.start_date
+                            ? "N/A" 
+                            : leave.start_date === leave.end_date 
+                                ? leave.start_date 
+                                : `${leave.start_date} to ${leave.end_date}`
+                    }
+                </span>
             </div>
         </div>
 
@@ -13702,7 +13846,7 @@ async function resetProxyUser(silent = false) {
 }
 
 
-async function submitLeaveInDashboard(event) {
+    async function submitLeaveInDashboard(event) {
     // 1. 🛑 HARD STOP: Prevent default browser submission
     if (event) {
         event.preventDefault();
@@ -13717,9 +13861,11 @@ async function submitLeaveInDashboard(event) {
         return false;
     }
 
+    // --- A. INITIALIZE VARIABLES ---
+    // Moved applicantName to the top so it is available for Guardrails and Validation
+    const applicantName = window.proxyUser ? window.proxyUser : (window.currentUser || currentUser);
     const submitBtn = document.getElementById("dash_submit_btn");
 
-    // --- A. INITIALIZE VARIABLES ---
     let type = "", startVal = "", endVal = "", finalReason = "", approverValue = "";
     let isHalfDay = false;
     
@@ -13752,10 +13898,62 @@ async function submitLeaveInDashboard(event) {
         const cfReasonEl = document.getElementById("cf_reason");
         const cfReasonText = cfReasonEl ? cfReasonEl.value.trim() : "";
 
-        if (!daysReq || daysReq <= 0 || !approverValue || !cfReasonText) {
+    if (!daysReq || daysReq <= 0 || !approverValue || !cfReasonText) {
             Swal.fire("Input Required", "Please fill in all Carry Forward fields.", "warning");
             return false;
         }
+
+// 🛡️ GUARDRAIL: Prevent duplicate Pending CF requests AND Check Policy Capacity
+try {
+    const historyResp = await fetch(`${API_URL}/leaves/history?employee_name=${applicantName}`);
+    const historyData = await historyResp.json();
+    
+    // FIX: Access the 'leaves' property from the response object
+    const historyArr = Array.isArray(historyData.leaves) ? historyData.leaves : [];
+    
+    // 1. Get Dynamic Limit from the UI element
+    const limitEl = document.getElementById('cf_display_limit');
+    const policyLimit = limitEl ? parseFloat(limitEl.innerText) : 0;
+
+    // FIX: Use the 'reason' field to identify CF requests, 
+    // because your API uses generic "Annual Leave" as the leave_type
+    const isCF = (req) => req.reason && req.reason.toUpperCase().includes("CARRY FORWARD");
+
+    // 2. Check for Pending Requests (Issue 2)
+    const hasPendingCF = historyArr.some(req =>
+        isCF(req) && 
+        (req.status === "Pending" || req.status === "Waiting Approval")
+    );
+
+    if (hasPendingCF) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Submission Blocked',
+            text: 'You already have a Carry Forward request pending approval.',
+            confirmButtonColor: '#b45309'
+        });
+        return false;
+    }
+
+    // 3. Check Capacity (Issue 1)
+    // FIX: Use 'days_taken' (as per your JSON) instead of 'days'
+    const totalApprovedCF = historyArr
+        .filter(req => isCF(req) && req.status === "Approved")
+        .reduce((sum, req) => sum + (parseFloat(req.days_taken) || 0), 0);
+
+    if ((daysReq + totalApprovedCF) > policyLimit) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Limit Exceeded',
+            text: `Policy limit is ${policyLimit} days. You have already had ${totalApprovedCF} days approved. You can only apply for ${policyLimit - totalApprovedCF} more.`,
+            confirmButtonColor: '#b45309'
+        });
+        return false;
+    }
+
+} catch (err) {
+    console.warn("⚠️ Guardrail check failed, proceeding by default:", err);
+}
 
         const currentYear = new Date().getFullYear();
         startVal = `${currentYear}-12-31`;
@@ -13817,9 +14015,10 @@ async function submitLeaveInDashboard(event) {
         }
     }
 
-    // --- C. PREPARE DATA ---
+// --- C. PREPARE DATA ---
     const formData = new FormData();
-    const applicantName = window.proxyUser ? window.proxyUser : currentUser;
+    
+    // No 'const' here! We use the applicantName defined at the top.
     formData.append("employee_name", applicantName);
     
     if (window.proxyUser) {
@@ -13832,6 +14031,16 @@ async function submitLeaveInDashboard(event) {
     formData.append("end_date", endVal);
     formData.append("is_half_day", isHalfDay);
     formData.append("reason", finalReason);
+
+    // 🚀 INTEGRATED: Capture and log cf_days for validation
+    const cfDaysInput = document.getElementById("cf_days_input");
+    const cfValue = cfDaysInput ? cfDaysInput.value : "0";
+    
+    // This will appear in your Browser Console (F12)
+    console.log("🔍 FE_DEBUG: Captured cf_days_input value is:", cfValue);
+    
+    const cfFloat = parseFloat(cfValue);
+    formData.append("cf_days", isNaN(cfFloat) ? 0.0 : cfFloat);
 
     if (fileInput && fileInput.files.length > 0) {
         formData.append("file", fileInput.files[0]);
@@ -13879,63 +14088,65 @@ async function submitLeaveInDashboard(event) {
         }
 
         // Integrity check: If status code is 200/OK, database record transaction succeeded
-        if (response.ok || response.status === 200) {
+    if (response.ok || response.status === 200) {
             
-            // ✨ FIX: Release button state and unfreeze form elements BEFORE opening the success window
+            // 1. Release UI immediately (Freezes form elements first)
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Submit Application';
             }
             document.querySelectorAll("#applyLeaveForm input, #applyLeaveForm select, #applyLeaveForm textarea").forEach(el => el.disabled = false);
 
+            // 2. Show Success Alert
             await Swal.fire({
                 title: 'Success!',
                 text: isCarryForward ? 'Carry Forward request sent.' : 'Leave request submitted.',
                 icon: 'success',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#2563eb',
-                allowOutsideClick: false,
-                allowEscapeKey: false
-            }).then(async (res) => { 
-                if (res.isConfirmed) {
-                    
-                    // Refresh data for the current user/proxy context
-                    if (typeof prefetchBalances === "function") {
-                        await prefetchBalances(); 
-                    }
-
-                    const form = document.getElementById("applyLeaveForm");
-                    if (form) form.reset();
-                    
-                    ["cf_days_input", "cf_reason", "dash_reason"].forEach(id => {
-                        const el = document.getElementById(id);
-                        if (el) el.value = "";
-                    });
-
-                    localStorage.removeItem("leave_draft_std");
-                    localStorage.removeItem("leave_draft_cf");
-                    
-                    if(typeof removeAttachment === 'function') {
-                        removeAttachment('leave_attachment', 'leave_file_label', 'leave_remove_btn');
-                    }
-
-                    if (typeof historySortState !== 'undefined') {
-                        historySortState.key = 'id';
-                        historySortState.direction = 'desc';
-                    }
-
-                    if (window.proxyUser) {
-                        showSection('manager_history');
-                        if (typeof loadTeamHistory === 'function') loadTeamHistory();
-                        // 🚀 REVERT UI AUTOMATICALLY AFTER PROXY SUCCESS
-                        if (typeof switchProxyTab === 'function') switchProxyTab('myself'); 
-                    } else {
-                        showSection('history');
-                        if (typeof loadHistory === 'function') loadHistory();
-                    }
-                }
+                confirmButtonColor: '#2563eb'
             });
 
+            // 3. THOROUGH CLEANUP (Runs after user clicks 'OK')
+            
+            // Reset standard form inputs
+            const form = document.getElementById("applyLeaveForm");
+            if (form) form.reset();
+
+            // Clear custom specific fields
+            ["cf_days_input", "cf_reason", "dash_reason"].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = "";
+            });
+
+            // Remove attachments
+            if(typeof removeAttachment === 'function') {
+                removeAttachment('leave_attachment', 'leave_file_label', 'leave_remove_btn');
+            }
+
+            // Clear Drafts
+            localStorage.removeItem("leave_draft_std");
+            localStorage.removeItem("leave_draft_cf");
+
+            // Reset Table Sort State
+            if (typeof historySortState !== 'undefined') {
+                historySortState.key = 'id';
+                historySortState.direction = 'desc';
+            }
+
+            // 4. NAVIGATION & DATA REFRESH
+            if (window.proxyUser) {
+                showSection('manager_history');
+                if (typeof loadTeamHistory === 'function') await loadTeamHistory();
+                if (typeof switchProxyTab === 'function') switchProxyTab('myself'); 
+            } else {
+                showSection('history');
+                if (typeof loadHistory === 'function') await loadHistory();
+            }
+
+            // Refresh balances last
+            if (typeof prefetchBalances === "function") {
+                await prefetchBalances(); 
+            }
         } else {
             let msg = result.detail || "Unknown error.";
             if (Array.isArray(msg)) msg = msg.map(e => e.msg).join("<br>");
@@ -14677,9 +14888,15 @@ function renderManagerQueueTable() {
             <div style="width: 20%; display: flex; flex-direction: column; gap: 2px;">
                 <span style="font-size: 0.85rem; font-weight: 700; color: #334155;">
                     <i class="far fa-calendar-alt" style="color: #94a3b8; font-size: 0.75rem; margin-right: 4px;"></i> 
-                    ${formatDateNice(r.start_date)}
+                    ${r.display_range ? r.display_range : formatDateNice(r.start_date)}
                 </span>
-                ${r.start_date !== r.end_date ? `<span style="font-size: 0.7rem; color: #94a3b8; font-weight: 600; padding-left: 18px;">to ${formatDateNice(r.end_date)}</span>` : ''}
+                
+                ${(!r.display_range && r.start_date !== r.end_date) 
+                    ? `<span style="font-size: 0.7rem; color: #94a3b8; font-weight: 600; padding-left: 18px;">
+                        to ${formatDateNice(r.end_date)}
+                       </span>` 
+                    : ''
+                }
             </div>
 
             <div style="width: 20%; display: flex; justify-content: center;">
@@ -16065,10 +16282,18 @@ let attachmentHtml = "";
             </div>
             <div>
                 <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Dates</label><br>
-                <span>${startDate} to ${endDate}</span>
+                <span>
+                    ${(String(leaveType).includes("Carry Forward") || String(leaveType) === "CF") && startDate
+                        ? startDate.substring(0, 4) 
+                        : !startDate
+                            ? "N/A" 
+                            : startDate === endDate 
+                                ? startDate 
+                                : `${startDate} to ${endDate}`
+                    }
+                </span>
             </div>
         </div>
-
         <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
             <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">Current Approver</label><br>
             <span style="color: #2563eb; font-weight: 600;">
@@ -21949,7 +22174,7 @@ function clearPolicySearch() {
                     // 🎯 CASE A: Today is an official Public Holiday
                     listEl.innerHTML = `
                         <div style="text-align: center; padding: 25px 15px; background: #fff7ed; border: 1px dashed #fed7aa; border-radius: 8px; margin: 10px 0; box-sizing: border-box;">
-                            <div style="font-size: 1.5rem; color: #f97316; margin-bottom: 6px;"><i class="fas fa-umbrella-beach"></i></div>
+                            <div style="font-size: 4.5rem; color: #f97316; margin-bottom: 6px;"><i class="fas fa-umbrella-beach"></i></div>
                             <span style="font-size: 0.75rem; font-weight: 800; color: #c2410c; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Office Closed</span>
                             <div style="font-size: 0.85rem; font-weight: 700; color: #7c2d12;">Public Holiday: ${activeHolidayToday.name}</div>
                         </div>`;

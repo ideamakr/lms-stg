@@ -26,7 +26,65 @@ def custom_time(*args):
 # Apply the custom time to the standard logging formatter
 logging.Formatter.converter = custom_time
 
-# 4. Add the Uvicorn Logging Config
+# # 4. Add the Uvicorn Logging Config
+# LOGGING_CONFIG = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "formatters": {
+#         "default": {
+#             "()": "uvicorn.logging.DefaultFormatter",
+#             "fmt": "%(asctime)s - %(levelname)s - %(message)s",
+#             "datefmt": "%Y-%m-%d %H:%M:%S",
+#         },
+#         "access": {
+#             "()": "uvicorn.logging.AccessFormatter",
+#             "fmt": '%(asctime)s - %(levelname)s - "%(request_line)s" %(status_code)s',
+#             "datefmt": "%Y-%m-%d %H:%M:%S",
+#         },
+#     },
+#     "handlers": {
+#         "default": {
+#             "formatter": "default",
+#             "class": "logging.StreamHandler",
+#             "stream": "ext://sys.stdout",
+#         },
+#         "access": {
+#             "formatter": "access",
+#             "class": "logging.StreamHandler",
+#             "stream": "ext://sys.stdout",
+#         },
+#     },
+#     "loggers": {
+#         "uvicorn": {"handlers": ["default"], "level": "INFO"},
+#         "uvicorn.error": {"handlers": ["default"], "level": "INFO", "propagate": False},
+#         "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
+#     },
+# }
+
+# # 👇 ADD THESE TWO LINES HERE TO APPLY THE CONFIG IMMEDIATELY
+# import logging.config
+# logging.config.dictConfig(LOGGING_CONFIG)
+
+
+import logging.config
+import os
+import pytz
+from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
+
+# 1. Custom Timezone Logic
+def custom_time(*args):
+    my_dt = datetime.now(pytz.timezone('Asia/Kuala_Lumpur'))
+    return my_dt.timetuple()
+
+logging.Formatter.converter = custom_time
+
+# 2. Robust Path Setup
+log_dir = os.path.join(os.getcwd(), "logs")
+os.makedirs(log_dir, exist_ok=True)
+log_file_path = os.path.join(log_dir, "server_logs.txt")
+
+# 3. Consolidated Logging Configuration
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -48,6 +106,15 @@ LOGGING_CONFIG = {
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
         },
+        "file_handler": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": log_file_path,
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 30,
+            "formatter": "default",
+            "encoding": "utf-8"
+        },
         "access": {
             "formatter": "access",
             "class": "logging.StreamHandler",
@@ -55,15 +122,20 @@ LOGGING_CONFIG = {
         },
     },
     "loggers": {
-        "uvicorn": {"handlers": ["default"], "level": "INFO"},
-        "uvicorn.error": {"handlers": ["default"], "level": "INFO", "propagate": False},
-        "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
+        "uvicorn": {"handlers": ["default", "file_handler"], "level": "INFO"},
+        "uvicorn.error": {"handlers": ["default", "file_handler"], "level": "INFO", "propagate": False},
+        "uvicorn.access": {"handlers": ["access", "file_handler"], "level": "INFO", "propagate": False},
     },
 }
 
-# 👇 ADD THESE TWO LINES HERE TO APPLY THE CONFIG IMMEDIATELY
-import logging.config
-logging.config.dictConfig(LOGGING_CONFIG)
+# 4. Apply with Safety Net
+try:
+    logging.config.dictConfig(LOGGING_CONFIG)
+except Exception as e:
+    print(f"⚠️ LOGGING CONFIG FAILED (Falling back to console): {e}")
+    logging.basicConfig(level=logging.INFO)
+
+
 
 # Now proceed with your app initialization...
 
@@ -313,15 +385,15 @@ async def get_version(db: Session = Depends(get_db)):
         print(f"⚠️ Version Sync Error: {e}")
         return {"version": "v1.0.0-fallback"}
     
-    # --- LOGGING SETUP ---
-LOG_DIR = r"C:\leave-system\leave-system\logs"
-LOG_FILE = os.path.join(LOG_DIR, "server_logs.txt")
+#     # --- LOGGING SETUP ---
+# LOG_DIR = r"C:\leave-system\leave-system\logs"
+# LOG_FILE = os.path.join(LOG_DIR, "server_logs.txt")
 
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
+# if not os.path.exists(LOG_DIR):
+#     os.makedirs(LOG_DIR)
 
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+# logging.basicConfig(
+#     filename=LOG_FILE,
+#     level=logging.INFO,
+#     format='%(asctime)s - %(levelname)s - %(message)s'
+# )

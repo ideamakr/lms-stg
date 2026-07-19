@@ -243,3 +243,20 @@ def get_branding(db: Session = Depends(database.get_db)):
         "maintenance_mode": settings_dict.get("maintenance_mode", "false") == "true",
         "system_version": "v1.4.15"
     }
+
+# --- ADD THIS TO system_settings.py ---
+
+@router.post("/force-set-cf-max")
+def force_set_cf_max(value: float = 5.0, db: Session = Depends(database.get_db)):
+    """
+    Admin Utility: Force the system to accept a specific Max Carry Forward limit.
+    Use this if you suspect the database value has drifted.
+    """
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
+    if setting:
+        setting.value = str(value)
+    else:
+        new_setting = models.SystemSetting(key="cf_max_days", value=str(value))
+        db.add(new_setting)
+    db.commit()
+    return {"message": f"Successfully forced cf_max_days to {value}"}

@@ -498,3 +498,132 @@ Issue Details:
 
 Please log in to the system workspace to track progress or add updates.
 """
+
+
+def template_cf_request(manager_name, employee_name, days, reason):
+    """
+    Template for Carry Forward requests.
+    """
+    return f"""
+Hi {manager_name},
+
+Action Required: New Carry Forward Request
+--------------------------------
+Employee:       {employee_name}
+Days Requested: {days} Days
+Reason:         {reason}
+--------------------------------
+
+Please log in to the Dashboard to review and take action.
+
+Best regards,
+Leave System
+"""
+
+def template_cf_approved(employee_name, manager_name, days):
+    return f"""
+Hi {employee_name},
+
+Good news! Your Carry Forward request has been APPROVED.
+
+--------------------------------
+Approver:   {manager_name}
+Days Approved: {days} Days
+Status:     ✅ APPROVED
+--------------------------------
+
+The requested days will be moved to your balance for the upcoming year.
+
+Best regards,
+Leave System
+"""
+
+def template_cf_rejected(employee_name, manager_name, remarks):
+    return f"""
+Hi {employee_name},
+
+Your Carry Forward request has been REJECTED.
+
+--------------------------------
+Approver:   {manager_name}
+Status:     ❌ REJECTED
+Remarks:    {remarks if remarks else 'No specific remarks provided.'}
+--------------------------------
+
+Best regards,
+Leave System
+"""
+
+def template_cf_cancellation_approved(employee_name, manager_name, days):
+    return f"""
+Hi {employee_name},
+
+Your request to CANCEL your Carry Forward request has been APPROVED.
+
+--------------------------------
+Approved By: {manager_name}
+Days:        {days} Days
+Status:      ✅ CF CANCELLATION APPROVED
+--------------------------------
+
+Best regards,
+Leave System
+"""
+
+def template_cf_cancellation_rejected(employee_name, manager_name, remarks):
+    return f"""
+Hi {employee_name},
+
+Your request to CANCEL your Carry Forward request was DENIED.
+
+--------------------------------
+Denied By:   {manager_name}
+Status:      ⚠️ CF CANCELLATION REJECTED
+Remarks:     {remarks if remarks else 'No specific remarks provided.'}
+--------------------------------
+
+Best regards,
+Leave System
+"""
+
+def template_l2_cf_cancellation_request(l2_manager_name, l1_manager_name, employee_name, days):
+    return f"""
+Hi {l2_manager_name},
+
+Action Required: Carry Forward Cancellation Approval (Level 2)
+
+{l1_manager_name} has approved the cancellation of a Carry Forward request for {employee_name}.
+This requires your final sign-off.
+
+--------------------------------
+Employee:   {employee_name}
+Days:       {days} Days
+Status:     Waiting for L2 Confirmation
+--------------------------------
+
+Please log in to the Manager Dashboard to finalize.
+
+Best regards,
+Leave System
+"""
+
+
+def template_cf_cancellation_request(manager_name, employee_name, days, reason):
+    return f"""
+Hi {manager_name},
+
+Action Required: Carry Forward Cancellation Request
+
+{employee_name} has requested to CANCEL a Carry Forward request.
+
+--------------------------------
+Employee:   {employee_name}
+Days:       {days} Days
+Reason:     {reason if reason else 'No reason provided'}
+--------------------------------
+
+Please log in to the Manager Dashboard to Confirm or Deny this cancellation.
+
+Best regards,
+Leave System
+"""

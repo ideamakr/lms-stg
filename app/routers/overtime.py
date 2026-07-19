@@ -8,31 +8,68 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Query, BackgroundTasks, Body, Header
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, cast, String
 from pydantic import BaseModel
 from PIL import Image
 
 from app.database import get_db
 from app import models
 
+# Attachement settings
+def _normalize_attachment_url(attachment_path: Optional[str]) -> Optional[str]:
+    """
+    Standardizes local attachment paths for Overtime.
+    Returns None if the path is invalid or empty to prevent 404s.
+    """
+    if not attachment_path:
+        return None
+
+    path = str(attachment_path).strip()
+    
+    # 🛡️ THE DIRECTORY GUARD: 
+    # Returns None for empty paths, directory folders, or "None" strings.
+    if path in ["", "mcs", "mcs/", "/mcs/", "/uploads/mcs/", "None"]:
+        return None
+
+    # Already a full URL
+    if path.startswith("http"):
+        return path
+        
+    # Standardize format:
+    # 1. Clean out existing prefixes so we don't end up with /uploads/mcs/uploads/mcs/file.jpg
+    # 2. Add the clean path to the standard local storage directory
+    clean_filename = path.replace("/uploads/mcs/", "").replace("mcs/", "").lstrip("/")
+    
+    return f"/uploads/mcs/{clean_filename}"
+
 # 🛠️ HELPERS (FIXED: Offset-based for cross-platform stability)
 
-# Use this helper instead of the old ZoneInfo version
-def get_local_timestamp():
-    # Force UTC+8 manually
-    return (datetime.now(timezone.utc) + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M")
+# ============================================================
+# 🕒 TIMEZONE UTILITIES (FIXED: UTC Saving, KL Display)
+# ============================================================
+KL_TZ = timezone(timedelta(hours=8))
 
-# Use this convert function (No ZoneInfo, uses manual math)
+def get_utc_timestamp():
+    """Returns the current UTC time for saving to the database."""
+    # ALWAYS save in UTC. This ensures the DB never has an offset baked in.
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+
 def convert_utc_string_to_kl(history_str: str) -> str:
-    if not history_str: return "Pending"
+    """Converts a UTC string from the DB to KL (UTC+8) for the UI."""
+    if not history_str: 
+        return "Pending"
     
     def replacer(match):
         try:
-            utc_dt = datetime.strptime(match.group(1), "%Y-%m-%d %H:%M")
-            utc_dt = utc_dt.replace(tzinfo=timezone.utc)
-            kl_dt = utc_dt + timedelta(hours=8) # Manual Malaysia Offset
+            # 1. Parse the string as UTC
+            dt = datetime.strptime(match.group(1), "%Y-%m-%d %H:%M")
+            utc_dt = dt.replace(tzinfo=timezone.utc)
+            
+            # 2. Convert to Kuala Lumpur time for display
+            kl_dt = utc_dt.astimezone(KL_TZ)
             return f"({kl_dt.strftime('%Y-%m-%d %H:%M')})"
-        except:
+        except Exception as e:
+            print(f"DEBUG: Conversion error: {e}")
             return match.group(0)
 
     return re.sub(r"\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)", replacer, history_str)
@@ -158,7 +195,7 @@ async def apply_overtime(
         reason=reason,
         attachment_path=saved_filename,
         status="Pending",
-        status_history=f"Submitted ({get_local_timestamp()})"
+        status_history=f"Submitted ({get_utc_timestamp()})"
     )
     db.add(new_ot)
     db.commit()
@@ -191,10 +228,8 @@ def get_all_overtime_requests(db: Session = Depends(get_db)):
     
     formatted = []
     for o in results:
-        # 🚀 CLEANED: Local path normalization consistent with your other modules
-        url = o.attachment_path
-        if url and not url.startswith(("/uploads", "http")):
-             url = f"/uploads/mcs/{url.lstrip('/')}"
+        # 🚀 FIXED: Using the centralized helper to prevent 404s
+        url = _normalize_attachment_url(o.attachment_path)
 
         formatted.append({
             "id": o.id,
@@ -244,13 +279,9 @@ def get_manager_ot_requests(
     
     formatted_results = []
     for o in results:
-        # 🚀 FIX: GENERATE LOCAL URL (Supabase code completely removed)
-        full_attachment_url = o.attachment_path
+        # 🚀 FIXED: Using the centralized helper to prevent 404s
+        full_attachment_url = _normalize_attachment_url(o.attachment_path)
         
-        # If a file path exists and is not already a full URL or local path, point it to local uploads
-        if full_attachment_url and not full_attachment_url.startswith(("/uploads", "http")):
-            full_attachment_url = f"/uploads/mcs/{o.attachment_path}"
-
         formatted_results.append({
             "id": o.id,
             "employee_name": o.employee_name,
@@ -318,7 +349,7 @@ async def process_ot_action(
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     l2_active = policy.l2_approval_enabled if policy else False
     
-    timestamp = get_local_timestamp()
+    timestamp = get_utc_timestamp()
     current_status = ot.status
     route_to_l2 = False
     l2_user = None
@@ -437,7 +468,7 @@ async def cancel_overtime_request( # 👈 Renamed to match leave.py style
     if not current_user or (ot.employee_name != current_user.full_name and current_user.role != "superuser"):
         raise HTTPException(status_code=403, detail="You do not have permission to cancel this request.")
 
-    timestamp = get_local_timestamp()
+    timestamp = get_utc_timestamp()
     current_status = ot.status
     
     # Extract Reason safely
@@ -445,11 +476,11 @@ async def cancel_overtime_request( # 👈 Renamed to match leave.py style
     reason_text = f" (Reason: {reason_val})"
 
     # --- STATUS LOGIC ---
-
+    
     # CASE A: WITHDRAWAL (Pending -> Withdrawn)
     if current_status in ["Pending", "Pending L2 Approval"]:
         ot.status = "Withdrawn"
-        # 🚀 FIX: Handle None history safely
+        # The timestamp string will be captured in the history and localized on the UI
         ot.status_history = (ot.status_history or "") + f"\n > Withdrawn by Employee{reason_text} ({timestamp})"
         msg = "Overtime claim successfully withdrawn."
         
@@ -497,10 +528,8 @@ def get_my_overtime_requests(employee_name: str, db: Session = Depends(get_db)):
         
         formatted_results = []
         for o in results:
-            # 🚀 FIX: GENERATE LOCAL URL
-            full_attachment_url = o.attachment_path
-            if full_attachment_url and not full_attachment_url.startswith(("/uploads", "http")):
-                full_attachment_url = f"/uploads/mcs/{o.attachment_path}"
+            # 🚀 FIXED: Using the centralized helper to prevent 404s
+            full_attachment_url = _normalize_attachment_url(o.attachment_path)
 
             formatted_results.append({
                 "id": o.id,
@@ -556,10 +585,8 @@ def get_all_manager_overtime(
     
     formatted_results = []
     for o in results:
-        # 🚀 FIX: GENERATE LOCAL URL
-        full_attachment_url = o.attachment_path
-        if full_attachment_url and not full_attachment_url.startswith(("/uploads", "http")):
-            full_attachment_url = f"/uploads/mcs/{o.attachment_path.lstrip('/')}"
+        # 🚀 FIXED: Using the centralized helper to prevent 404s
+        full_attachment_url = _normalize_attachment_url(o.attachment_path)
 
         formatted_results.append({
             "id": o.id,

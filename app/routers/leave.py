@@ -8,7 +8,8 @@ from datetime import date, datetime, timedelta, timezone
 
 # 🚀 FastAPI, Security & Background Tasks
 from fastapi import APIRouter, Depends, HTTPException, Form, Query, Body, UploadFile, File, BackgroundTasks, Header
-from sqlalchemy import func, or_, and_, desc, text, extract
+from fastapi.responses import JSONResponse  # <--- ADDED
+from sqlalchemy import func, or_, and_, desc, text, extract, cast, String
 from sqlalchemy.orm import Session
 from pydantic import BaseModel 
 
@@ -18,26 +19,28 @@ from app.database import SessionLocal
 from app.dependencies import validate_session
 
 # ============================================================
-# 🕒 TIMEZONE UTILITIES (FIXED: Offset-based for cross-platform stability)
+# 🕒 TIMEZONE UTILITIES (FIXED: Save UTC, Convert for Display)
 # ============================================================
+KL_TZ = timezone(timedelta(hours=8))
 
-# Use this helper instead of the old ZoneInfo version
-def get_local_timestamp():
-    """Returns the current UTC time for logs."""
-    # STOP adding 8 hours here. Save the actual UTC time.
+def get_utc_timestamp():
+    """Returns the current UTC time for storage in the database."""
+    # ALWAYS save in UTC. This ensures the DB never has an offset baked in.
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
 
 def convert_utc_string_to_kl(history_str: str) -> str:
-    if not history_str: return "Pending"
+    """Converts a UTC string from the DB to KL (UTC+8) for the UI."""
+    if not history_str: 
+        return "Pending"
     
     def replacer(match):
         try:
-            # Parse the UTC time saved in the DB
-            utc_dt = datetime.strptime(match.group(1), "%Y-%m-%d %H:%M")
-            utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+            # 1. Parse the string as UTC
+            dt = datetime.strptime(match.group(1), "%Y-%m-%d %H:%M")
+            utc_dt = dt.replace(tzinfo=timezone.utc)
             
-            # Apply the +8 shift here (The single source of truth)
-            kl_dt = utc_dt + timedelta(hours=8)
+            # 2. Convert to Kuala Lumpur time for display
+            kl_dt = utc_dt.astimezone(KL_TZ)
             return f"({kl_dt.strftime('%Y-%m-%d %H:%M')})"
         except Exception as e:
             print(f"DEBUG: Conversion error: {e}")
@@ -79,7 +82,14 @@ try:
         template_cancellation_request,
         template_l2_cancellation_request,
         template_cancellation_approved,
-        template_cancellation_rejected
+        template_cancellation_rejected,
+        template_cf_request,
+        template_cf_approved,
+        template_cf_rejected,
+        template_cf_cancellation_approved,   
+        template_cf_cancellation_rejected,    
+        template_l2_cf_cancellation_request,
+        template_cf_cancellation_request
     )
 except ImportError:
     # Fallback for local testing
@@ -93,7 +103,15 @@ except ImportError:
         template_cancellation_request,
         template_l2_cancellation_request,
         template_cancellation_approved,
-        template_cancellation_rejected
+        template_cancellation_rejected,
+        template_cf_request,
+        template_cf_approved,
+        template_cf_rejected,
+        template_cf_cancellation_approved,   
+        template_cf_cancellation_rejected,    
+        template_l2_cf_cancellation_request,
+        template_cf_cancellation_request
+
     )
 
 # ============================================================
@@ -113,35 +131,32 @@ def get_db():
         db.close()
 
 
-def _normalize_attachment_url(attachment_path: Optional[str], supabase_url: Optional[str], supabase_bucket: Optional[str]) -> Optional[str]:
+def _normalize_attachment_url(attachment_path: Optional[str]) -> Optional[str]:
+    """
+    Standardizes local attachment paths. 
+    Returns None if the path is invalid or empty to prevent 404s.
+    """
     if not attachment_path:
         return None
 
-    url = str(attachment_path).strip()
-    if url.startswith("http"):
-        return url
+    path = str(attachment_path).strip()
+    
+    # 🛡️ THE DIRECTORY GUARD: 
+    # Returns None for empty paths, directory folders, or legacy cleanup misses
+    # This prevents your browser from trying to load '/uploads/mcs/' as an image.
+    if path in ["", "mcs", "mcs/", "/mcs/", "/uploads/mcs/", "None"]:
+        return None
 
-    # Fix broken legacy values from missing environment configuration
-    if "None/storage/v1/object/public/None/" in url:
-        url = url.split("None/storage/v1/object/public/None/")[-1]
-
-    if not url.startswith("/"):
-        url = "/" + url
-
-    if url.startswith("/uploads") or url.startswith("/storage/v1/object/public"):
-        return url
-
-    if supabase_url and supabase_bucket:
-        clean_path = url.lstrip('/')
-        return f"{supabase_url}/storage/v1/object/public/{supabase_bucket}/mcs/{clean_path}"
-
-    if url.startswith("/mcs/"):
-        return f"/uploads{url}"
-
-    if url.startswith("/uploads/"):
-        return url
-
-    return f"/uploads/mcs/{url.lstrip('/')}"
+    # Already a full URL
+    if path.startswith("http"):
+        return path
+        
+    # Standardize format:
+    # 1. Clean out existing prefixes so we don't end up with /uploads/mcs/uploads/mcs/file.jpg
+    # 2. Add the clean path to the standard local storage directory
+    clean_filename = path.replace("/uploads/mcs/", "").replace("mcs/", "").lstrip("/")
+    
+    return f"/uploads/mcs/{clean_filename}"
 
 
 # 🚀 V1.5.1: THE ULTIMATE SPLIT-WALLET ENGINE (UNIFIED SYNC)
@@ -177,7 +192,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         extract('year', models.Leave.start_date) == year
     ).all()
 
-    # 📊 INDEPENDENT WALLET COUNTERS
+# 📊 INDEPENDENT WALLET COUNTERS
     spent_annual = 0.0  
     spent_cf = 0.0      
     approved_taken_total = 0.0
@@ -188,19 +203,20 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         l_type = str(l.leave_type.value if hasattr(l.leave_type, 'value') else l.leave_type)
         status_str = str(l.status.value if hasattr(l.status, 'value') else l.status)
         
+        # --- 1. TRACK SUB-WALLET (Carry Forward) ---
         if l_type == "Claim Carry Forward":
             spent_cf += days
-        elif l_type in ["Annual Leave", "Emergency Leave"]:
-            if "[CARRY FORWARD" in (l.reason or ""):
-                match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
-                cf_part = float(match.group(1)) if match else days
-                spent_cf += cf_part
-                spent_annual += max(0, days - cf_part)
-            else:
-                spent_annual += days
-        else:
-            spent_annual += days
+        elif l_type in ["Annual Leave", "Emergency Leave"] and "[CARRY FORWARD" in (l.reason or ""):
+            match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
+            cf_part = float(match.group(1)) if match else days
+            spent_cf += cf_part
+            
+        # --- 2. 🚀 THE FIX: UNIFIED MASTER DEDUCTION ---
+        # ALL approved time off (CF, AL, Emergency, or Medical) 
+        # MUST deduct from the master spent_annual pool to prevent double-dipping.
+        spent_annual += days
 
+        # --- 3. TRACK UI STATUS ---
         if status_str in ["Pending", "Pending L2 Approval"]:
             pending_total += days
         elif status_str in ["Approved", "Pending Cancel"]:
@@ -261,6 +277,27 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         "cf_max_days": cf_max_days 
     }
 
+
+def get_formatted_dates(leave_record):
+    """
+    Returns:
+    - raw_start, raw_end: Valid YYYY-MM-DD strings for system/API logic.
+    - display_range: A pre-formatted string for the UI (e.g., 'Year 2026').
+    """
+    is_cf = "[CARRY FORWARD:" in (leave_record.reason or "").upper()
+    
+    # Generate clean ISO formats
+    raw_start = leave_record.start_date.strftime("%Y-%m-%d") if leave_record.start_date else "N/A"
+    raw_end = leave_record.end_date.strftime("%Y-%m-%d") if leave_record.end_date else "N/A"
+    
+    # Generate the display string
+    if is_cf and leave_record.start_date:
+        display_range = f"Year {leave_record.start_date.strftime('%Y')}"
+    else:
+        display_range = f"{raw_start} to {raw_end}"
+        
+    return raw_start, raw_end, display_range
+
 @router.get("/balance")
 def get_leave_balance(
     employee_name: str, 
@@ -295,12 +332,13 @@ async def create_leave(
     start_date: str = Form(...), 
     end_date: str = Form(...),
     reason: str = Form(...), 
+    cf_days: float = Form(0.0), # 👈 NEW: Capture the input value
     is_half_day: Union[bool, str] = Form(False),
-    applied_by: Optional[str] = Form(None), # 🚀 Added to capture Natasha's name
+    applied_by: Optional[str] = Form(None),
     file: UploadFile = File(None), 
     db: Session = Depends(get_db)
 ):
-    # 1. SANITIZE & PARSE
+    # 1. PARSE & SANITIZE
     employee_name = employee_name.strip()
     approver_name = approver_name.strip()
     leave_type = leave_type.strip()
@@ -308,70 +346,114 @@ async def create_leave(
     end_obj = date.fromisoformat(end_date)
     is_half_day_bool = is_half_day in (True, "true")
 
-    # 2. DUPLICATE / OVERLAP CHECK
-    collision = db.query(models.Leave).filter(
-        models.Leave.employee_name == employee_name,
-        models.Leave.status.in_(["Pending", "Pending L2 Approval", "Approved", "Pending Cancel"]),
-        models.Leave.start_date <= end_obj,
-        models.Leave.end_date >= start_obj
-    ).first()
+# 2. DUPLICATE / OVERLAP & EXPIRY POLICY CHECK
+    is_cf_request = "[CARRY FORWARD:" in (reason or "").upper()
+    is_cf_claim = "carry forward" in leave_type.lower()
+    
+    # 🚀 FETCH DYNAMIC EXPIRY DATE
+    expiry_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
+    cf_expiry = date.fromisoformat(expiry_setting.value) if expiry_setting and expiry_setting.value else None
+
+    # 2a. Overlap Check
+    if is_cf_request:
+        collision = db.query(models.Leave).filter(
+            models.Leave.employee_name == employee_name,
+            models.Leave.reason.ilike("%[CARRY FORWARD:%"), 
+            models.Leave.status.in_(["Pending", "Pending L2 Approval", "Pending Cancel"])
+        ).first()
+    else:
+        # Global Overlap: Block if ANY leave type overlaps on these dates
+        collision = db.query(models.Leave).filter(
+            models.Leave.employee_name == employee_name,
+            models.Leave.status.in_(["Pending", "Pending L2 Approval", "Approved", "Pending Cancel"]),
+            models.Leave.start_date <= end_obj,
+            models.Leave.end_date >= start_obj
+        ).first()
 
     if collision:
-        is_cf = "[CARRY FORWARD" in (collision.reason or "")
-        type_label = "Carry Forward" if is_cf else "Leave"
-        raise HTTPException(
+        return JSONResponse(
             status_code=400, 
-            detail=f"Duplicate Request: You already have a {type_label} request ({collision.status}) from {collision.start_date} to {collision.end_date}."
+            content={
+                "detail": f"Date Conflict: You already have a {collision.status} '{collision.leave_type}' request for these dates."
+            }
         )
 
-    # 3. CALENDAR & HOLIDAY VALIDATION
+    # 2b. Dynamic Expiry Policy Gate
+    if is_cf_claim and cf_expiry:
+        if end_obj > cf_expiry:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": f"Policy Violation: Carry Forward leave must be consumed on or before the expiry date set by admin ({cf_expiry.strftime('%d %B %Y')})."
+                }
+            )
+
+    # 3. HOLIDAY & DURATION CALCULATION
     holidays = db.query(models.PublicHoliday).all()
     holiday_dates = [h.holiday_date for h in holidays]
-    for check_date in [start_obj, end_obj]:
-        if check_date.weekday() >= 5:
-            raise HTTPException(status_code=400, detail=f"Selection Error: {check_date} is a weekend.")
-        if check_date in holiday_dates:
-            raise HTTPException(status_code=400, detail=f"Conflict: {check_date} is a Public Holiday.")
-
-    # 4. CALCULATE DURATION
+    
     if is_half_day_bool:
         days_requested = 0.5
-        end_obj = start_obj
     else:
         all_dates = pd.date_range(start=start_obj, end=end_obj)
         working_days = [d for d in all_dates if d.weekday() < 5 and d.date() not in holiday_dates]
         days_requested = float(len(working_days))
 
-    # --- 5. 🛡️ HARD WALLET LOCKDOWN ---
-    current_year = start_obj.year
-    balance = _calculate_shared_balance(db, employee_name, current_year, leave_type, include_pending=True)
-    
+    # 4. FETCH BALANCE
+    balance = _calculate_shared_balance(db, employee_name, start_obj.year, leave_type, include_pending=True)
     if not balance:
-        raise HTTPException(status_code=404, detail="Balance record not found.")
+        return JSONResponse(status_code=404, content={"detail": "Balance record not found."})
+    
+# 5. 🛡️ DETERMINE WALLET (HARDENED LOGIC - PRODUCTION)
+    cf_max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
+    cf_max_days = float(cf_max_setting.value) if (cf_max_setting and cf_max_setting.value) else 5.0
 
-    if leave_type == "Claim Carry Forward":
-        wallet_available = float(balance.get("carry_forward_total", 0))
-        wallet_name = "Carry Forward"
-    elif leave_type == "Unpaid Leave":
-        wallet_available = 999.0
-        wallet_name = "Unpaid"
+    annual_rem = float(balance.get("remaining", 0))
+    cf_rem = float(balance.get("carry_forward_total", 0))
+    
+    is_cf_request = "[CARRY FORWARD:" in (reason or "").upper()
+    is_cf_claim = "claim carry forward" in leave_type.lower()
+
+    # --- MANDATORY POLICY GATE ---
+    if is_cf_request:
+        # VALIDATE AGAINST THE INPUT FIELD (cf_days)
+        if cf_days > cf_max_days:
+            return JSONResponse(status_code=400, content={"detail": f"Policy Error: The maximum allowed to carry forward is {cf_max_days} days."})
+        
+        # Ensure they don't carry forward more than they have
+        if cf_days > annual_rem:
+            return JSONResponse(status_code=400, content={"detail": "Insufficient Annual Balance to carry forward."})
+        
+        # Overwrite days_requested with the user's input so the DB records the correct amount
+        days_requested = cf_days 
+        wallet_available = annual_rem
+        wallet_name = "Annual Leave (to Carry Forward)"
+    
+    elif is_cf_claim:
+        wallet_available = cf_rem
+        wallet_name = "Carry Forward Balance"
+        
+    elif leave_type in ["Annual Leave", "Emergency Leave"]:
+        wallet_available = annual_rem + cf_rem
+        wallet_name = "Annual/Emergency/CF"
+        
     else:
-        wallet_available = float(balance.get("remaining", 0))
-        wallet_name = "Annual/Medical"
+        wallet_available = annual_rem
+        wallet_name = leave_type
 
-    if days_requested > wallet_available:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Insufficient {wallet_name} Balance: You requested {days_requested} days, but only {wallet_available} days are available."
-        )
+    # ==========================================================
+    # 🚀 FIX: FINAL BALANCE CHECK
+    # ==========================================================
+    # We strictly enforce limits for all paid leaves.
+    # Unpaid Leave is explicitly bypassed since it tracks upward.
+    if leave_type != "Unpaid Leave":
+        if round(days_requested, 2) > round(wallet_available, 2):
+            return JSONResponse(
+                status_code=400, 
+                content={"detail": f"Insufficient {wallet_name} balance: Requested {days_requested} days, but only {wallet_available} available."}
+            )
 
-    if leave_type == "Annual Leave" and days_requested > float(balance.get("remaining", 0)):
-         raise HTTPException(
-            status_code=400, 
-            detail=f"Insufficient Annual Leave: You only have {balance.get('remaining')} days left."
-        )
-
-    # --- 6. FILE HANDLING ---
+    # 6. FILE HANDLING
     attachment_url = None 
     if file and file.filename:
         try:
@@ -379,21 +461,18 @@ async def create_leave(
             from app.main import compress_and_upload
             attachment_url = compress_and_upload(file, folder="mcs")
         except Exception as e:
-            print(f"⚠️ Upload Error: {e}")
-            raise HTTPException(status_code=500, detail="System Error: Failed to process attachment.")
+            return JSONResponse(status_code=500, content={"detail": "System Error: Failed to process attachment."})
 
-    # --- 🚀 7. NEW: MANAGER ID RESOLUTION ---
-    # Convert the string name into the secure user_id for the new database architecture
+    # 7. MANAGER ID RESOLUTION
     manager = _find_user_by_name_or_username(db, approver_name)
     approver_id = manager.id if manager else None
 
-    # --- 8. SAVE RECORD ---
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-    
+    # 8. SAVE RECORD
+    timestamp = get_utc_timestamp()
     new_leave = models.Leave(
         employee_name=employee_name, 
-        approver_name=approver_name, # Keep legacy string for UI safety
-        approver_id=approver_id,     # 🚀 NEW: Save the secure ID!
+        approver_name=approver_name, 
+        approver_id=approver_id,
         leave_type=leave_type,
         start_date=start_obj, 
         end_date=end_obj, 
@@ -401,74 +480,42 @@ async def create_leave(
         days_taken=days_requested,
         attachment_path=attachment_url,
         status="Pending", 
-        status_history=f"Submitted ({now_str})"
+        status_history=f"Submitted ({timestamp})"
     )
     db.add(new_leave)
     db.commit()
     db.refresh(new_leave)
 
-    # 📧 --- 9. NOTIFY MANAGER & LOG ACTIVITY ---
+# 9. NOTIFY MANAGER & LOG ACTIVITY
     try:
-        # A. LOG ACTIVITY
         user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
         if user_record:
-            log_activity(
-                db=db, 
-                user_id=user_record.id, 
-                action_type="SUBMISSION",
-                category=leave_type, 
-                message=f"You submitted a {leave_type} request for {start_date}",
-                reference_id=new_leave.id
-            )
+            log_activity(db=db, user_id=user_record.id, action_type="SUBMISSION", category=leave_type, message=f"You submitted a {leave_type} request for {start_date}", reference_id=new_leave.id)
 
-        # B. EMAIL MANAGER
         if manager and manager.email:
-            subject = f"Action Required: New Leave Request ({employee_name})"
             admin_name = applied_by if applied_by and applied_by != employee_name else None
             
+            # --- 🚀 CONDITIONAL EMAIL ROUTING ---
             if leave_type == "Medical Leave":
+                subject = f"Action Required: Medical Leave Reported ({employee_name})"
                 body = template_medical_request(manager.full_name, employee_name, str(start_obj), str(end_obj), days_requested)
+            
+            elif is_cf_request:
+                # 🚀 FIX: Strip the technical tag for the email display, keep the user's actual text
+                clean_reason = re.sub(r"\[CARRY FORWARD REQUEST:\s*[\d\.]+\s*DAY(S)\]", "", reason).strip()
+                subject = f"Action Required: Carry Forward Request ({employee_name})"
+                body = template_cf_request(manager.full_name, employee_name, days_requested, clean_reason)
+            
             else:
+                subject = f"Action Required: New Leave Request ({employee_name})"
                 body = template_new_request(manager.full_name, employee_name, leave_type, str(start_obj), str(end_obj), days_requested, admin_name)
             
             background_tasks.add_task(send_email, manager.email, subject, body)
-            print(f"📧 Manager Notification queued for {manager.email}")
-            
+    
     except Exception as e:
         print(f"⚠️ Post-Submission Error: {e}")
 
-    # 🚀 SINGLE, CLEAN RETURN
     return {"message": "Leave request submitted successfully", "leave_id": new_leave.id}
-
-    # ============================================================
-    # 🚀 RECORD TO ACTIVITY LOG (STEP 3)
-    # ============================================================
-    # try:
-    #     # 1. Find the user ID based on the employee name
-    #     user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
-        
-    #     if user_record:
-    #         log_activity(
-    #             db=db,
-    #             user_id=user_record.id,
-    #             action_type="SUBMISSION",
-    #             category=leave_type,
-    #             message=f"You submitted a {leave_type} request for {start_date}",
-    #             reference_id=new_leave.id
-    #         )
-    # except Exception as log_error:
-    #     print(f"⚠️ Activity Log Warning: {log_error}")
-
-    # # --- 8. EMAIL NOTIFICATION ---
-    # manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
-    # if manager and manager.email:
-    #     display_type = "Carry Forward" if is_cf_request else leave_type
-    #     subject = f"ACTION REQUIRED: New {display_type} Request - {employee_name}"
-    #     # (Using standard template for both to keep it clean)
-    #     body = template_new_request(manager.full_name, employee_name, display_type, start_date, end_date, days_requested)
-    #     background_tasks.add_task(send_email, manager.email, subject, body)
-
-    # return new_leave
 
 # --- 3. MISSING ENDPOINT: BALANCE HISTORY ---
 @router.get("/manager/balance-history")
@@ -561,7 +608,6 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
         "cf_total": cf_total
     }
 
-
 @router.get("/history")
 def get_leave_history(
     employee_name: str, 
@@ -617,16 +663,18 @@ def get_leave_history(
         models.Leave.id.desc()
     ).offset(skip).limit(page_size).all()
     
-    # 6. Formatted response
+ # 6. Formatted response
     formatted = []
-    for l in leaves:  # 👈 FIXED: Changed 'results' to 'leaves'
+    for l in leaves: 
         # Determine types once
         l_type = l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type)
         l_status = l.status.value if hasattr(l.status, 'value') else str(l.status)
         
-        # 🚀 FIXED: Supabase removed. Assuming local path is in attachment_path or simple normalization
-        # You can adjust this helper to just return the path if you don't need fancy URL building anymore
-        full_attachment_url = l.attachment_path if (l.attachment_path or "").startswith("/") else f"/uploads/mcs/{l.attachment_path or ''}"
+        # 🚀 REFACTORED: Unpacking 3 values from the helper
+        raw_start, raw_end, display_range = get_formatted_dates(l)
+
+        # 🚀 FIXED: Using the defensive helper to prevent 404s
+        full_attachment_url = _normalize_attachment_url(l.attachment_path)
 
         formatted.append({
             "id": l.id, 
@@ -637,15 +685,16 @@ def get_leave_history(
             "reason": l.reason or "No reason provided",
             "leave_type": l_type,
             "status": l_status,
-            "start_date": l.start_date.strftime("%Y-%m-%d") if l.start_date else "N/A",
-            "end_date": l.end_date.strftime("%Y-%m-%d") if l.end_date else "N/A",
+            # 🚀 SENDING RAW DATA + DISPLAY STRING
+            "start_date": raw_start,    # Used by system logic
+            "end_date": raw_end,        # Used by system logic
+            "display_range": display_range, # 👈 USE THIS IN YOUR FRONTEND UI
             "attachment_path": full_attachment_url, 
-            "status_history": convert_utc_string_to_kl(l.status_history), # 👈 Timezone conversion applied
+            "status_history": convert_utc_string_to_kl(l.status_history),
             "approved_at": l.approved_at.strftime("%Y-%m-%d %H:%M") if l.approved_at else None,
             "rejected_at": l.rejected_at.strftime("%Y-%m-%d %H:%M") if l.rejected_at else None,
             "cancelled_at": l.cancelled_at.strftime("%Y-%m-%d %H:%M") if l.cancelled_at else None
         })
-
     return {
         "total_records": total, 
         "total_pages": total_pages, 
@@ -677,14 +726,13 @@ async def cancel_leave_request(
         raise HTTPException(status_code=403, detail="You do not have permission to cancel this leave.")
 
     current_status = leave.status
-    timestamp = get_local_timestamp()
+    timestamp = get_utc_timestamp()
     
     # Format reason
     reason_val = payload.reason if (payload and payload.reason) else "No reason provided"
     reason_text = f" (Reason: {reason_val})"
 
     # --- STATUS LOGIC ---
-    
     # CASE A: WITHDRAWAL (Pending -> Withdrawn)
     if current_status == "Pending":
         leave.status = "Withdrawn"
@@ -698,23 +746,42 @@ async def cancel_leave_request(
         msg = "Cancellation request sent to manager for review."
 
         # 🚀 EMAIL NOTIFICATION
-        manager = db.query(models.User).filter(models.User.full_name == leave.approver_name).first()
+        # Ensure we look up by approver name or fallback safely
+        manager = None
+        if leave.approver_name:
+            manager = db.query(models.User).filter(models.User.full_name == leave.approver_name).first()
         
         if manager and manager.email:
-            # Safe enum conversion
-            l_type = leave.leave_type.value if hasattr(leave.leave_type, 'value') else str(leave.leave_type)
+            # 1. Determine if this is a Carry Forward request
+            is_cf = "[CARRY FORWARD:" in (leave.reason or "").upper()
             
-            subject = f"ACTION REQUIRED: Cancellation Request - {leave.employee_name}"
-            body = template_cancellation_request(
-                manager.full_name,
-                leave.employee_name,
-                l_type,
-                leave.start_date.strftime("%Y-%m-%d"),
-                leave.end_date.strftime("%Y-%m-%d"),
-                reason_val
-            )
+            # 2. Logic to pick the right template
+            if is_cf:
+                match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", leave.reason or "")
+                cf_days = match.group(1) if match else (leave.days_taken or 0)
+                
+                subject = f"ACTION REQUIRED: Carry Forward Cancellation - {leave.employee_name}"
+                body = template_cf_cancellation_request(
+                    manager.full_name, 
+                    leave.employee_name, 
+                    cf_days, 
+                    reason_val
+                )
+            else:
+                # Standard Leave Cancellation
+                l_type = leave.leave_type.value if hasattr(leave.leave_type, 'value') else str(leave.leave_type)
+                subject = f"ACTION REQUIRED: Cancellation Request - {leave.employee_name}"
+                body = template_cancellation_request(
+                    manager.full_name,
+                    leave.employee_name,
+                    l_type,
+                    leave.start_date.strftime("%Y-%m-%d"),
+                    leave.end_date.strftime("%Y-%m-%d"),
+                    reason_val
+                )
+            
             background_tasks.add_task(send_email, manager.email, subject, body)
-
+    
     else:
         raise HTTPException(status_code=400, detail="Request state cannot be modified.")
     
@@ -725,17 +792,15 @@ async def cancel_leave_request(
         db.rollback()
         print(f"Error cancelling leave: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-# app/routers/leave.py
 
 # 🚀 Ensure these are imported at the top
-
 @router.get("/manager/pending")
 def get_manager_pending(
     approver_name: str, 
     db: Session = Depends(get_db), 
     page: int = 1, 
     page_size: int = 10,
-    name: str = "",         
+    name: str = "",           
     date_str: str = "",     
     end_date: str = "",     
     leave_type: str = "",   
@@ -779,31 +844,28 @@ def get_manager_pending(
 
     formatted_results = []
     for r in results:
-        # 🚀 CLEANED UP: Local Storage URL Builder (Supabase Removed)
-        full_attachment_url = r.attachment_path
-        if full_attachment_url and not full_attachment_url.startswith("http"):
-            if full_attachment_url.startswith("/uploads"):
-                pass # It is already perfectly formatted
-            elif full_attachment_url.startswith("uploads/"):
-                full_attachment_url = "/" + full_attachment_url
-            elif full_attachment_url.startswith("mcs/"):
-                full_attachment_url = f"/uploads/{full_attachment_url}"
-            else:
-                full_attachment_url = f"/uploads/mcs/{full_attachment_url.lstrip('/')}"
+        # 🚀 FIXED: Using the centralized helper to prevent 404s
+        full_attachment_url = _normalize_attachment_url(r.attachment_path)
+        
+        # 🚀 INTEGRATED: Unified Date Helper
+        # Unpack all 3 values returned by the helper
+        raw_start, raw_end, display_range = get_formatted_dates(r)
 
         formatted_results.append({
             "id": r.id,
             "employee_name": r.employee_name,
             "approver_name": r.approver_name, 
-            "approver_l2": r.approver_l2,     
+            "approver_l2": r.approver_l2,       
             "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
             "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
             "days_taken": r.days_taken,
-            "start_date": r.start_date.strftime("%Y-%m-%d"),
-            "end_date": r.end_date.strftime("%Y-%m-%d"),
+            # 🚀 PASSING RAW DATES + DISPLAY RANGE
+            "start_date": raw_start,      # Kept as raw for system/backend logic
+            "end_date": raw_end,          # Kept as raw for system/backend logic
+            "display_range": display_range, # NEW: Use this in your frontend for display
             "reason": r.reason,
             "attachment_path": full_attachment_url, 
-            "status_history": convert_utc_string_to_kl(r.status_history) # 👈 FIXED: Localized timestamp
+            "status_history": convert_utc_string_to_kl(r.status_history)
         })
     
     return {
@@ -890,7 +952,7 @@ async def approve_leave(
     policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
     l2_active = policy.l2_approval_enabled if policy else False
 
-    timestamp = get_local_timestamp()
+    timestamp = get_utc_timestamp()
     note_str = f" | Note: {remarks}" if remarks else ""
     l_type_str = str(leave.leave_type.value) if hasattr(leave.leave_type, 'value') else str(leave.leave_type)
     
@@ -975,6 +1037,9 @@ async def approve_leave(
         emp_record = db.query(models.User).filter(or_(models.User.full_name == leave.employee_name, models.User.username == leave.employee_name)).first()
         mgr_record = db.query(models.User).filter(or_(models.User.full_name == approver_name, models.User.username == approver_name)).first()
 
+        # 1. Determine if this is a Carry Forward request
+        is_cf = "[CARRY FORWARD:" in (leave.reason or "").upper()
+
         if status == "Approved":
             suffix = " (Pending L2)" if "Pending L2" in leave.status else ""
             log_msg_emp = f"Your {l_type_str} request was approved via administrative override" if is_superuser_override else f"Your {l_type_str} request was APPROVED{suffix}"
@@ -990,17 +1055,58 @@ async def approve_leave(
         if mgr_record and not is_superuser_override:
             log_activity(db=db, user_id=mgr_record.id, action_type=act_type, category=l_type_str, message=log_msg_mgr, reference_id=leave.id)
 
-        # Emails
+# 2. Email Notification Logic
         if status == "Approved":
+            # Priority 1: L2 Routing (Handles L2 Cancellation OR L2 Standard)
             if route_to_l2 and l2_user and l2_user.email:
-                body = template_l2_request(l2_user.full_name or l2_user.username, approver_name or display_approver, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: Final Approval Needed - {leave.employee_name}", body)
+                if is_cancellation_journey:
+                    if is_cf: # 👈 L2 CF Cancellation
+                        body = template_l2_cf_cancellation_request(l2_user.full_name, approver_name, leave.employee_name, leave.days_taken)
+                        subject = f"ACTION REQUIRED: L2 CF Cancellation - {leave.employee_name}"
+                    else:     # Standard Cancellation L2
+                        body = template_l2_cancellation_request(l2_user.full_name, approver_name, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                        subject = f"ACTION REQUIRED: L2 Cancellation - {leave.employee_name}"
+                else:         # Standard L2 Request
+                    body = template_l2_request(l2_user.full_name or l2_user.username, approver_name or display_approver, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
+                    subject = f"ACTION REQUIRED: Final Approval Needed - {leave.employee_name}"
+                
+                background_tasks.add_task(send_email, l2_user.email, subject, body)
+            
+            # Priority 2: Direct Approval (Branch between Cancellation, CF, or Standard)
             elif not route_to_l2 and emp_record and emp_record.email:
-                body = template_request_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
-                background_tasks.add_task(send_email, emp_record.email, f"✅ Leave Request Approved - {l_type_str}", body)
+                if is_cancellation_journey:
+                    if is_cf: # ✅ CF Cancellation Approved
+                        body = template_cf_cancellation_approved(leave.employee_name, display_approver, leave.days_taken)
+                        subject = "✅ Carry Forward Cancellation Approved"
+                    else:     # ✅ Standard Cancellation Approved
+                        body = template_cancellation_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
+                        subject = "✅ Leave Cancellation Approved"
+                elif is_cf:   # ✅ CF Approved
+                    body = template_cf_approved(leave.employee_name, display_approver, leave.days_taken)
+                    subject = "✅ Carry Forward Request Approved"
+                else:         # ✅ Standard Approved
+                    body = template_request_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
+                    subject = f"✅ Leave Request Approved - {l_type_str}"
+                
+                background_tasks.add_task(send_email, emp_record.email, subject, body)
+
+        # Rejection Logic (Branch between Cancellation, CF, or Standard)
         elif status == "Rejected" and emp_record and emp_record.email:
-             body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
-             background_tasks.add_task(send_email, emp_record.email, f"❌ Leave Request Rejected - {l_type_str}", body)
+             if is_cancellation_journey:
+                 if is_cf: # ❌ CF Cancellation Rejected
+                     body = template_cf_cancellation_rejected(leave.employee_name, display_approver, remarks or "Processed via Admin Override.")
+                     subject = "⚠️ Carry Forward Cancellation Rejected"
+                 else:     # ❌ Standard Cancellation Rejected
+                     body = template_cancellation_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
+                     subject = "⚠️ Leave Cancellation Rejected"
+             elif is_cf: # ❌ CF Rejected
+                 body = template_cf_rejected(leave.employee_name, display_approver, remarks or "Processed via Admin Override.")
+                 subject = "❌ Carry Forward Request Rejected"
+             else:       # ❌ Standard Rejected
+                 body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
+                 subject = f"❌ Leave Request Rejected - {l_type_str}"
+             
+             background_tasks.add_task(send_email, emp_record.email, subject, body)
 
     except Exception as e:
         print(f"⚠️ Activity/Email Error: {e}")
@@ -1009,7 +1115,7 @@ async def approve_leave(
 
 @router.get("/manager/all")
 def get_all_manager_leaves(
-    user_role: str,         
+    user_role: str,           
     approver_name: str = None, 
     name: str = "", 
     status: str = Query("", alias="status"), 
@@ -1051,27 +1157,22 @@ def get_all_manager_leaves(
     results = query.order_by(models.Leave.id.desc()).all()
     formatted = []
     for r in results:
-        # 🚀 CLEANED UP: Local Storage URL Builder (Supabase Removed)
-        full_attachment_url = r.attachment_path
-        if full_attachment_url and not full_attachment_url.startswith("http"):
-            if full_attachment_url.startswith("/uploads"):
-                pass # It is already perfectly formatted
-            elif full_attachment_url.startswith("uploads/"):
-                full_attachment_url = "/" + full_attachment_url
-            elif full_attachment_url.startswith("mcs/"):
-                full_attachment_url = f"/uploads/{full_attachment_url}"
-            else:
-                full_attachment_url = f"/uploads/mcs/{full_attachment_url.lstrip('/')}"
+        # 🚀 CLEANED UP: Using centralized helper for path consistency
+        full_attachment_url = _normalize_attachment_url(r.attachment_path)
+        
+        # 🚀 INTEGRATED: Unified Date Helper (FIXED UNPACKING)
+        raw_start, raw_end, display_range = get_formatted_dates(r)
 
         formatted.append({
             "id": r.id,
             "employee_name": r.employee_name,
             "approver_name": r.approver_name, # Legacy string retained for UI stability
-            "approver_l2": r.approver_l2,     
+            "approver_l2": r.approver_l2,       
             "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
             "days_taken": r.days_taken,
-            "start_date": r.start_date.strftime("%Y-%m-%d"),
-            "end_date": r.end_date.strftime("%Y-%m-%d"),
+            "start_date": raw_start,        # 🚀 Unified format
+            "end_date": raw_end,            # 🚀 Unified format
+            "display_range": display_range, # 🚀 Added to match other endpoints
             "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
             "attachment_path": full_attachment_url, 
             "status_history": convert_utc_string_to_kl(r.status_history) # 👈 FIXED: Localized timestamp
@@ -1446,11 +1547,8 @@ def get_global_audit_logs(db: Session = Depends(get_db)):
     
     formatted = []
     for l in results:
-        # 🚀 CLEANED: Removed Supabase constants and _normalize_attachment_url
-        # Direct local path construction
-        full_attachment_url = l.attachment_path
-        if full_attachment_url and not full_attachment_url.startswith(("/uploads", "http")):
-             full_attachment_url = f"/uploads/mcs/{full_attachment_url.lstrip('/')}"
+        # 🚀 FIXED: Using the centralized helper to prevent 404s
+        full_attachment_url = _normalize_attachment_url(l.attachment_path)
 
         formatted.append({
             "id": l.id,
@@ -1826,22 +1924,22 @@ def check_and_wipe_expired_cf(db: Session):
         ).all()
 
         if expired_records:
-            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+            # 🚀 FIXED: Call the local timestamp helper to enforce KL (UTC+8) time
+            timestamp = get_utc_timestamp()
             
             for record in expired_records:
                 old_val = record.carry_forward_total
                 
                 # A. Create an Audit Record in the Leave table
-                # We tag it as 'System Action' so Natasha knows it wasn't a manual deletion
                 expiry_log = models.Leave(
                     employee_name=record.employee_name,
                     leave_type="Claim Carry Forward",
                     start_date=today,
                     end_date=today,
                     days_taken=old_val,
-                    status="Cancelled", # Or create a new status like "Expired"
+                    status="Cancelled", 
                     reason=f"[SYSTEM AUTO-CLEANUP] {old_val} banked days expired on {expiry_date}.",
-                    status_history=f"Expired ({now_str})",
+                    status_history=f"Expired ({timestamp})", 
                     approver_name="System Administrator"
                 )
                 db.add(expiry_log)
@@ -1849,6 +1947,7 @@ def check_and_wipe_expired_cf(db: Session):
                 # B. Wipe the balance
                 record.carry_forward_total = 0.0
             
+            # Don't forget to commit outside the loop to keep the transaction efficient!
             db.commit()
             print(f"🕒 {today}: Cleanup complete. {len(expired_records)} wallets emptied.")
 
@@ -1909,9 +2008,15 @@ def get_activity_feed(employee_name: str, db: Session = Depends(get_db)):
 
     # 3. Format Timestamps
     formatted_logs = []
+    # Get "today" relative to Malaysia time, not server time
+    today_kl = datetime.now(KL_TZ).date() 
+
     for log in logs:
-        is_today = log.created_at.date() == datetime.now().date()
-        display_time = log.created_at.strftime("%I:%M %p") if is_today else log.created_at.strftime("%b %d")
+        # Ensure log.created_at is treated as UTC then shifted to KL
+        log_time_kl = log.created_at.replace(tzinfo=timezone.utc).astimezone(KL_TZ)
+        
+        is_today = log_time_kl.date() == today_kl
+        display_time = log_time_kl.strftime("%I:%M %p") if is_today else log_time_kl.strftime("%b %d")
 
         formatted_logs.append({
             "id": log.id,
