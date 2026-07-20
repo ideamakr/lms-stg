@@ -13269,13 +13269,21 @@ let attachmentHtml = "";
             }
         }
 
-        // Define status colors
-        let dotColor = "#cbd5e1"; 
-        if (stepStatus.toLowerCase().includes("approved")) dotColor = "#10b981"; // Green
-        else if (stepStatus.toLowerCase().includes("rejected")) dotColor = "#ef4444"; // Red
-        else if (stepStatus.toLowerCase().includes("cancelled") || stepStatus.toLowerCase().includes("withdrawn")) dotColor = "#64748b"; // Grey
-        else if (stepStatus === "Awaiting Final Approval") dotColor = "#8b5cf6"; // Purple
-        else if (index === historySteps.length - 1 && leave.status.includes("Pending")) dotColor = "#f59e0b"; // Orange
+// Expanded & Unified Dot Color Logic
+        let dotColor = "#cbd5e1"; // Default Light Grey
+        const lowerStatus = stepStatus.toLowerCase();
+        
+        if (lowerStatus.includes("rejected")) {
+            dotColor = "#ef4444"; // Red
+        } else if (lowerStatus.includes("awaiting final approval") || lowerStatus.includes("pending l2")) {
+            dotColor = "#8b5cf6"; // Purple
+        } else if (lowerStatus.includes("approved") || lowerStatus.includes("approval") || lowerStatus.includes("finalized")) {
+            dotColor = "#10b981"; // Green (Catches Final Approvals & Finalized Cancellations)
+        } else if (lowerStatus.includes("cancelled") || lowerStatus.includes("withdrawn") || lowerStatus.includes("cancellation")) {
+            dotColor = "#64748b"; // Dark Grey (Catches pending cancellations/withdrawals)
+        } else if (index === historySteps.length - 1 && leave.status.includes("Pending")) {
+            dotColor = "#f59e0b"; // Orange
+        }
 
         timelineHtml += `
         <div style="margin-bottom: 20px; position: relative;">
@@ -24709,11 +24717,14 @@ function viewOTDetails(ot) {
             </div>`;
     }
 
+
+    // ---------------------------------------------------------
+    // 📜 2. UNIVERSAL TIMELINE ENGINE (OVERTIME)
+    // ---------------------------------------------------------
+
     // Timeline History
     let rawHistory = ot.status_history || "Pending";
-    if ((ot.status === "Withdrawn" || ot.status === "Cancelled") && !rawHistory.includes("Withdrawn") && !rawHistory.includes("Cancelled")) {
-        rawHistory += ` > ${ot.status} (${ot.updated_at || "Date N/A"})`;
-    }
+    // 🗑️ Redundant fallback block has been removed to fix the "DATE N/A" bug.
 
     const historySteps = rawHistory.split(" > ");
     let timelineHtml = `<div style="position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 8px; margin-top: 10px;">`;
@@ -24722,6 +24733,8 @@ function viewOTDetails(ot) {
         const isFirst = index === 0;
         const dateRegex = /\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)/;
         const timeMatch = step.match(dateRegex);
+        
+        // Retaining your specific variables (safeDate, cleanReason)
         let timeText = timeMatch ? timeMatch[1] : (isFirst ? safeDate : "N/A");
         let stepStatus = step.replace(dateRegex, "").trim();
         let stepRemark = isFirst ? cleanReason : "";
@@ -24735,15 +24748,27 @@ function viewOTDetails(ot) {
         }
         stepStatus = stepStatus.replace(/\(\s*\)/g, "").trim();
 
-        let dotColor = "#cbd5e1";
-        if (stepStatus.includes("Approved")) dotColor = "#10b981";
-        else if (stepStatus.includes("Rejected")) dotColor = "#ef4444";
-        else if (stepStatus === "Final Approval") dotColor = "#8b5cf6";
+// Expanded & Unified Dot Color Logic
+        let dotColor = "#cbd5e1"; // Default Light Grey
+        const lowerStatus = stepStatus.toLowerCase();
         
+        if (lowerStatus.includes("rejected")) {
+            dotColor = "#ef4444"; // Red
+        } else if (lowerStatus.includes("awaiting final approval") || lowerStatus.includes("pending l2")) {
+            dotColor = "#8b5cf6"; // Purple
+        } else if (lowerStatus.includes("approved") || lowerStatus.includes("approval") || lowerStatus.includes("finalized")) {
+            dotColor = "#10b981"; // Green (Catches Final Approvals & Finalized Cancellations)
+        } else if (lowerStatus.includes("cancelled") || lowerStatus.includes("withdrawn") || lowerStatus.includes("cancellation")) {
+            dotColor = "#64748b"; // Dark Grey (Catches pending cancellations/withdrawals)
+        } else if (index === historySteps.length - 1 && (ot.status || "").includes("Pending")) {
+            dotColor = "#f59e0b"; // Orange
+        }
+
+        // Standardized UI Typography (Matching Leave Module)
         timelineHtml += `
             <div style="margin-bottom: 20px; position: relative;">
                 <div style="position: absolute; left: -26px; top: 3px; width: 12px; height: 12px; background: white; border: 3px solid ${dotColor}; border-radius: 50%;"></div>
-                <div style="font-weight: 700; font-size: 0.88rem; color: #1e293b;">${stepStatus.toUpperCase()}</div>
+                <div style="font-weight: 600; font-size: 0.9rem; color: #1e293b;">${stepStatus}</div>
                 <div style="font-size: 0.75rem; color: #94a3b8;">${timeText}</div>
                 ${stepRemark ? `<div style="margin-top:4px; font-size:0.85rem; color:#475569; background:#f1f5f9; padding:6px 10px; border-radius:6px; border-left:3px solid ${dotColor};">${stepRemark}</div>` : ""}
             </div>`;
@@ -24792,12 +24817,12 @@ function viewOTDetails(ot) {
     <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">
         ${ot.status === "Approved" ? "Approved By" : (ot.status === "Pending L2 Approval" ? "Final Approver" : "Approver")}
     </label><br>
-    <span style="color: #2563eb; font-weight: 600;">
+<span style="color: #2563eb; font-weight: 600;">
         <i class="fas fa-user-tie"></i> 
         ${ot.status === "Approved" 
             ? (ot.approver_l2 || ot.approver_name || "Manager") 
             : (ot.status === "Pending L2 Approval" 
-                ? (ot.approver_l2 || "Awaiting Assignment") 
+                ? (ot.approver_l2 || ot.approver_name || "Awaiting Assignment") 
                 : (ot.approver_name || "Line Manager"))}
     </span>
 </div>
