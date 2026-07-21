@@ -6026,59 +6026,74 @@ html.dark #card_unpaid {
                                                             <textarea id="cf_reason" class="saas-form-control" rows="2" placeholder="Explain why you are carrying days forward..." oninput="updateCharCountGeneric('cf_reason', 'char_count_cf')" maxlength="200" style="height: 55px !important; padding: 6px 10px !important; font-size: 0.85rem; resize: none;"></textarea>
                                                         </div>
                                                     </div>
-                                                    <div id="standard_leave_ui">
-                                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; align-items: start; width: 100%;">
-                                                            
-                                                            <div class="saas-form-group" style="margin: 0;">
-                                                                <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Leave Type</label>
-                                                                <select id="dash_leave_type" class="saas-form-control" required onchange="showEntitlementInfo(); updateLiveSummary()" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
-                                                                    <option value="" disabled selected hidden>Select Leave Type...</option>
-                                                                    <option value="Annual Leave">Annual Leave</option>
-                                                                    <option value="Medical Leave">Medical Leave</option>
-                                                                    <option value="Emergency Leave">Emergency Leave</option>
-                                                                    <option value="Compassionate Leave">Compassionate Leave</option>
-                                                                    <option value="Unpaid Leave">Unpaid Leave</option>
-                                                                </select>
-                                                                <div id="dash_entitlement_info" style="font-size: 0.7rem; color: #64748b; margin-top: 4px;"></div>
-                                                            </div>
-                                
-                                                            <div class="saas-form-group" style="margin: 0;">
-                                                                <!-- ✅ ADDED: Flex alignment with an elegant, spinning FontAwesome notch indicator -->
-                                                                <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                                                                    Select Approver 
-                                                                    <i class="fas fa-circle-notch fa-spin approver-spinner" style="color: #2563eb; font-size: 0.65rem;"></i>
-                                                                </label>
-                                                                <select id="dash_approver" class="saas-form-control" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
-                                                                    <option value="" disabled selected hidden>Loading managers...</option>
-                                                                </select>
-                                                                <div id="dash_approver_alert" style="display: none; margin-top: 10px;"></div>
-                                                            </div>
-                                                    
-                                                            <div class="saas-form-group" style="margin: 0;">
-                                                                <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Start Date</label>
-                                                                <input type="date" id="dash_start" class="saas-form-control" onchange="handleDateChange(); updateLiveSummary()" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;" />
-                                                            </div>
-                                                    
-                                                            <div class="saas-form-group" style="margin: 0;">
-                                                                <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">End Date</label>
-                                                                <div style="display: flex; gap: 10px; align-items: center;">
-                                                                    <input type="date" id="dash_end" class="saas-form-control" style="flex: 1; height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;" onchange="updateLiveSummary()" />
-                                                                    
-                                                                    <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0 10px; height: 34px; border-radius: 6px; box-sizing: border-box;">
-                                                                        <input type="checkbox" id="dash_half_day" onchange="toggleHalfDay(); updateLiveSummary()" style="width: 14px; height: 14px; cursor: pointer; accent-color: #2563eb;" />
-                                                                        <label for="dash_half_day" style="margin: 0; cursor: pointer; font-size: 0.75rem; font-weight: 700; color: #475569; white-space: nowrap;">Half Day</label>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            
-                                                        </div> <div class="grid-full-width saas-form-group" style="margin-top: 12px;">
-                                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                                                <label class="reg-label" style="margin:0; font-size: 0.7rem;">Reason for Leave</label>
-                                                                <span id="char_count" style="font-size: 0.65rem; color: #94a3b8; font-weight: 700;">0/200</span>
-                                                            </div>
-                                                            <textarea id="dash_reason" class="saas-form-control" rows="2" placeholder="Please provide details..." oninput="updateCharCountGeneric('dash_reason', 'char_count')" maxlength="200" style="height: 55px !important; padding: 6px 10px !important; font-size: 0.85rem; resize: none;"></textarea>
-                                                        </div>
-                                                    </div>
+<div id="standard_leave_ui">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; align-items: start; width: 100%;">
+        
+        <div class="saas-form-group" style="margin: 0;">
+            <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Leave Type</label>
+            <select id="dash_leave_type" class="saas-form-control" required onchange="showEntitlementInfo(); updateLiveSummary()" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
+                <option value="" disabled selected hidden>Select Leave Type...</option>
+                <option value="Annual Leave">Annual Leave</option>
+                <option value="Medical Leave">Medical Leave</option>
+                <option value="Emergency Leave">Emergency Leave</option>
+                <option value="Compassionate Leave">Compassionate Leave</option>
+                <option value="Unpaid Leave">Unpaid Leave</option>
+            </select>
+            <div id="dash_entitlement_info" style="font-size: 0.7rem; color: #64748b; margin-top: 4px;"></div>
+        </div>
+
+        <div class="saas-form-group" style="margin: 0;">
+            <!-- ✅ ADDED: Flex alignment with an elegant, spinning FontAwesome notch indicator -->
+            <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                Select Approver 
+                <i class="fas fa-circle-notch fa-spin approver-spinner" style="color: #2563eb; font-size: 0.65rem;"></i>
+            </label>
+            <select id="dash_approver" class="saas-form-control" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
+                <option value="" disabled selected hidden>Loading managers...</option>
+            </select>
+            <div id="dash_approver_alert" style="display: none; margin-top: 10px;"></div>
+        </div>
+
+        <div class="saas-form-group" style="margin: 0;">
+            <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Start Date</label>
+            <input type="date" id="dash_start" class="saas-form-control" onchange="handleDateChange(); updateLiveSummary()" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;" />
+        </div>
+
+        <div class="saas-form-group" style="margin: 0;">
+            <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">End Date</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="date" id="dash_end" class="saas-form-control" style="flex: 1; height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;" onchange="updateLiveSummary()" />
+                
+                <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0 10px; height: 34px; border-radius: 6px; box-sizing: border-box;">
+                    <input type="checkbox" id="dash_half_day" onchange="toggleHalfDay(); updateLiveSummary()" style="width: 14px; height: 14px; cursor: pointer; accent-color: #2563eb;" />
+                    <label for="dash_half_day" style="margin: 0; cursor: pointer; font-size: 0.75rem; font-weight: 700; color: #475569; white-space: nowrap;">Half Day</label>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+<!-- 📌 INLINE HOLIDAY NOTICE (Yellow System Theme with Calendar Icon) -->
+<div id="holiday_warning_box" style="display: none; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-top: 12px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-calendar-day" style="color: #d97706; font-size: 1.1rem; flex-shrink: 0;"></i>
+        <p style="margin: 0; font-weight: 600; color: #92400e; font-size: 0.8rem; line-height: 1.4;" id="holiday_warning_text">
+            Note: Selected date range includes a Public Holiday.
+        </p>
+    </div>
+</div>
+
+    <!-- Hidden input field to store holiday details for backend submission -->
+    <input type="hidden" id="hidden_holiday_info" name="holiday_info" value="">
+
+    <div class="grid-full-width saas-form-group" style="margin-top: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label class="reg-label" style="margin:0; font-size: 0.7rem;">Reason for Leave</label>
+            <span id="char_count" style="font-size: 0.65rem; color: #94a3b8; font-weight: 700;">0/200</span>
+        </div>
+        <textarea id="dash_reason" class="saas-form-control" rows="2" placeholder="Please provide details..." oninput="updateCharCountGeneric('dash_reason', 'char_count')" maxlength="200" style="height: 55px !important; padding: 6px 10px !important; font-size: 0.85rem; resize: none;"></textarea>
+    </div>
+</div>
                                     
                                                     <div class="grid-full-width saas-form-group" style="margin-top: 12px;">
                                                         <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Supporting Document (Optional)</label>
@@ -11893,8 +11908,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // 🚀 NOTE: We REMOVED the loadUserProfile() and showSection() calls from here.
         // They are now handled exclusively by window.onload to prevent the AbortError.
-      });
 
+        // 🚀 3. THE FIX: Evaluate holiday overlap on page load/refresh
+        // A short timeout ensures any restored draft values are fully written to inputs first
+        setTimeout(() => {
+            if (typeof checkHolidayOverlap === "function") {
+                checkHolidayOverlap();
+            }
+        }, 100);
+      });
 
 
 
@@ -13500,6 +13522,11 @@ modal.style.display = "flex";
 }
 // 🚀 V1.4.15: Optimized Split-Wallet Projection Engine
 async function updateLiveSummary() {
+    // 🚀 Trigger public holiday check safely without blocking execution
+    if (typeof checkHolidayOverlap === 'function') {
+        checkHolidayOverlap();
+    }
+
     const type = document.getElementById("dash_leave_type").value;
     const start = document.getElementById("dash_start").value;
     const end = document.getElementById("dash_end").value;
@@ -13642,8 +13669,7 @@ function resetApplyForm() {
         removeAttachment('leave_attachment', 'leave_file_label', 'leave_remove_btn');
     }
 
-// 🚀 8. THE BUTTON SYNC FIX: Hardened Visibility Guard
-    // Uses !important to ensure no CSS conflicts keep the wrong button visible.
+    // 🚀 8. THE BUTTON SYNC FIX: Hardened Visibility Guard
     const currentMode = localStorage.getItem("current_apply_mode") || "leave";
     const leaveSubmit = document.getElementById("dash_submit_btn");
     const otSubmit = document.getElementById("dash_ot_submit_btn");
@@ -13659,6 +13685,12 @@ function resetApplyForm() {
     // 9. CLEANUP FIX: Clear BOTH draft buckets
     localStorage.removeItem("leave_draft_std");
     localStorage.removeItem("leave_draft_cf");
+
+    // 🚀 10. Hide Public Holiday Notice & Clear Hidden Field on Reset
+    const holidayWarningBox = document.getElementById("holiday_warning_box");
+    const holidayHiddenInput = document.getElementById("hidden_holiday_info");
+    if (holidayWarningBox) holidayWarningBox.style.display = "none";
+    if (holidayHiddenInput) holidayHiddenInput.value = "";
 }
 
 /**
@@ -14268,6 +14300,11 @@ function restoreLeaveDraft() {
                 document.getElementById("dash_half_day").checked = draft.half_day || false;
 
             console.log("✅ Standard Leave draft restored.");
+
+            // 🚀 THE FIX: Immediately validate holidays right after the draft is restored
+            if (typeof checkHolidayOverlap === "function") {
+                checkHolidayOverlap();
+            }
         } catch (e) {
             console.error("Error parsing Standard draft:", e);
         }
@@ -17953,6 +17990,74 @@ async function loadPublicHolidays() {
     }
 }
 
+// 🚀 Check if selected date range overlaps with any Public Holidays (Auto-fetch & Safe)
+async function checkHolidayOverlap() {
+    const startElem = document.getElementById('dash_start');
+    const endElem = document.getElementById('dash_end');
+    const isHalfDay = document.getElementById('dash_half_day')?.checked;
+    
+    const warningBox = document.getElementById('holiday_warning_box');
+    const warningText = document.getElementById('holiday_warning_text');
+    const hiddenInput = document.getElementById('hidden_holiday_info');
+
+    if (!startElem) return; 
+
+    const startVal = startElem.value;
+    const endVal = isHalfDay ? startVal : (endElem ? endElem.value : '');
+
+    if (!startVal || !endVal) {
+        if (warningBox) warningBox.style.display = 'none';
+        if (hiddenInput) hiddenInput.value = '';
+        return;
+    }
+
+    // 🎯 Included employeeHolidaysCache alongside other fallbacks
+    let holidays = window.employeeHolidaysCache || window.publicHolidaysList || window.publicHolidays || [];
+
+    // 🚀 Auto-fetch from backend if the cache is empty
+    if (holidays.length === 0 && typeof fetchWithAuth === 'function' && typeof API_URL !== 'undefined') {
+        try {
+            const res = await fetchWithAuth(`${API_URL}/leaves/public-holidays`);
+            if (res && res.ok) {
+                holidays = await res.json();
+                window.employeeHolidaysCache = holidays; // Cache globally for subsequent checks
+            }
+        } catch (e) {
+            console.error("Failed to auto-fetch holidays for validation:", e);
+        }
+    }
+
+    const startDate = new Date(startVal);
+    const endDate = new Date(endVal);
+    let matchedHolidays = [];
+
+    if (Array.isArray(holidays) && holidays.length > 0) {
+        holidays.forEach(h => {
+            const hDateStr = h.date || h.holiday_date;
+            const hName = h.name || h.holiday_name || 'Public Holiday';
+            
+            if (hDateStr) {
+                const hDate = new Date(hDateStr);
+                if (hDate >= startDate && hDate <= endDate) {
+                    matchedHolidays.push(`${hDateStr} (${hName})`);
+                }
+            }
+        });
+    }
+
+    if (matchedHolidays.length > 0) {
+        const holidayStr = matchedHolidays.join(', ');
+        if (warningText) {
+            warningText.innerHTML = `⚠️ <strong>Note:</strong>Your selected leave period includes the public holiday: <strong>${holidayStr}</strong>. The public holiday will be counted as part of your leave, and your leave balance will be deducted accordingly.`;
+        }
+        if (warningBox) warningBox.style.display = 'block';
+        if (hiddenInput) hiddenInput.value = holidayStr;
+    } else {
+        if (warningBox) warningBox.style.display = 'none';
+        if (hiddenInput) hiddenInput.value = '';
+    }
+}
+
 /**
  * 🎨 RENDER ENGINE: Intercepts dropdown year selection constraints and paints tabular grid cells
  */
@@ -20297,6 +20402,16 @@ function resetRegistrationForm() {
           }
         });
       });
+
+      // 🚀 Trigger holiday check on page load / refresh to catch restored draft dates
+    document.addEventListener("DOMContentLoaded", () => {
+    // A brief timeout ensures any local storage draft loaders have finished populating the date inputs first
+    setTimeout(() => {
+        if (typeof checkHolidayOverlap === "function") {
+            checkHolidayOverlap();
+        }
+        }, 150);
+    });
 
 // 2. Close the Registration Modal
 function closeRegisterModal() {

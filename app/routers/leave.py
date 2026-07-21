@@ -332,9 +332,10 @@ async def create_leave(
     start_date: str = Form(...), 
     end_date: str = Form(...),
     reason: str = Form(...), 
-    cf_days: float = Form(0.0), # 👈 NEW: Capture the input value
+    cf_days: float = Form(0.0), 
     is_half_day: Union[bool, str] = Form(False),
     applied_by: Optional[str] = Form(None),
+    holiday_info: Optional[str] = Form(None), # 👈 1. Safely capture public holiday info
     file: UploadFile = File(None), 
     db: Session = Depends(get_db)
 ):
@@ -346,7 +347,7 @@ async def create_leave(
     end_obj = date.fromisoformat(end_date)
     is_half_day_bool = is_half_day in (True, "true")
 
-# 2. DUPLICATE / OVERLAP & EXPIRY POLICY CHECK
+    # 2. DUPLICATE / OVERLAP & EXPIRY POLICY CHECK
     is_cf_request = "[CARRY FORWARD:" in (reason or "").upper()
     is_cf_claim = "carry forward" in leave_type.lower()
     
@@ -388,7 +389,7 @@ async def create_leave(
                 }
             )
 
-    # 3. HOLIDAY & DURATION CALCULATION
+    # 3. HOLIDAY & DURATION CALCULATION (Synced with Frontend Rule)
     holidays = db.query(models.PublicHoliday).all()
     holiday_dates = [h.holiday_date for h in holidays]
     
@@ -396,7 +397,11 @@ async def create_leave(
         days_requested = 0.5
     else:
         all_dates = pd.date_range(start=start_obj, end=end_obj)
-        working_days = [d for d in all_dates if d.weekday() < 5 and d.date() not in holiday_dates]
+        if holiday_info:
+            # If applying on a holiday, count all weekdays (matching frontend live calculation)
+            working_days = [d for d in all_dates if d.weekday() < 5]
+        else:
+            working_days = [d for d in all_dates if d.weekday() < 5 and d.date() not in holiday_dates]
         days_requested = float(len(working_days))
 
     # 4. FETCH BALANCE
@@ -404,7 +409,7 @@ async def create_leave(
     if not balance:
         return JSONResponse(status_code=404, content={"detail": "Balance record not found."})
     
-# 5. 🛡️ DETERMINE WALLET (HARDENED LOGIC - PRODUCTION)
+    # 5. 🛡️ DETERMINE WALLET (HARDENED LOGIC - PRODUCTION)
     cf_max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
     cf_max_days = float(cf_max_setting.value) if (cf_max_setting and cf_max_setting.value) else 5.0
 
@@ -416,15 +421,12 @@ async def create_leave(
 
     # --- MANDATORY POLICY GATE ---
     if is_cf_request:
-        # VALIDATE AGAINST THE INPUT FIELD (cf_days)
         if cf_days > cf_max_days:
             return JSONResponse(status_code=400, content={"detail": f"Policy Error: The maximum allowed to carry forward is {cf_max_days} days."})
         
-        # Ensure they don't carry forward more than they have
         if cf_days > annual_rem:
             return JSONResponse(status_code=400, content={"detail": "Insufficient Annual Balance to carry forward."})
         
-        # Overwrite days_requested with the user's input so the DB records the correct amount
         days_requested = cf_days 
         wallet_available = annual_rem
         wallet_name = "Annual Leave (to Carry Forward)"
@@ -441,11 +443,6 @@ async def create_leave(
         wallet_available = annual_rem
         wallet_name = leave_type
 
-    # ==========================================================
-    # 🚀 FIX: FINAL BALANCE CHECK
-    # ==========================================================
-    # We strictly enforce limits for all paid leaves.
-    # Unpaid Leave is explicitly bypassed since it tracks upward.
     if leave_type != "Unpaid Leave":
         if round(days_requested, 2) > round(wallet_available, 2):
             return JSONResponse(
@@ -469,6 +466,11 @@ async def create_leave(
 
     # 8. SAVE RECORD
     timestamp = get_utc_timestamp()
+    
+    # 🚀 2. Format holiday note securely for database records & approver visibility
+    holiday_note = f" [Note: Applied on Public Holiday - {holiday_info}]" if holiday_info else ""
+    final_reason = f"{reason}{holiday_note}" if holiday_info else reason
+
     new_leave = models.Leave(
         employee_name=employee_name, 
         approver_name=approver_name, 
@@ -476,17 +478,17 @@ async def create_leave(
         leave_type=leave_type,
         start_date=start_obj, 
         end_date=end_obj, 
-        reason=reason, 
+        reason=final_reason, 
         days_taken=days_requested,
         attachment_path=attachment_url,
         status="Pending", 
-        status_history=f"Submitted ({timestamp})"
+        status_history=f"Submitted ({timestamp}){holiday_note}"
     )
     db.add(new_leave)
     db.commit()
     db.refresh(new_leave)
 
-# 9. NOTIFY MANAGER & LOG ACTIVITY
+    # 9. NOTIFY MANAGER & LOG ACTIVITY
     try:
         user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
         if user_record:
@@ -501,7 +503,6 @@ async def create_leave(
                 body = template_medical_request(manager.full_name, employee_name, str(start_obj), str(end_obj), days_requested)
             
             elif is_cf_request:
-                # 🚀 FIX: Strip the technical tag for the email display, keep the user's actual text
                 clean_reason = re.sub(r"\[CARRY FORWARD REQUEST:\s*[\d\.]+\s*DAY(S)\]", "", reason).strip()
                 subject = f"Action Required: Carry Forward Request ({employee_name})"
                 body = template_cf_request(manager.full_name, employee_name, days_requested, clean_reason)
@@ -516,6 +517,8 @@ async def create_leave(
         print(f"⚠️ Post-Submission Error: {e}")
 
     return {"message": "Leave request submitted successfully", "leave_id": new_leave.id}
+
+
 
 # --- 3. MISSING ENDPOINT: BALANCE HISTORY ---
 @router.get("/manager/balance-history")
