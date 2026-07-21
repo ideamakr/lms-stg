@@ -8,16 +8,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <link rel="stylesheet" 
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
-          onerror="this.onerror=null; this.href='static/css/all.min.css';">
+<link rel="stylesheet" 
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+      onerror="this.onerror=null; this.href='static/css/all.min.css';">
 
-    <link rel="stylesheet" 
-          href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"
-          onerror="this.onerror=null; this.href='static/css/cropper.min.css';">
-          
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"
-            onerror="this.onerror=null; this.src='static/js/cropper.min.js';"></script>
+<link rel="stylesheet" 
+      href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"
+      onerror="this.onerror=null; this.href='static/css/cropper.min.css';">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"
+        onerror="this.onerror=null; this.src='static/js/cropper.min.js';"></script>
     
 
     <!-- <script src="http://127.0.0.1:8000/static/sweetalert2.js"></script>
@@ -42,14 +46,19 @@
       html {
         scroll-behavior: smooth;
       }
-      body {
-        margin: 0;
-        font-family: -apple-system, sans-serif;
-        background: var(--bg);
-        display: flex;
-        height: 100vh;
-        overflow: hidden; /* Prevent body scroll, handle inside .content */
-      }
+
+    body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+
+    background: var(--bg);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
     
 
       /* ====================================================================
@@ -4964,6 +4973,7 @@ html.dark #card_cf,
 html.dark #card_unpaid {
     color: #f1f5f9 !important; /* High contrast white for Dark Mode */
 }
+
 
     </style>
   </head>
