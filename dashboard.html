@@ -4941,7 +4941,29 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
       color: var(--text-main) !important;
   }
 
+/* ====================================================================
+   🎨 DASHBOARD CARD TEXT INHERITANCE FIX (LIGHT & DARK MODE)
+   ==================================================================== */
 
+/* Force all dashboard card numerical display values to use dynamic theme color in light mode */
+#home #left-workspace .data p,
+#home #left-workspace .data p span,
+#home #left-workspace card span,
+#card_annual, #card_medical, #card_ot, #card_compassionate, #card_cf, #card_unpaid {
+    color: #1e293b !important; /* Deep dark slate for Light Mode */
+}
+
+/* Force bright white text when Dark Mode is active */
+html.dark #home #left-workspace .data p,
+html.dark #home #left-workspace .data p span,
+html.dark #card_annual, 
+html.dark #card_medical, 
+html.dark #card_ot, 
+html.dark #card_compassionate, 
+html.dark #card_cf, 
+html.dark #card_unpaid {
+    color: #f1f5f9 !important; /* High contrast white for Dark Mode */
+}
 
     </style>
   </head>
@@ -5321,24 +5343,26 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
                                     </div>
                                 </div>
                             
-                                <div class="card">
-                                    <div class="title" style="justify-content: space-between;">
-                                        <div style="display: flex; align-items: center;">
-                                            <span style="background-color: #f59e0b;"><i class="fas fa-clock"></i></span>
-                                            <p class="title-text">Overtime</p>
-                                        </div>
-                                    </div>
-                                    <div class="data">
-                                        <p id="card_ot"><span class="loading-pulse"></span></p>
-                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #6b7280; margin-bottom: 6px; font-weight: 600;">
-                                            <span>Banked Balance</span>
-                                            <span>Accumulated Hours</span>
-                                        </div>
-                                        <div class="range">
-                                            <div class="fill" id="bar_ot" style="background-color: #f59e0b; width: 100%;"></div>
-                                        </div>
-                                    </div>
-                                </div>
+<div class="card">
+    <div class="title" style="justify-content: space-between;">
+        <div style="display: flex; align-items: center;">
+            <span style="background-color: #f59e0b;"><i class="fas fa-clock"></i></span>
+            <p class="title-text">Overtime</p>
+        </div>
+    </div>
+    <div class="data">
+        <p id="card_ot"><span class="loading-pulse"></span></p>
+        <!-- 🚀 Swapped Bottom Footer Row -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <span style="background-color: #fef3c7; color: #d97706; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; border: 1px solid #fde68a; white-space: nowrap;">
+                Active Balance
+            </span>
+            <!-- <span style="font-size: 0.75rem; color: #6b7280; font-weight: 600;">
+                Accumulated Hours -->
+            </span>
+        </div>
+    </div>
+</div>
                             
                                 <div class="card">
                                     <div class="title" style="justify-content: space-between;">
@@ -6112,7 +6136,7 @@ html.dark #reviewSummary div[style*="background:#f1f5f9"] {
                                                             <label class="reg-label" style="font-size: 0.7rem; margin-bottom: 4px;">Calculation Unit</label>
                                                             <select id="ot_unit" class="saas-form-control" onchange="updateOTFields()" style="height: 34px !important; padding: 0 10px !important; font-size: 0.85rem;">
                                                                 <option value="hours">Hourly Based</option>
-                                                                <option value="days">Day Based</option>
+                                                                <!-- <option value="days">Day Based</option> -->
                                                             </select>
                                                         </div>
                 
@@ -24363,27 +24387,29 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
     }
 }
 
-      // Dynamic Time Fields (updateOTFields)
+    // Dynamic Time Fields (updateOTFields)
     function updateOTFields() {
     const unitEl = document.getElementById("ot_unit");
-    if (!unitEl) return; // 🛡️ Safety Guard
+    // Default to true/hours if ot_unit exists with "hours" or if the element is missing
+    const isHours = !unitEl || unitEl.value === "hours";
 
-    const unit = unitEl.value;
     const startWrapper = document.getElementById("ot_start_wrapper");
     const endWrapper = document.getElementById("ot_end_wrapper");
     const summaryBox = document.getElementById("ot_summary_box");
 
-    // Determine if we should show or hide (Hours = flex/grid, Days = none)
-    const displayStyle = (unit === "days") ? "none" : "block";
-
+    // Keep fields visible for hourly overtime
+    const displayStyle = isHours ? "block" : "none";
+        
     if (startWrapper) startWrapper.style.display = displayStyle;
     if (endWrapper) endWrapper.style.display = displayStyle;
 
-    if (unit === "days") {
-        if (summaryBox) summaryBox.style.display = "none";
-    } else {
-        // Recalculate duration if we switched back to hours
-        if (typeof calculateOTDuration === "function") calculateOTDuration();
+    if (summaryBox) {
+        summaryBox.style.display = displayStyle;
+    }
+
+    // Trigger calculation directly for hourly requests
+    if (isHours && typeof calculateOTDuration === "function") {
+        calculateOTDuration();
     }
 }
 
