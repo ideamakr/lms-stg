@@ -159,7 +159,7 @@ def _normalize_attachment_url(attachment_path: Optional[str]) -> Optional[str]:
     return f"/uploads/mcs/{clean_filename}"
 
 
-# 🚀 V1.5.1: THE ULTIMATE SPLIT-WALLET ENGINE (UNIFIED SYNC)
+# 🚀 V1.5.2: THE ULTIMATE SPLIT-WALLET ENGINE (UNIFIED SYNC)
 def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_type: str, include_pending: bool = False):
     import re
     from sqlalchemy import extract
@@ -192,7 +192,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         extract('year', models.Leave.start_date) == year
     ).all()
 
-# 📊 INDEPENDENT WALLET COUNTERS
+    # 📊 INDEPENDENT WALLET COUNTERS
     spent_annual = 0.0  
     spent_cf = 0.0      
     approved_taken_total = 0.0
@@ -203,18 +203,24 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         l_type = str(l.leave_type.value if hasattr(l.leave_type, 'value') else l.leave_type)
         status_str = str(l.status.value if hasattr(l.status, 'value') else l.status)
         
-        # --- 1. TRACK SUB-WALLET (Carry Forward) ---
+        # --- 1. TRACK SUB-WALLET (Carry Forward Claim Only) ---
         if l_type == "Claim Carry Forward":
+            # 🚀 FIXED: Claiming carry forward uses last year's banked days.
+            # It must ONLY increase spent_cf and NOT touch spent_annual!
             spent_cf += days
-        elif l_type in ["Annual Leave", "Emergency Leave"] and "[CARRY FORWARD" in (l.reason or ""):
-            match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
-            cf_part = float(match.group(1)) if match else days
-            spent_cf += cf_part
             
-        # --- 2. 🚀 THE FIX: UNIFIED MASTER DEDUCTION ---
-        # ALL approved time off (CF, AL, Emergency, or Medical) 
-        # MUST deduct from the master spent_annual pool to prevent double-dipping.
-        spent_annual += days
+        elif l_type in ["Annual Leave", "Emergency Leave"]:
+            if "[CARRY FORWARD" in (l.reason or ""):
+                # Carry Forward Request: banking current year leave
+                match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason or "")
+                cf_p = float(match.group(1)) if match else days
+                spent_annual += cf_p
+            else:
+                # Standard Annual or Emergency Leave consumption
+                spent_annual += days
+        else:
+            # Any other matched leave types
+            spent_annual += days
 
         # --- 3. TRACK UI STATUS ---
         if status_str in ["Pending", "Pending L2 Approval"]:
@@ -248,7 +254,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     if today > expiry_date:
         cf_banked = spent_cf
 
-# --- FETCH MAX DAYS FOR UI ---
+    # --- FETCH MAX DAYS FOR UI ---
     max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
     cf_max_days = float(max_setting.value) if max_setting and max_setting.value else 0.0
 
@@ -389,19 +395,13 @@ async def create_leave(
                 }
             )
 
-    # 3. HOLIDAY & DURATION CALCULATION (Synced with Frontend Rule)
-    holidays = db.query(models.PublicHoliday).all()
-    holiday_dates = [h.holiday_date for h in holidays]
-    
+# 3. HOLIDAY & DURATION CALCULATION (Simplified: Public holidays do not block or reduce leave days)
     if is_half_day_bool:
         days_requested = 0.5
     else:
         all_dates = pd.date_range(start=start_obj, end=end_obj)
-        if holiday_info:
-            # If applying on a holiday, count all weekdays (matching frontend live calculation)
-            working_days = [d for d in all_dates if d.weekday() < 5]
-        else:
-            working_days = [d for d in all_dates if d.weekday() < 5 and d.date() not in holiday_dates]
+        # 🚀 Open the gate: Count all weekdays between start and end, ignoring public holiday deductions
+        working_days = [d for d in all_dates if d.weekday() < 5]
         days_requested = float(len(working_days))
 
     # 4. FETCH BALANCE
@@ -1243,21 +1243,20 @@ def get_all_entitlements(db: Session = Depends(get_db)):
 @router.get("/manager/entitlements")
 @router.get("/admin/entitlements")
 def get_team_entitlements(
-    user_role: str,          
-    approver_name: str,      
+    user_role: str,           
+    approver_name: str,       
     db: Session = Depends(get_db), 
     name: str = "",
     x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
     current_year = datetime.now().year
-    today = datetime.now().date() # 🚀 ADDED: Capture today's date for expiry check
+    today = datetime.now().date() # 🚀 Capture today's date for expiry check
     
     # 1. Standardize Inputs
     role_clean = user_role.lower().strip()
     approver_clean = approver_name.strip()
 
     # 2. 🔍 DATABASE OVERRIDE: Check if user is an Admin or Superuser
-    # Look up by unique username first via header context, fallback to full_name matching
     requester = None
     if x_username:
         requester = db.query(models.User).filter(models.User.username == x_username).first()
@@ -1266,23 +1265,21 @@ def get_team_entitlements(
         
     if requester:
         user_roles_list = [r.role_name for r in requester.assigned_roles] if hasattr(requester, 'assigned_roles') else []
-        # 👑 God Mode: Elevate superuser to hr_admin clearance level to drop team filters
         if requester.role in ["hr_admin", "superuser"] or "hr_admin" in user_roles_list:
             role_clean = "hr_admin"
 
-# 3. RBAC Check
+    # 3. RBAC Check
     allowed_roles = ["hr_admin", "manager", "payroll", "payroll_approver"]
     if role_clean not in allowed_roles:
         return []
 
-    # 🚀 THE FIX: Target the exact row key 'cf_expiry_date'
+    # 🚀 Target the exact row key 'cf_expiry_date'
     setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
     expiry_date = None
     if setting and setting.value:
         try:
             date_str = str(setting.value).strip()
             if "/" in date_str:
-                # 🖥️ CLEANED: Removed the inline import line that was crashing the function scope
                 expiry_date = datetime.strptime(date_str, "%d/%m/%Y").date()
             else:
                 expiry_date = date.fromisoformat(date_str)
@@ -1291,20 +1288,16 @@ def get_team_entitlements(
     else:
         expiry_date = date(current_year, 3, 23)
 
-    # 🚀 FETCH MAX DAYS TARGET FOR PAYLOAD PIPELINE
+    # 🚀 Fetch max days target for payload pipeline
     max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
     cf_max_days = float(max_setting.value) if max_setting and max_setting.value else 0.0
 
     # ============================================================
-    # 📊 SECTION 4: SMART ROUTING QUERY (LM vs HOD vs HR) (FIXED)
+    # 📊 SECTION 4: SMART ROUTING QUERY
     # ============================================================
-    # 1. Base query (Always hide superuser from balances)
     users_query = db.query(models.User).filter(models.User.role != "superuser")
 
     if role_clean != "hr_admin":
-        # 🚀 THE NUCLEAR FIX: 
-        # We cast the JSONB columns to String so the LIKE operator (~~) 
-        # works correctly in PostgreSQL. This stops the 500 Internal Server Error.
         users_query = users_query.filter(
             or_(
                 cast(models.User.line_manager, String).ilike(f"%{approver_clean}%"),
@@ -1312,16 +1305,13 @@ def get_team_entitlements(
             )
         )
         
-        # 💡 NOTE: The User Profile is now the absolute Source of Truth.
-
-    # 2. Apply Name Search (if manager is typing in the search box)
     if name:
         users_query = users_query.filter(models.User.full_name.ilike(f"%{name.strip()}%"))
 
     try:
         users = users_query.all()
         if not users: 
-            return [] # Returns empty list safely if no staff assigned
+            return []
             
         user_names = [u.full_name for u in users]
 
@@ -1346,7 +1336,6 @@ def get_team_entitlements(
             "Compassionate Leave": policy.compassionate_days if policy else 3.0
         }
         
-        # 🗺️ Map data for quick O(1) lookup
         bal_map = {uname: [] for uname in user_names}
         for b in all_balances: 
             bal_map[b.employee_name].append(b)
@@ -1357,13 +1346,13 @@ def get_team_entitlements(
 
         results = []
 
-        # 🚀 START CALCULATION LOOP
+        # 🚀 START CALCULATION LOOP (PROPERLY INDENTED)
         for u in users:
             emp_name = u.full_name
             u_bals = bal_map.get(emp_name, [])
             u_leaves = leave_map.get(emp_name, [])
 
- # 🛠️ INTERNAL BUCKET CALCULATOR
+            # 🛠️ INTERNAL BUCKET CALCULATOR (Correctly scoped inside the user loop)
             def get_bucket(l_type):
                 b = next((x for x in u_bals if str(getattr(x.leave_type, 'value', x.leave_type)) == l_type), None)
                 ent = float(b.entitlement or 0.0) if b else defaults.get(l_type, 0.0)
@@ -1382,19 +1371,20 @@ def get_team_entitlements(
                         
                         if l_type_str == "Claim Carry Forward":
                             spent_cf += days
+                            spent_annual += days
                         elif l_type_str in ["Annual Leave", "Emergency Leave"]:
                             if "[CARRY FORWARD" in (l.reason or ""):
+                                # 🛡️ THE FIX: Carry Forward Requests bank current year annual leave.
+                                # They must ONLY deduct from spent_annual, leaving spent_cf (last year's balance) untouched!
                                 match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
                                 cf_p = float(match.group(1)) if match else days
-                                spent_cf += cf_p
-                                spent_annual += max(0, days - cf_p)
+                                spent_annual += cf_p
                             else:
                                 spent_annual += days
                         else:
                             spent_annual += days
                 
-                # 🚀 ADDED: ENFORCE THE EXPIRY DEADLINE
-                # If the deadline has passed, unspent CF days are forfeited from the display
+                # 🚀 Enforce expiry deadline
                 if l_type == "Annual Leave" and today > expiry_date:
                     cf_banked = spent_cf
                             
@@ -1406,8 +1396,6 @@ def get_team_entitlements(
 
             ann = get_bucket("Annual Leave")
             med = get_bucket("Medical Leave")
-            
-            # 🚀 PRESERVED: Emergency & Compassionate additions
             emg = get_bucket("Emergency Leave")
             com = get_bucket("Compassionate Leave")
             
@@ -1415,7 +1403,6 @@ def get_team_entitlements(
                                if str(getattr(l.leave_type, 'value', l.leave_type)) == "Unpaid Leave" 
                                and str(getattr(l.status, 'value', l.status)) == "Approved")
 
-            # 🚀 Format variations for absolute JavaScript binding safety inside Step 2
             expiry_iso = expiry_date.strftime("%Y-%m-%d") if expiry_date else None
             expiry_slash = expiry_date.strftime("%d/%m/%Y") if expiry_date else None
             expiry_human = expiry_date.strftime("%d %b %Y") if expiry_date else None
@@ -1428,20 +1415,17 @@ def get_team_entitlements(
                 "annual_entitlement": ann["ent"],
                 "medical_remaining": med["rem"],
                 "medical_entitlement": med["ent"],
-                
-                # 🚀 PRESERVED: Emergency & Compassionate dictionary fields
                 "emergency_remaining": emg["rem"],
                 "emergency_entitlement": emg["ent"],
                 "compassionate_remaining": com["rem"],
                 "compassionate_entitlement": com["ent"],
-                
                 "unpaid_taken": unpaid_taken,
                 "carry_forward_total": ann["cf_rem"], 
-                "cf_expiry_date": expiry_iso,       # 🚀 Synced to standard ISO
-                "expiry_date": expiry_iso,          # 🚀 Secondary fallback
-                "cf_expiry_label": expiry_slash,    # 🚀 Direct HTML mapping match (DD/MM/YYYY)
-                "expiry_human": expiry_human,       # 🚀 Human-readable layout match
-                "cf_max_days": cf_max_days, 
+                "cf_expiry_date": expiry_iso,
+                "expiry_date": expiry_iso,
+                "cf_expiry_label": expiry_slash,
+                "expiry_human": expiry_human,
+                "cf_max_days": cf_max_days,
                 "overtime_bank": float(getattr(u, 'overtime_bank', 0) or 0)
             })
             
