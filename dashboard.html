@@ -6605,76 +6605,77 @@ html.dark #card_unpaid {
                             </div> 
                         </div> 
             
-                        <div id="reg_step_3" class="reg-step-content" style="display: none;">
-                            <div class="saas-card" style="width: 100%; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden;">
-                                <div style="padding: 20px 30px; border-bottom: 1px solid #f1f5f9; background: #f8fafc;">
-                                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;"><i class="fas fa-address-book" style="margin-right: 10px; color: #f59e0b;"></i>Contact & Logistics Node</h3>
-                                </div>
-                                <div style="padding: 35px;">
-                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px 30px;">
-                                        <div class="saas-form-group">
-                                            <label class="reg-label">Personal Mobile</label>
-                                            <input type="tel" id="reg_mobile_new" class="saas-form-control" placeholder="+60...">
-                                        </div>
-                                        <div class="saas-form-group" style="grid-column: span 2;">
-                                            <label class="reg-label">Personal Email</label>
-                                            <input type="email" id="reg_personal_email_new" class="saas-form-control">
-                                        </div>
-                                        <div class="saas-form-group" style="grid-column: span 3;">
-                                            <label class="reg-label">Home Address</label>
-                                            <textarea id="reg_home_address_new" class="saas-form-control" rows="2" maxlength="200" oninput="updateCharCount(this, 'home_addr_count')" style="min-height: 80px !important;"></textarea>
-                                            <div style="text-align: right;"><small id="home_addr_count" style="color: #94a3b8;">0/200</small></div>
-                                        </div>
-                                        <div class="saas-form-group" style="grid-column: span 3;">
-                                            <label class="reg-label">Current Address</label>
-                                            <textarea id="reg_current_address_new" class="saas-form-control" rows="2" maxlength="200" oninput="updateCharCount(this, 'curr_addr_count')" style="min-height: 80px !important;"></textarea>
-                                            <div style="text-align: right;"><small id="curr_addr_count" style="color: #94a3b8;">0/200</small></div>
-                                        </div>
+ <div id="reg_step_3" class="reg-step-content" style="display: none;">
+    <div class="saas-card" style="width: 100%; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column;">
+        <!-- Fixed Header -->
+        <div style="padding: 20px 30px; border-bottom: 1px solid #f1f5f9; background: #f8fafc; flex-shrink: 0;">
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;"><i class="fas fa-address-book" style="margin-right: 10px; color: #f59e0b;"></i>Contact & Logistics Node</h3>
+        </div>
+        <!-- Scrollable Form Body -->
+        <div style="padding: 35px; max-height: 55vh; overflow-y: auto;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px 30px;">
+                <div class="saas-form-group">
+                    <label class="reg-label">Personal Mobile</label>
+                    <input type="tel" id="reg_mobile_new" class="saas-form-control" placeholder="+60...">
+                </div>
+                <div class="saas-form-group" style="grid-column: span 2;">
+                    <label class="reg-label">Personal Email</label>
+                    <input type="email" id="reg_personal_email_new" class="saas-form-control">
+                </div>
+                <div class="saas-form-group" style="grid-column: span 3;">
+                    <label class="reg-label">Home Address</label>
+                    <textarea id="reg_home_address_new" class="saas-form-control" rows="2" maxlength="200" oninput="updateCharCount(this, 'home_addr_count')" style="min-height: 80px !important;"></textarea>
+                    <div style="text-align: right;"><small id="home_addr_count" style="color: #94a3b8;">0/200</small></div>
+                </div>
+                <div class="saas-form-group" style="grid-column: span 3;">
+                    <label class="reg-label">Current Address</label>
+                    <textarea id="reg_current_address_new" class="saas-form-control" rows="2" maxlength="200" oninput="updateCharCount(this, 'curr_addr_count')" style="min-height: 80px !important;"></textarea>
+                    <div style="text-align: right;"><small id="curr_addr_count" style="color: #94a3b8;">0/200</small></div>
+                </div>
 
-                                        <div style="grid-column: span 3; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin: 10px 0;">
-                                            <h4 style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-ambulance" style="margin-right: 8px; color: #ef4444;"></i>Emergency Contact</h4>
-                                        </div>
-                                        <div class="saas-form-group">
-                                            <label class="reg-label">Contact Name</label>
-                                            <input type="text" id="reg_em_name" class="saas-form-control">
-                                        </div>
-                                        <div class="saas-form-group">
-                                            <label class="reg-label">Relationship</label>
-                                            <input type="text" id="reg_em_rel" class="saas-form-control">
-                                        </div>
-                                        <div class="saas-form-group">
-                                            <label class="reg-label">Mobile Number</label>
-                                            <input type="tel" id="reg_em_mobile" class="saas-form-control">
-                                        </div>
+                <div style="grid-column: span 3; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin: 10px 0;">
+                    <h4 style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-ambulance" style="margin-right: 8px; color: #ef4444;"></i>Emergency Contact</h4>
+                </div>
+                <div class="saas-form-group">
+                    <label class="reg-label">Contact Name</label>
+                    <input type="text" id="reg_em_name" class="saas-form-control">
+                </div>
+                <div class="saas-form-group">
+                    <label class="reg-label">Relationship</label>
+                    <input type="text" id="reg_em_rel" class="saas-form-control">
+                </div>
+                <div class="saas-form-group">
+                    <label class="reg-label">Mobile Number</label>
+                    <input type="tel" id="reg_em_mobile" class="saas-form-control">
+                </div>
 
-                                        <div style="grid-column: span 3; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin: 25px 0 10px 0;">
-                                            <h4 style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-university" style="margin-right: 8px; color: #2563eb;"></i>Banking Disbursal Configuration</h4>
-                                        </div>
-                                        <div class="saas-form-group">
-                                            <label class="reg-label">Bank Holder Name</label>
-                                            <input type="text" id="reg_bank_holder_name" class="saas-form-control" placeholder="Account Holder Full Name">
-                                        </div>
-                                        <div class="saas-form-group">
-                                            <label class="reg-label">Bank Institution Name</label>
-                                            <input type="text" id="reg_bank_name" class="saas-form-control" placeholder="e.g. Maybank / CIMB">
-                                        </div>
-                                        <div class="saas-form-group">
-                                            <label class="reg-label">Account Number</label>
-                                            <input type="text" id="reg_bank_account_number" class="saas-form-control" placeholder="Numeric account string">
-                                        </div>
-                                        <div class="saas-form-group">
-                                            <label class="reg-label">Bank Account Status</label>
-                                            <select id="reg_bank_account_status" class="saas-form-control">
-                                                <option value="Active" selected>Active</option>
-                                                <option value="Inactive">Inactive</option>
-                                                <option value="Pending-Verification">Pending Verification</option>
-                                            </select>
-                                        </div>
-
-                                    </div> 
-                                </div> 
-                            </div> 
-                        </div>
+                <div style="grid-column: span 3; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin: 25px 0 10px 0;">
+                    <h4 style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-university" style="margin-right: 8px; color: #2563eb;"></i>Banking Disbursal Configuration</h4>
+                </div>
+                <div class="saas-form-group">
+                    <label class="reg-label">Bank Holder Name</label>
+                    <input type="text" id="reg_bank_holder_name" class="saas-form-control" placeholder="Account Holder Full Name">
+                </div>
+                <div class="saas-form-group">
+                    <label class="reg-label">Bank Institution Name</label>
+                    <input type="text" id="reg_bank_name" class="saas-form-control" placeholder="e.g. Maybank / CIMB">
+                </div>
+                <div class="saas-form-group">
+                    <label class="reg-label">Account Number</label>
+                    <input type="text" id="reg_bank_account_number" class="saas-form-control" placeholder="Numeric account string">
+                </div>
+                <div class="saas-form-group">
+                    <label class="reg-label">Bank Account Status</label>
+                    <select id="reg_bank_account_status" class="saas-form-control">
+                        <option value="Active" selected>Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Pending-Verification">Pending Verification</option>
+                    </select>
+                </div>
+            </div> 
+        </div> 
+    </div> 
+</div>
                         
                         <div style="margin-top: 35px; display: flex; justify-content: space-between; align-items: center;">
                             <div style="display: flex; gap: 30px; align-items: center;">
