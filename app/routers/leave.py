@@ -17,6 +17,8 @@ from pydantic import BaseModel
 from app import models
 from app.database import SessionLocal
 from app.dependencies import validate_session
+from sqlalchemy import extract
+
 
 # ============================================================
 # 🕒 TIMEZONE UTILITIES (FIXED: Save UTC, Convert for Display)
@@ -164,10 +166,10 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     import re
     from sqlalchemy import extract
     from datetime import date, datetime
-    
+
     # 1. Bucket Mapping
     shared_annual_bucket = ["Annual Leave", "Emergency Leave", "Claim Carry Forward"]
-    
+
     if leave_type in shared_annual_bucket:
         target_entitlement_type = "Annual Leave"
         types_to_scan = shared_annual_bucket
@@ -181,7 +183,8 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         models.LeaveBalance.leave_type == target_entitlement_type
     ).first()
 
-    if not balance_entry: return None
+    if not balance_entry:
+        return None
 
     # Fetch all active records
     active_statuses = ["Approved", "Pending", "Pending Cancel", "Pending L2 Approval"]
@@ -193,8 +196,8 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     ).all()
 
     # 📊 INDEPENDENT WALLET COUNTERS
-    spent_annual = 0.0  
-    spent_cf = 0.0      
+    spent_annual = 0.0
+    spent_cf = 0.0
     approved_taken_total = 0.0
     pending_total = 0.0
 
@@ -202,13 +205,13 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         days = float(l.days_taken or 0.0)
         l_type = str(l.leave_type.value if hasattr(l.leave_type, 'value') else l.leave_type)
         status_str = str(l.status.value if hasattr(l.status, 'value') else l.status)
-        
+
         # --- 1. TRACK SUB-WALLET (Carry Forward Claim Only) ---
         if l_type == "Claim Carry Forward":
             # 🚀 FIXED: Claiming carry forward uses last year's banked days.
             # It must ONLY increase spent_cf and NOT touch spent_annual!
             spent_cf += days
-            
+
         elif l_type in ["Annual Leave", "Emergency Leave"]:
             if "[CARRY FORWARD" in (l.reason or ""):
                 # Carry Forward Request: banking current year leave
@@ -232,10 +235,12 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     base_entitlement = float(balance_entry.entitlement or 0.0)
     cf_banked = float(balance_entry.carry_forward_total or 0.0)
     today = datetime.now().date()
-    
+
     # 🚀 THE FIX: Target the exact row key from the database
-    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
-    
+    setting = db.query(models.SystemSetting).filter(
+        models.SystemSetting.key == "cf_expiry_date"
+    ).first()
+
     expiry_date = None
     if setting and setting.value:
         try:
@@ -246,7 +251,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
             else:
                 expiry_date = date.fromisoformat(date_str)
         except:
-            expiry_date = date(year, 3, 23) # Fallback
+            expiry_date = date(year, 3, 23)  # Fallback
     else:
         expiry_date = date(year, 3, 23)
 
@@ -255,7 +260,9 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         cf_banked = spent_cf
 
     # --- FETCH MAX DAYS FOR UI ---
-    max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
+    max_setting = db.query(models.SystemSetting).filter(
+        models.SystemSetting.key == "cf_max_days"
+    ).first()
     cf_max_days = float(max_setting.value) if max_setting and max_setting.value else 0.0
 
     # 5. FINAL CALCULATION
@@ -267,20 +274,32 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     expiry_slash = expiry_date.strftime("%d/%m/%Y") if expiry_date else None
     expiry_human = expiry_date.strftime("%d %b %Y") if expiry_date else None
 
+    # 🚀 NEW: Fetch overtime bank from User table
+    user = db.query(models.User).filter(
+        or_(
+            models.User.full_name == employee_name,
+            models.User.username == employee_name
+        )
+    ).first()
+
     return {
         "employee_name": employee_name,
         "year": year,
         "leave_type": target_entitlement_type,
-        "entitlement": base_entitlement, 
-        "carry_forward_total": max(0, cf_remaining), 
-        "remaining": annual_remaining,                
+        "entitlement": base_entitlement,
+        "carry_forward_total": max(0, cf_remaining),
+        "remaining": annual_remaining,
         "taken": approved_taken_total,
         "pending_total": pending_total,
+
+        # 🚀 NEW: Include OT Bank for dashboard
+        "overtime_bank": float(user.overtime_bank or 0.0) if user else 0.0,
+
         "expiry_date": expiry_iso,          # 🚀 Powers Application Center Form
         "cf_expiry_date": expiry_iso,       # 🚀 Standard fallback
         "cf_expiry_label": expiry_slash,    # 🚀 Matches HTML element ID directly
         "expiry_human": expiry_human,       # 🚀 Human readable option (e.g., 30 Jun 2026)
-        "cf_max_days": cf_max_days 
+        "cf_max_days": cf_max_days
     }
 
 
@@ -1315,6 +1334,25 @@ def get_team_entitlements(
             
         user_names = [u.full_name for u in users]
 
+        # 🚀 Bulk Fetch Approved OT Balances
+        approved_ot = (
+            db.query(
+                models.Overtime.employee_name,
+                func.coalesce(func.sum(models.Overtime.total_value), 0).label("ot_balance")
+            )
+            .filter(
+                models.Overtime.status == "Approved",
+                models.Overtime.employee_name.in_(user_names)
+            )
+            .group_by(models.Overtime.employee_name)
+            .all()
+        )
+
+        ot_map = {
+            row.employee_name: float(row.ot_balance or 0)
+            for row in approved_ot
+        }
+
         # 🚀 Bulk Fetch Balances and Leaves for Performance
         all_balances = db.query(models.LeaveBalance).filter(
             models.LeaveBalance.employee_name.in_(user_names),
@@ -1349,6 +1387,7 @@ def get_team_entitlements(
         # 🚀 START CALCULATION LOOP (PROPERLY INDENTED)
         for u in users:
             emp_name = u.full_name
+            ot_balance = ot_map.get(emp_name, 0.0)
             u_bals = bal_map.get(emp_name, [])
             u_leaves = leave_map.get(emp_name, [])
 
@@ -1648,42 +1687,202 @@ def update_policy(settings: dict = Body(...), db: Session = Depends(get_db)):
     return {"message": "Global policy updated and synced for all employees."}
 
 @router.post("/admin/adjust-individual")
-def adjust_individual_balance(data: dict = Body(...), db: Session = Depends(get_db)):
+def adjust_individual_balance(
+    background_tasks: BackgroundTasks,
+    data: dict = Body(...),
+    db: Session = Depends(get_db),
+    x_username: Optional[str] = Header(None)
+):
     name = data.get("employee_name")
-    year = data.get("year")
+
+    # ==========================================================
+    # Defensive cleanup:
+    # Normalize employee name in case the frontend accidentally
+    # sends a UI label (e.g. "Adjusting: John Doe").
+    # ==========================================================
+    if name:
+        name = (
+            name.replace("Adjusting:", "")
+                .replace("Employee:", "")
+                .strip()
+        )
+
+    year = data.get("year") or datetime.now().year
+    remark = data.get("remark", "No remark provided")
+    adjustment_type = data.get("adjustment_type", "Manual Override")
+
+    if not name:
+        raise HTTPException(
+            status_code=400,
+            detail="Employee name is required."
+        )
+
+    # 1. Resolve Acting Admin Name for Audit & Email
+    admin_user = (
+        db.query(models.User)
+        .filter(models.User.username == x_username)
+        .first()
+        if x_username else None
+    )
+    admin_name = admin_user.full_name if admin_user else "HR Administrator"
+
+    # 2. Fetch Employee Record for Overtime Bank & Email
+    employee = db.query(models.User).filter(
+        or_(
+            models.User.full_name == name,
+            models.User.username == name
+        )
+    ).first()
     
+    employee_email = employee.email if employee else None
+
+    # 3. Capture "Before" Values (Snapshot for Audit & Email)
+    old_values = {
+        "annual_leave": 0.0,
+        "medical_leave": 0.0,
+        "emergency_leave": 0.0,
+        "compassionate_leave": 0.0,
+        "overtime_hours": float(getattr(employee, 'overtime_bank', 0.0) or 0.0),
+        "carry_forward_days": 0.0
+    }
+
+    # Fetch existing leave balances to record initial states
+    existing_balances = db.query(models.LeaveBalance).filter(
+        models.LeaveBalance.employee_name == name,
+        models.LeaveBalance.year == year
+    ).all()
+
+    for b in existing_balances:
+        b_type = str(getattr(b.leave_type, 'value', b.leave_type))
+        if b_type == "Annual Leave":
+            old_values["annual_leave"] = float(b.entitlement or 0.0)
+            old_values["carry_forward_days"] = float(b.carry_forward_total or 0.0)
+        elif b_type == "Medical Leave":
+            old_values["medical_leave"] = float(b.entitlement or 0.0)
+        elif b_type == "Emergency Leave":
+            old_values["emergency_leave"] = float(b.entitlement or 0.0)
+        elif b_type == "Compassionate Leave":
+            old_values["compassionate_leave"] = float(b.entitlement or 0.0)
+
+    # 4. Process Standard Leave Entitlements
     types_mapping = {
         "Annual Leave": data.get("annual"),
         "Medical Leave": data.get("medical"),
         "Emergency Leave": data.get("emergency"),
         "Compassionate Leave": data.get("compassionate")
     }
-    
-    for leave_type, days in types_mapping.items():
-        if days is None: continue 
+
+    new_values = old_values.copy()
+
+    for leave_type, val in types_mapping.items():
+        if val is None:
+            continue
         
+        new_val = float(val)
+        if leave_type == "Annual Leave":
+            new_values["annual_leave"] = new_val
+        elif leave_type == "Medical Leave":
+            new_values["medical_leave"] = new_val
+        elif leave_type == "Emergency Leave":
+            new_values["emergency_leave"] = new_val
+        elif leave_type == "Compassionate Leave":
+            new_values["compassionate_leave"] = new_val
+
+         # ==========================================================
+    # 🔍 DEBUG: Verify why LeaveBalance lookup is failing
+    # ==========================================================
+        print("\n========== LEAVEBALANCE DEBUG ==========")
+        print(f"Searching for:")
+        print(f"  Employee : {repr(name)}")
+        print(f"  Year     : {repr(year)}")
+        print(f"  Type     : {repr(leave_type)}")
+        
+
         balance = db.query(models.LeaveBalance).filter(
             models.LeaveBalance.employee_name == name,
             models.LeaveBalance.year == year,
             models.LeaveBalance.leave_type == leave_type
         ).first()
-        
+
         if balance:
-            balance.entitlement = float(days)
+            balance.entitlement = new_val
         else:
-            # Create if missing
             new_bal = models.LeaveBalance(
                 employee_name=name,
                 year=year,
                 leave_type=leave_type,
-                entitlement=float(days),
-                remaining=float(days),
+                entitlement=new_val,
+                remaining=new_val,
                 carry_forward_total=0.0
             )
             db.add(new_bal)
-            
-    db.commit()
-    return {"message": f"Successfully updated balances for {name}"}
+
+    # 5. Handle Overtime Hours Adjustment (Delta or Direct)
+    ot_val = data.get("overtime_hours")
+    if ot_val is not None and employee:
+        new_ot = float(ot_val)
+        employee.overtime_bank = new_ot
+        new_values["overtime_hours"] = new_ot
+
+# 6. Handle Carry Forward Days Adjustment
+    cf_val = data.get("carry_forward_days")
+    if cf_val is not None:
+        new_cf = float(cf_val)
+        new_values["carry_forward_days"] = new_cf
+
+        ann_balance = db.query(models.LeaveBalance).filter(
+            models.LeaveBalance.employee_name == name,
+            models.LeaveBalance.year == year,
+            models.LeaveBalance.leave_type == "Annual Leave"
+        ).first()
+
+        if ann_balance:
+            ann_balance.carry_forward_total = new_cf
+        else:
+            db.add(models.LeaveBalance(
+                employee_name=name,
+                year=year,
+                leave_type="Annual Leave",
+                entitlement=14.0,
+                remaining=14.0 + new_cf,
+                carry_forward_total=new_cf
+            ))
+
+    # =========================================================================
+    # 🛡️ CHANGE DETECTION GUARD: Prevent Duplicate / Redundant Entries
+    # =========================================================================
+    if old_values == new_values:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "No changes detected. The submitted balance values are identical to the current database records."}
+        )
+
+    # 7. Safe Transaction Commit
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"❌ DB Adjustment Error: {e}")
+        raise HTTPException(status_code=500, detail="Database transaction failed during balance update.")
+
+    # 8. Queue Background Email Dispatch
+    if employee_email:
+        send_balance_adjustment_email(
+            background_tasks=background_tasks,
+            employee_email=employee_email,
+            employee_name=name,
+            admin_name=admin_name,
+            adjustment_type=adjustment_type,
+            old_values=old_values,
+            new_values=new_values,
+            remark=remark
+        )
+
+    return {
+        "message": f"Successfully updated balances for {name}",
+        "old_values": old_values,
+        "new_values": new_values
+    }
 
 # ============================================================
 # 📊 HR ADMIN: REPORTING & AUDIT
@@ -1816,6 +2015,8 @@ def get_cf_processing_list(
         if status == "Pending" and is_merged: continue
         if status == "Merged" and not is_merged: continue
         if year and year != "All" and origin_year != year: continue
+
+        
         
         target_balance = db.query(models.LeaveBalance).filter(
             models.LeaveBalance.employee_name == req.employee_name,
@@ -2016,3 +2217,67 @@ def get_activity_feed(employee_name: str, db: Session = Depends(get_db)):
 
     return formatted_logs
 
+def send_balance_adjustment_email(
+    background_tasks: BackgroundTasks,
+    employee_email: str,
+    employee_name: str,
+    admin_name: str,
+    adjustment_type: str,
+    old_values: dict,
+    new_values: dict,
+    remark: str
+):
+    """Sends a formatted HTML notification email for balance adjustments in the background."""
+    if not employee_email:
+        print("⚠️ Employee email not found. Skipping adjustment notification.")
+        return
+
+    try:
+        subject = f"Notice: Leave Balance Adjustment - {adjustment_type}"
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #333;">
+            <h2>Leave & Balance Amendment Notification</h2>
+            <p>Hello <b>{employee_name}</b>,</p>
+            <p>Your leave/OT balances have been updated by HR admin <b>{admin_name}</b>.</p>
+            
+            <p><b>Adjustment Type:</b> {adjustment_type}</p>
+            <p><b>HR Remark / Reason:</b> {remark}</p>
+            
+            <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; max-width: 600px; margin-top: 15px;">
+                <tr style="background-color: #f4f4f4;">
+                    <th>Balance Type</th>
+                    <th>Before</th>
+                    <th>After</th>
+                </tr>
+                <tr>
+                    <td>Annual Leave</td>
+                    <td>{old_values.get('annual_leave', 0)} days</td>
+                    <td><b>{new_values.get('annual_leave', 0)} days</b></td>
+                </tr>
+                <tr>
+                    <td>Overtime Hours</td>
+                    <td>{old_values.get('overtime_hours', 0)} hrs</td>
+                    <td><b>{new_values.get('overtime_hours', 0)} hrs</b></td>
+                </tr>
+                <tr>
+                    <td>Carry Forward Days</td>
+                    <td>{old_values.get('carry_forward_days', 0)} days</td>
+                    <td><b>{new_values.get('carry_forward_days', 0)} days</b></td>
+                </tr>
+            </table>
+            
+            <p style="margin-top: 20px; font-size: 12px; color: #777;">
+                This is an automated notification from the PS YAP & CO. Leave System. Please contact HR if you require clarification.
+            </p>
+        </body>
+        </html>
+        """
+        
+        # Dispatch using your existing send_email utility via background tasks
+        background_tasks.add_task(send_email, employee_email, subject, html_content)
+        print(f"📧 Adjustment email queued for background dispatch to: {employee_email}")
+
+    except Exception as e:
+        print(f"❌ Failed to queue adjustment email: {e}")

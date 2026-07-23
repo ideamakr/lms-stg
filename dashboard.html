@@ -19019,44 +19019,76 @@ const currentYear = new Date().getFullYear();
         Search
     </button>
 </div>
-                    <div id="adjustment_form_container" style="display: none; background: #fff; padding: 30px; border-radius: 16px; border: 1px solid #e2e8f0; max-width: 800px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9;">
-                             <h4 id="adj_emp_name" style="margin: 0; color: #1e293b; font-size: 1.2rem; display:flex; align-items:center; gap:10px;">
-                                <div style="width:32px; height:32px; background:#e0f2fe; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#0369a1;"><i class="fas fa-user-edit"></i></div>
-                                <span>Adjusting User</span>
-                             </h4>
-                             <button class="icon-btn" onclick="resetAdjustmentForm()" style="color:#64748b; border:none; background:transparent;"><i class="fas fa-times"></i></button>
-                        </div>
+<div id="adjustment_form_container" style="display: none; background: #fff; padding: 30px; border-radius: 16px; border: 1px solid #e2e8f0; max-width: 800px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9;">
+         <h4 id="adj_emp_name" style="margin: 0; color: #1e293b; font-size: 1.2rem; display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; background:#e0f2fe; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#0369a1;"><i class="fas fa-user-edit"></i></div>
+            <span>Adjusting User</span>
+         </h4>
+         <button class="icon-btn" onclick="resetAdjustmentForm()" style="color:#64748b; border:none; background:transparent;"><i class="fas fa-times"></i></button>
+    </div>
 
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-                            <div class="form-group">
-                                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b;">ANNUAL LEAVE</label>
-                                <input type="number" id="adj_annual" class="saas-form-control">
-                            </div>
-                            <div class="form-group">
-                                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b;">MEDICAL LEAVE</label>
-                                <input type="number" id="adj_medical" class="saas-form-control">
-                            </div>
-                            <div class="form-group">
-                                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b;">EMERGENCY LEAVE</label>
-                                <input type="number" id="adj_emergency" class="saas-form-control">
-                            </div>
-                            <div class="form-group">
-                                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b;">COMPASSIONATE LEAVE</label>
-                                <input type="number" id="adj_compassionate" class="saas-form-control">
-                            </div>
-                        </div>
+    <!-- Wrapped in a form to intercept submission and trigger the confirmation review modal -->
+    <form id="individual-adj-form" onsubmit="openConfirmationModal(event)">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+            <div class="form-group">
+                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">ANNUAL LEAVE (Days)</label>
+                <input type="number" step="0.5" id="adj_annual" class="saas-form-control" value="0">
+            </div>
+            <div class="form-group">
+                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">MEDICAL LEAVE (Days)</label>
+                <input type="number" step="0.5" id="adj_medical" class="saas-form-control" value="0">
+            </div>
+            <div class="form-group">
+                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">EMERGENCY LEAVE (Days)</label>
+                <input type="number" step="0.5" id="adj_emergency" class="saas-form-control" value="0">
+            </div>
+            <div class="form-group">
+                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">COMPASSIONATE LEAVE (Days)</label>
+                <input type="number" step="0.5" id="adj_compassionate" class="saas-form-control" value="0">
+            </div>
+            <div class="form-group">
+                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">OVERTIME HOURS (Hrs)</label>
+                <input type="number" step="0.5" id="adj_ot" class="saas-form-control" value="0">
+            </div>
+            <div class="form-group">
+                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">CARRY FORWARD DAYS (Days)</label>
+                <input type="number" step="0.5" id="adj_cf" class="saas-form-control" value="0">
+            </div>
+        </div>
 
-                        <button class="btn" onclick="saveIndividualAdjustment()" style="background: #10b981; margin-top: 25px; width: 100%; height: 48px; font-weight: 700; font-size: 1rem;">
-                            <i class="fas fa-check-circle" style="margin-right: 8px;"></i> Save Adjustments
-                        </button>
-                    </div>
+        <div class="form-group" style="margin-top: 20px;">
+            <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">MANDATORY HR AUDIT REMARK / REASON</label>
+            <textarea id="adj_remark" class="saas-form-control" rows="3" placeholder="Provide reason for adjustment (required for email notification & audit trail)..." required style="height: auto; padding: 12px;"></textarea>
+        </div>
 
-                    <div id="adj_placeholder" style="text-align: center; padding: 40px; color: #cbd5e1;">
-                         <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                         <p>Search for an employee to adjust their specific entitlements.</p>
-                    </div>
-                </div>
+        <button type="submit" class="btn" style="background: #3b82f6; margin-top: 25px; width: 100%; height: 48px; font-weight: 700; font-size: 1rem; color: white;">
+            <i class="fas fa-eye" style="margin-right: 8px;"></i> Review & Save Adjustments
+        </button>
+    </form>
+</div>
+
+<div id="adj_placeholder" style="text-align: center; padding: 40px; color: #cbd5e1;">
+     <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 15px;"></i>
+     <p>Search for an employee to adjust their specific entitlements.</p>
+</div>
+
+<!-- Before vs After Interactive Confirmation Modal -->
+<div id="confirmation-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center; z-index: 1050;">
+    <div style="background: white; border-radius: 16px; padding: 30px; max-width: 550px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+        <h3 style="margin-top: 0; font-size: 1.25rem; color: #1e293b; margin-bottom: 10px;">Confirm Balance Adjustments</h3>
+        <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 20px;">Please review the side-by-side changes below before committing to the database:</p>
+        
+        <div id="modal-summary-content" style="margin-bottom: 25px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.9rem;">
+            <!-- Dynamically injected comparison table will render here -->
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" onclick="closeConfirmationModal()" style="background: #e2e8f0; color: #475569; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
+            <button type="button" onclick="executeFinalAdjustment()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;"><i class="fas fa-check" style="margin-right: 6px;"></i> Proceed & Commit</button>
+        </div>
+    </div>
+</div>
 
                 <div id="policy_cf_view" style="display: none;">
                     
@@ -19550,72 +19582,75 @@ const currentYear = new Date().getFullYear();
         );
       }
 
-      async function searchEmployeeForAdjustment() {
-        const nameInput = document.getElementById("policy_user_search");
-        const name = nameInput.value.trim();
-        if (!name) return alert("Please enter a name.");
+     async function searchEmployeeForAdjustment() {
+    const nameInput = document.getElementById("policy_user_search");
+    const name = nameInput.value.trim();
+    if (!name) return alert("Please enter a name.");
 
-        // 1. Identify context (Backend requires these to authorize the search)
-        const primaryRole = userRoles.includes("hr_admin")
-          ? "hr_admin"
-          : "manager";
-        const currentYear = new Date().getFullYear();
+    // 1. Identify context (Backend requires these to authorize the search)
+    const primaryRole = userRoles.includes("hr_admin")
+        ? "hr_admin"
+        : "manager";
 
-        try {
-          // 2. Build the full query string with ALL required parameters
-          const params = new URLSearchParams({
-            user_role: primaryRole, // MATCHES Python 'user_role'
-            approver_name: currentUser, // MATCHES Python 'approver_name'
-            name: name, // MATCHES Python 'name'
-          });
+    try {
+        // 2. Build the full query string with ALL required parameters
+        const params = new URLSearchParams({
+            user_role: primaryRole,
+            approver_name: currentUser,
+            name: name,
+        });
 
-          const res = await fetchWithAuth(
+        const res = await fetchWithAuth(
             `${API_URL}/leaves/manager/entitlements?${params.toString()}`
-          );
+        );
 
-          if (!res.ok) {
+        if (!res.ok) {
             const errData = await res.json();
             throw new Error(errData.detail || "Search failed");
-          }
-
-          const data = await res.json();
-
-          // 3. Find the exact user from the returned list
-          const user = data.find(
-            (u) => u.name.toLowerCase() === name.toLowerCase()
-          );
-
-          if (user) {
-            document.getElementById("adjustment_form_container").style.display =
-              "block";
-            document.getElementById(
-              "adj_emp_name"
-            ).innerText = `Adjusting: ${user.name}`;
-
-            // Fill individual boxes with data from DB
-            document.getElementById("adj_annual").value =
-              user.annual_entitlement;
-            document.getElementById("adj_medical").value =
-              user.medical_entitlement;
-            document.getElementById("adj_emergency").value =
-              user.emergency_entitlement;
-            document.getElementById("adj_compassionate").value =
-              user.compassionate_entitlement;
-
-            // Store name for the Save button
-            window.currentAdjustingUser = user.name;
-          } else {
-            alert(
-              `User "${name}" not found. Please type the full name exactly.`
-            );
-            document.getElementById("adjustment_form_container").style.display =
-              "none";
-          }
-        } catch (e) {
-          console.error("Search error:", e);
-          alert(`❌ Search failed: ${e.message}`);
         }
-      }
+
+        const data = await res.json();
+
+        // 3. Find the exact user from the returned list
+        const user = data.find(
+            (u) => u.name.toLowerCase() === name.toLowerCase()
+        );
+
+if (user) {
+    document.getElementById("adjustment_form_container").style.display = "block";
+
+    // Display only
+    document.getElementById("adj_emp_name").innerText = `Adjusting: ${user.name}`;
+
+    // Fill individual boxes with data from DB
+    document.getElementById("adj_annual").value = user.annual_entitlement;
+    document.getElementById("adj_medical").value = user.medical_entitlement;
+    document.getElementById("adj_emergency").value = user.emergency_entitlement;
+    document.getElementById("adj_compassionate").value = user.compassionate_entitlement;
+
+    document.getElementById("adj_ot").value =
+        user.overtime_bank ?? 0;
+
+    document.getElementById("adj_cf").value =
+        user.carry_forward_total ?? 0;
+
+    // ✅ Source of truth for all future save operations
+    window.currentAdjustingUser = user.name;
+
+} else {
+
+            // Prevent stale value from previous search
+            window.currentAdjustingUser = null;
+
+            alert(`User "${name}" not found. Please type the full name exactly.`);
+            document.getElementById("adjustment_form_container").style.display = "none";
+        }
+
+    } catch (e) {
+        console.error("Search error:", e);
+        alert(`❌ Search failed: ${e.message}`);
+    }
+}
 
       async function loadGlobalPolicy() {
         try {
@@ -31278,6 +31313,150 @@ function changeTicketPage(direction) {
         loadIncidentTriage();
     }
 }
+
+// Global variable to temporarily hold adjustment data during review
+let pendingAdjustmentData = null;
+
+function openConfirmationModal(event) {
+    event.preventDefault();
+
+    // =====================================================
+    // Get employee name from the stored selection.
+    // Never rely on UI display text as the source of truth.
+    // =====================================================
+    let employeeName = window.currentAdjustingUser;
+
+    // Safety fallback (should rarely be needed)
+    if (!employeeName) {
+        employeeName = document.getElementById("adj_emp_name")
+            .innerText
+            .replace(/^Adjusting:\s*/, "")
+            .replace(/^Employee:\s*/, "")
+            .trim();
+    }
+
+    // Final validation
+    if (!employeeName) {
+        alert("Unable to determine the selected employee. Please search and select an employee again.");
+        return;
+    }
+
+    // Gather values from the adjustment form
+    const annual = parseFloat(document.getElementById("adj_annual").value) || 0;
+    const medical = parseFloat(document.getElementById("adj_medical").value) || 0;
+    const emergency = parseFloat(document.getElementById("adj_emergency").value) || 0;
+    const compassionate = parseFloat(document.getElementById("adj_compassionate").value) || 0;
+    const overtimeHours = parseFloat(document.getElementById("adj_ot").value) || 0;
+    const carryForwardDays = parseFloat(document.getElementById("adj_cf").value) || 0;
+    const remark = document.getElementById("adj_remark").value.trim();
+
+    if (!remark) {
+        alert("Mandatory HR audit remark is required.");
+        return;
+    }
+
+    // Store payload for final execution
+    pendingAdjustmentData = {
+        employee_name: employeeName,
+        annual: annual,
+        medical: medical,
+        emergency: emergency,
+        compassionate: compassionate,
+        overtime_hours: overtimeHours,
+        carry_forward_days: carryForwardDays,
+        remark: remark,
+        adjustment_type: "Manual Individual Override"
+    };
+
+    // Build summary view
+    const modalContent = document.getElementById("modal-summary-content");
+    modalContent.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding:6px 0; color:#64748b;">Employee:</td>
+                <td style="font-weight:bold; text-align:right;">${employeeName}</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0; color:#64748b;">Annual Leave:</td>
+                <td style="font-weight:bold; text-align:right;">${annual} days</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0; color:#64748b;">Medical Leave:</td>
+                <td style="font-weight:bold; text-align:right;">${medical} days</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0; color:#64748b;">Emergency Leave:</td>
+                <td style="font-weight:bold; text-align:right;">${emergency} days</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0; color:#64748b;">Compassionate Leave:</td>
+                <td style="font-weight:bold; text-align:right;">${compassionate} days</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0; color:#64748b;">Overtime Bank:</td>
+                <td style="font-weight:bold; text-align:right;">${overtimeHours} hrs</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0; color:#64748b;">Carry Forward:</td>
+                <td style="font-weight:bold; text-align:right;">${carryForwardDays} days</td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding-top:10px; border-top:1px solid #e2e8f0; font-size:0.85rem; color:#475569;">
+                    <strong>Audit Remark:</strong> ${remark}
+                </td>
+            </tr>
+        </table>
+    `;
+
+    // Display confirmation modal
+    document.getElementById("confirmation-modal").style.display = "flex";
+}
+
+function closeConfirmationModal() {
+    document.getElementById("confirmation-modal").style.display = "none";
+    pendingAdjustmentData = null;
+}
+async function executeFinalAdjustment() {
+    if (!pendingAdjustmentData) return;
+
+    try {
+        const token = localStorage.getItem("x_username") || sessionStorage.getItem("x_username") || "admin";
+        
+        // 🚀 Explicitly target port 8081 where the FastAPI backend is listening
+        const backendUrl = `${window.location.protocol}//${window.location.hostname}:8081/leaves/admin/adjust-individual`;
+
+        const response = await fetch(backendUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Username': token
+            },
+            body: JSON.stringify(pendingAdjustmentData)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.detail || "Failed to commit adjustment.");
+        }
+
+        alert("Successfully updated balances and queued audit notification email.");
+        closeConfirmationModal();
+        
+        if (typeof resetAdjustmentForm === 'function') {
+            resetAdjustmentForm();
+        }
+        
+        // Refresh grid if available
+        if (typeof loadTeamEntitlements === 'function') {
+            loadTeamEntitlements();
+        }
+    } catch (error) {
+        console.error("Adjustment Error:", error);
+        alert("Error: " + error.message);
+    }
+}
+
 
 </script>
 

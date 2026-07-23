@@ -662,3 +662,30 @@ def get_all_manager_overtime(
         })
         
     return formatted_results
+
+@router.get("/balance")
+def get_overtime_balance(
+    employee_name: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        user = db.query(models.User).filter(
+            or_(
+                models.User.full_name == employee_name,
+                models.User.username == employee_name
+            )
+        ).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        return {
+            "balance": float(user.overtime_bank or 0.0)
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(f"Error fetching overtime balance: {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not load overtime balance")

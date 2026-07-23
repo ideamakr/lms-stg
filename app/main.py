@@ -156,7 +156,7 @@ from app.utils.security import verify_password
 from app.routers import leave, user, overtime, system_settings, incidents 
 from fastapi.responses import RedirectResponse, FileResponse
 from sqlalchemy import text
-
+import json
 # 👇 INITIALIZE ENVIRONMENT
 load_dotenv()
 
@@ -397,3 +397,137 @@ async def get_version(db: Session = Depends(get_db)):
 #     level=logging.INFO,
 #     format='%(asctime)s - %(levelname)s - %(message)s'
 # )
+
+# Pydantic model for incoming/outgoing balance payload
+class EmployeeBalanceResponse(BaseModel):
+    employee_id: int
+    employee_name: str
+    annual_leave: float
+    medical_leave: float
+    emergency_leave: float
+    compassionate_leave: float
+    overtime_hours: float
+    carry_forward_days: float
+    unpaid_leave_used: float
+
+# FastAPI Endpoint to fetch balances (Using @app instead of @router)
+@app.get("/admin/employee-balances/{employee_id}", response_model=EmployeeBalanceResponse)
+async def get_employee_balance(employee_id: int):
+    # TODO: Replace with your actual database connection / query logic
+    # Placeholder return structure for illustration
+    return {
+        "employee_id": employee_id,
+        "employee_name": "Sample Employee",
+        "annual_leave": 14.0,
+        "medical_leave": 14.0,
+        "emergency_leave": 2.0,
+        "compassionate_leave": 10.0,
+        "overtime_hours": 8.0,
+        "carry_forward_days": 2.0,
+        "unpaid_leave_used": 0.0
+    }
+
+# Pydantic model for the adjustment request
+class LeaveAdjustmentRequest(BaseModel):
+    employee_id: int
+    admin_name: str
+    adjustment_type: str  # e.g., 'OT_CONVERSION', 'MANUAL_OVERRIDE'
+    annual_leave_delta: float = 0.0
+    medical_leave_delta: float = 0.0
+    emergency_leave_delta: float = 0.0
+    compassionate_leave_delta: float = 0.0
+    overtime_hours_delta: float = 0.0
+    carry_forward_days_delta: float = 0.0
+    remark: str           # Mandatory HR audit remark
+
+@app.post("/admin/employee-balances/adjust")
+async def adjust_employee_balance(payload: LeaveAdjustmentRequest, db: Session = Depends(get_db)):
+    # 1. Validate mandatory audit remark
+    if not payload.remark or len(payload.remark.strip()) < 3:
+        raise HTTPException(
+            status_code=400, 
+            detail="A valid audit remark/reason is mandatory for all leave adjustments."
+        )
+    
+    try:
+        # 2. Fetch current employee details and balances
+        user_query = text("""
+            SELECT id, full_name, annual_leave, medical_leave, emergency_leave, 
+                   compassionate_leave, overtime_hours, carry_forward_days 
+            FROM users WHERE id = :emp_id
+        """)
+        current_emp = db.execute(user_query, {"emp_id": payload.employee_id}).fetchone()
+        
+        if not current_emp:
+            raise HTTPException(status_code=404, detail="Employee not found.")
+        
+        # Capture old values snapshot for audit trail
+        old_values = {
+            "annual_leave": current_emp.annual_leave,
+            "medical_leave": current_emp.medical_leave,
+            "emergency_leave": current_emp.emergency_leave,
+            "compassionate_leave": current_emp.compassionate_leave,
+            "overtime_hours": current_emp.overtime_hours,
+            "carry_forward_days": current_emp.carry_forward_days
+        }
+        
+        # 3. Calculate new balances
+        new_annual = max(0.0, float(current_emp.annual_leave or 0) + payload.annual_leave_delta)
+        new_medical = max(0.0, float(current_emp.medical_leave or 0) + payload.medical_leave_delta)
+        new_emergency = max(0.0, float(current_emp.emergency_leave or 0) + payload.emergency_leave_delta)
+        new_compassionate = max(0.0, float(current_emp.compassionate_leave or 0) + payload.compassionate_leave_delta)
+        new_overtime = max(0.0, float(current_emp.overtime_hours or 0) + payload.overtime_hours_delta)
+        new_carry_forward = max(0.0, float(current_emp.carry_forward_days or 0) + payload.carry_forward_days_delta)
+        
+        new_values = {
+            "annual_leave": new_annual,
+            "medical_leave": new_medical,
+            "emergency_leave": new_emergency,
+            "compassionate_leave": new_compassionate,
+            "overtime_hours": new_overtime,
+            "carry_forward_days": new_carry_forward
+        }
+        
+        # 4. Perform the Database Update on user balances
+        update_query = text("""
+            UPDATE users 
+            SET annual_leave = :al, medical_leave = :ml, emergency_leave = :el,
+                compassionate_leave = :cl, overtime_hours = :ot, carry_forward_days = :cf
+            WHERE id = :emp_id
+        """)
+        db.execute(update_query, {
+            "al": new_annual, "ml": new_medical, "el": new_emergency,
+            "cl": new_compassionate, "ot": new_overtime, "cf": new_carry_forward,
+            "emp_id": payload.employee_id
+        })
+        
+        # 5. Insert permanent record into the audit table
+        audit_query = text("""
+            INSERT INTO leave_adjustments_audit 
+            (employee_id, employee_name, admin_name, adjustment_type, old_values, new_values, remark)
+            VALUES (:emp_id, :emp_name, :admin_name, :adj_type, :old_val, :new_val, :remark)
+        """)
+        db.execute(audit_query, {
+            "emp_id": payload.employee_id,
+            "emp_name": current_emp.full_name,
+            "admin_name": payload.admin_name,
+            "adj_type": payload.adjustment_type,
+            "old_val": json.dumps(old_values),
+            "new_val": json.dumps(new_values),
+            "remark": payload.remark
+        })
+        
+        db.commit()
+        
+        return {
+            "status": "success",
+            "message": "Leave balances adjusted successfully and recorded in audit trail.",
+            "employee_id": payload.employee_id,
+            "old_values": old_values,
+            "new_values": new_values
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Leave Adjustment Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process adjustment: {str(e)}")
