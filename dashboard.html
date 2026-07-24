@@ -18880,11 +18880,9 @@ async function submitHolidayEdit() {
       // Execute the restriction immediately
       restrictDateToCurrentYear();
 
-      /* =========================================
-         🚀 HR POLICY: COMMAND CENTER UI (Modern Upgrade)
-         ========================================= */
 
-/* =========================================
+
+        /* =========================================
          🚀 HR POLICY: COMMAND CENTER UI (Modern Upgrade)
          ========================================= */
 
@@ -18892,8 +18890,8 @@ async function submitHolidayEdit() {
         const section = document.getElementById("hr_policy");
 
         // Dynamic Year Options for CF Filter
-// Dynamic Year Options for CF Filter
-const currentYear = new Date().getFullYear();
+        // Dynamic Year Options for CF Filter
+        const currentYear = new Date().getFullYear();
         // 🚀 FIX 1: Set "All Years" as the default selected option
         let yearOptions = `<option value="All" selected>All Years</option>`;
         for (let y = currentYear - 1; y <= currentYear + 1; y++) {
@@ -19025,7 +19023,11 @@ const currentYear = new Date().getFullYear();
             <div style="width:32px; height:32px; background:#e0f2fe; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#0369a1;"><i class="fas fa-user-edit"></i></div>
             <span>Adjusting User</span>
          </h4>
-         <button class="icon-btn" onclick="resetAdjustmentForm()" style="color:#64748b; border:none; background:transparent;"><i class="fas fa-times"></i></button>
+         <button class="icon-btn"
+        onclick="resetAdjustmentForm()"
+        style="color:#64748b; border:none; background:transparent;">
+    <i class="fas fa-times"></i>
+    </button>   
     </div>
 
     <!-- Wrapped in a form to intercept submission and trigger the confirmation review modal -->
@@ -19033,7 +19035,13 @@ const currentYear = new Date().getFullYear();
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
             <div class="form-group">
                 <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">ANNUAL LEAVE (Days)</label>
-                <input type="number" step="0.5" id="adj_annual" class="saas-form-control" value="0">
+                <input
+                type="number"
+                step="0.5"
+                id="adj_annual"
+                class="saas-form-control"
+                value="0"
+                oninput="updateAdjustmentDirtyState()">
             </div>
             <div class="form-group">
                 <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">MEDICAL LEAVE (Days)</label>
@@ -19058,19 +19066,77 @@ const currentYear = new Date().getFullYear();
         </div>
 
         <div class="form-group" style="margin-top: 20px;">
-            <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">MANDATORY HR AUDIT REMARK / REASON</label>
-            <textarea id="adj_remark" class="saas-form-control" rows="3" placeholder="Provide reason for adjustment (required for email notification & audit trail)..." required style="height: auto; padding: 12px;"></textarea>
+            <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">
+                MANDATORY HR AUDIT REMARK / REASON
+            </label>
+
+            <textarea
+                id="adj_remark"
+                class="saas-form-control"
+                rows="3"
+                placeholder="Provide reason for adjustment (required for email notification & audit trail)..."
+                required
+                style="height:auto; padding:12px;">
+            </textarea>
         </div>
 
-        <button type="submit" class="btn" style="background: #3b82f6; margin-top: 25px; width: 100%; height: 48px; font-weight: 700; font-size: 1rem; color: white;">
-            <i class="fas fa-eye" style="margin-right: 8px;"></i> Review & Save Adjustments
-        </button>
+        <!-- Action Buttons -->
+<div style="
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:12px;
+    margin-top:25px;
+">
+
+    <button
+        type="button"
+        id="btnResetAdjustment"
+        onclick="resetAdjustmentValues()"
+        style="
+            width:160px;
+            height:46px;
+            border:1px solid #cbd5e1;
+            background:#ffffff;
+            color:#475569;
+            border-radius:10px;
+            font-weight:700;
+            cursor:pointer;
+            transition:all .2s;
+        ">
+        <i class="fas fa-undo-alt" style="margin-right:8px;"></i>
+        Reset
+    </button>
+
+    <button
+        type="submit"
+        id="btnReviewAdjustment"
+        class="btn"
+        style="
+            width:320px;
+            height:46px;
+            background:#3b82f6;
+            border:none;
+            border-radius:10px;
+            font-weight:700;
+            font-size:0.95rem;
+            color:white;
+            cursor:pointer;
+            transition:all .2s;
+        ">
+        <i class="fas fa-eye" style="margin-right:8px;"></i>
+        Review & Save Adjustments
+    </button>
+
+</div>
+
     </form>
+
 </div>
 
 <div id="adj_placeholder" style="text-align: center; padding: 40px; color: #cbd5e1;">
-     <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 15px;"></i>
-     <p>Search for an employee to adjust their specific entitlements.</p>
+    <i class="fas fa-search" style="font-size:3rem; margin-bottom:15px;"></i>
+    <p>Search for an employee to adjust their specific entitlements.</p>
 </div>
 
 <!-- Before vs After Interactive Confirmation Modal -->
@@ -19582,22 +19648,30 @@ const currentYear = new Date().getFullYear();
         );
       }
 
-     async function searchEmployeeForAdjustment() {
+    async function searchEmployeeForAdjustment() {
+
     const nameInput = document.getElementById("policy_user_search");
     const name = nameInput.value.trim();
-    if (!name) return alert("Please enter a name.");
 
-    // 1. Identify context (Backend requires these to authorize the search)
+    if (!name) {
+        return Swal.fire({
+            icon: "warning",
+            title: "Employee Name Required",
+            text: "Please enter an employee name to search.",
+            confirmButtonColor: "#f59e0b"
+        });
+    }
+
     const primaryRole = userRoles.includes("hr_admin")
         ? "hr_admin"
         : "manager";
 
     try {
-        // 2. Build the full query string with ALL required parameters
+
         const params = new URLSearchParams({
             user_role: primaryRole,
             approver_name: currentUser,
-            name: name,
+            name: name
         });
 
         const res = await fetchWithAuth(
@@ -19611,44 +19685,81 @@ const currentYear = new Date().getFullYear();
 
         const data = await res.json();
 
-        // 3. Find the exact user from the returned list
         const user = data.find(
             (u) => u.name.toLowerCase() === name.toLowerCase()
         );
 
-if (user) {
-    document.getElementById("adjustment_form_container").style.display = "block";
+        if (user) {
 
-    // Display only
-    document.getElementById("adj_emp_name").innerText = `Adjusting: ${user.name}`;
+            document.getElementById("adjustment_form_container").style.display = "block";
 
-    // Fill individual boxes with data from DB
-    document.getElementById("adj_annual").value = user.annual_entitlement;
-    document.getElementById("adj_medical").value = user.medical_entitlement;
-    document.getElementById("adj_emergency").value = user.emergency_entitlement;
-    document.getElementById("adj_compassionate").value = user.compassionate_entitlement;
+            document.getElementById("adj_emp_name").innerText =
+                `Adjusting: ${user.name}`;
 
-    document.getElementById("adj_ot").value =
-        user.overtime_bank ?? 0;
+            document.getElementById("adj_annual").value =
+                user.annual_entitlement;
 
-    document.getElementById("adj_cf").value =
-        user.carry_forward_total ?? 0;
+            document.getElementById("adj_medical").value =
+                user.medical_entitlement;
 
-    // ✅ Source of truth for all future save operations
-    window.currentAdjustingUser = user.name;
+            document.getElementById("adj_emergency").value =
+                user.emergency_entitlement;
 
-} else {
+            document.getElementById("adj_compassionate").value =
+                user.compassionate_entitlement;
 
-            // Prevent stale value from previous search
+            document.getElementById("adj_ot").value =
+                user.overtime_bank ?? 0;
+
+            document.getElementById("adj_cf").value =
+                user.carry_forward_total ?? 0;
+
+            // Current employee
+            window.currentAdjustingUser = user.name;
+
+            // Foundation for Smart Reset (no behavioural change yet)
+            window.originalAdjustmentData = {
+                annual: Number(user.annual_entitlement ?? 0),
+                medical: Number(user.medical_entitlement ?? 0),
+                emergency: Number(user.emergency_entitlement ?? 0),
+                compassionate: Number(user.compassionate_entitlement ?? 0),
+                overtime: Number(user.overtime_bank ?? 0),
+                carryForward: Number(user.carry_forward_total ?? 0),
+                remark: ""
+            };
+
+            window.adjustmentDirty = false;
+
+        } else {
+
             window.currentAdjustingUser = null;
+            window.originalAdjustmentData = null;
+            window.adjustmentDirty = false;
 
-            alert(`User "${name}" not found. Please type the full name exactly.`);
             document.getElementById("adjustment_form_container").style.display = "none";
+
+            Swal.fire({
+                icon: "warning",
+                title: "Employee Not Found",
+                html: `
+                    Unable to find <strong>${name}</strong>.<br><br>
+                    Please enter the employee's full name exactly as it appears in the system.
+                `,
+                confirmButtonColor: "#f59e0b"
+            });
         }
 
     } catch (e) {
+
         console.error("Search error:", e);
-        alert(`❌ Search failed: ${e.message}`);
+
+        Swal.fire({
+            icon: "error",
+            title: "Search Failed",
+            text: e.message,
+            confirmButtonColor: "#dc2626"
+        });
+
     }
 }
 
@@ -22039,6 +22150,34 @@ function clearPolicySearch() {
         }
       }
 
+    // =====================================================
+    // Track Individual Adjustment Changes
+    // =====================================================
+    function updateAdjustmentDirtyState() {
+
+    if (!window.originalAdjustmentData) {
+        window.adjustmentDirty = false;
+        return;
+    }
+
+    window.adjustmentDirty =
+        Number(document.getElementById("adj_annual").value || 0) !== window.originalAdjustmentData.annual ||
+        Number(document.getElementById("adj_medical").value || 0) !== window.originalAdjustmentData.medical ||
+        Number(document.getElementById("adj_emergency").value || 0) !== window.originalAdjustmentData.emergency ||
+        Number(document.getElementById("adj_compassionate").value || 0) !== window.originalAdjustmentData.compassionate ||
+        Number(document.getElementById("adj_ot").value || 0) !== window.originalAdjustmentData.overtime ||
+        Number(document.getElementById("adj_cf").value || 0) !== window.originalAdjustmentData.carryForward ||
+        document.getElementById("adj_remark").value.trim() !== window.originalAdjustmentData.remark;
+    }  
+
+    // =====================================================
+    // Reset Adjustment Form
+    // Wrapper for future Smart Reset enhancement.
+    // =====================================================
+    // function handleResetAdjustment() {
+    //     resetAdjustmentForm();
+    // }
+
       // 2. Reset Function: Clears search, hides form, and RESTORES placeholder
       function resetAdjustmentForm() {
         // Clear search input
@@ -22066,6 +22205,20 @@ function clearPolicySearch() {
         // Clear the global reference
         window.currentAdjustingUser = null;
       }
+
+     // Restore the original adjustment values without closing the form
+function resetAdjustmentValues() {
+
+    if (!window.originalAdjustmentData) return;
+
+    document.getElementById("adj_annual").value = window.originalAdjustmentData.annual;
+    document.getElementById("adj_medical").value = window.originalAdjustmentData.medical;
+    document.getElementById("adj_emergency").value = window.originalAdjustmentData.emergency;
+    document.getElementById("adj_compassionate").value = window.originalAdjustmentData.compassionate;
+    document.getElementById("adj_ot").value = window.originalAdjustmentData.overtime;
+    document.getElementById("adj_cf").value = window.originalAdjustmentData.carryForward;
+    document.getElementById("adj_remark").value = window.originalAdjustmentData.remark;
+} 
 
     async function loadHomeLeadershipInsights(signal) {
     // 1. Role Access Configuration
@@ -31337,7 +31490,12 @@ function openConfirmationModal(event) {
 
     // Final validation
     if (!employeeName) {
-        alert("Unable to determine the selected employee. Please search and select an employee again.");
+Swal.fire({
+    icon: "warning",
+    title: "Employee Not Selected",
+    text: "Please search and select an employee before proceeding.",
+    confirmButtonColor: "#2563eb"
+});
         return;
     }
 
@@ -31351,7 +31509,12 @@ function openConfirmationModal(event) {
     const remark = document.getElementById("adj_remark").value.trim();
 
     if (!remark) {
-        alert("Mandatory HR audit remark is required.");
+        Swal.fire({
+    icon: "warning",
+    title: "Audit Remark Required",
+    text: "Please enter a mandatory HR audit remark before continuing.",
+    confirmButtonColor: "#2563eb"
+});
         return;
     }
 
@@ -31416,20 +31579,24 @@ function closeConfirmationModal() {
     document.getElementById("confirmation-modal").style.display = "none";
     pendingAdjustmentData = null;
 }
+
 async function executeFinalAdjustment() {
     if (!pendingAdjustmentData) return;
 
     try {
-        const token = localStorage.getItem("x_username") || sessionStorage.getItem("x_username") || "admin";
-        
-        // 🚀 Explicitly target port 8081 where the FastAPI backend is listening
+        const token =
+            localStorage.getItem("x_username") ||
+            sessionStorage.getItem("x_username") ||
+            "admin";
+
+        // Explicitly target FastAPI backend
         const backendUrl = `${window.location.protocol}//${window.location.hostname}:8081/leaves/admin/adjust-individual`;
 
         const response = await fetch(backendUrl, {
-            method: 'POST',
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json',
-                'X-Username': token
+                "Content-Type": "application/json",
+                "X-Username": token
             },
             body: JSON.stringify(pendingAdjustmentData)
         });
@@ -31440,20 +31607,43 @@ async function executeFinalAdjustment() {
             throw new Error(result.detail || "Failed to commit adjustment.");
         }
 
-        alert("Successfully updated balances and queued audit notification email.");
+        // Success message
+        await Swal.fire({
+            icon: "success",
+            title: "Adjustment Completed",
+            html: `
+                <div style="line-height:1.7;">
+                    ✅ Employee balances have been successfully updated.<br><br>
+                    📧 Audit notification has been initiated.<br>
+                    📝 Audit trail has been recorded successfully.
+                </div>
+            `,
+            confirmButtonColor: "#16a34a",
+            allowOutsideClick: false
+        });
+
+        // Close confirmation modal
         closeConfirmationModal();
-        
-        if (typeof resetAdjustmentForm === 'function') {
-            resetAdjustmentForm();
+
+        // Keep employee selected and reload latest balances
+        if (typeof searchEmployeeForAdjustment === "function") {
+            await searchEmployeeForAdjustment();
         }
-        
-        // Refresh grid if available
-        if (typeof loadTeamEntitlements === 'function') {
-            loadTeamEntitlements();
+
+        // Refresh entitlement grid
+        if (typeof loadTeamEntitlements === "function") {
+            await loadTeamEntitlements();
         }
+
     } catch (error) {
         console.error("Adjustment Error:", error);
-        alert("Error: " + error.message);
+
+        Swal.fire({
+            icon: "error",
+            title: "Adjustment Failed",
+            text: error.message,
+            confirmButtonColor: "#dc2626"
+        });
     }
 }
 
