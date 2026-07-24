@@ -18918,10 +18918,13 @@ async function submitHolidayEdit() {
                         style="padding: 8px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; color: #64748b; background: transparent;">
                         <i class="fas fa-user-cog" style="margin-right: 6px;"></i> Individual Adjustments
                     </button>
-                    <button id="btnCFProcessing" onclick="togglePolicyMode('cf_processing')" 
-                        style="padding: 8px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; color: #64748b; background: transparent;">
-                        <i class="fas fa-history" style="margin-right: 6px;"></i> CF Processing
-                    </button>
+
+                    <!-- CF Processing tab temporarily hidden.Feature retained for future use.-->
+
+                    <!-- <button id="btnCFProcessing" onclick="togglePolicyMode('cf_processing')" 
+                         style="padding: 8px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; color: #64748b; background: transparent;">
+                         <i class="fas fa-history" style="margin-right: 6px;"></i> CF Processing
+                     </button> -->
                 </div>
             </div>
 
@@ -19032,38 +19035,94 @@ async function submitHolidayEdit() {
 
     <!-- Wrapped in a form to intercept submission and trigger the confirmation review modal -->
     <form id="individual-adj-form" onsubmit="openConfirmationModal(event)">
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-            <div class="form-group">
-                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">ANNUAL LEAVE (Days)</label>
-                <input
-                type="number"
-                step="0.5"
-                id="adj_annual"
-                class="saas-form-control"
-                value="0"
-                oninput="updateAdjustmentDirtyState()">
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+
+    <!-- Annual Leave -->
+    <div class="form-group">
+        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+            Annual Leave (Days)
+        </label>
+        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
+            <div style="width:56px;height:46px;background:#eff6ff;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-umbrella-beach" style="color:#2563eb;font-size:1rem;"></i>
             </div>
-            <div class="form-group">
-                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">MEDICAL LEAVE (Days)</label>
-                <input type="number" step="0.5" id="adj_medical" class="saas-form-control" value="0">
-            </div>
-            <div class="form-group">
-                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">EMERGENCY LEAVE (Days)</label>
-                <input type="number" step="0.5" id="adj_emergency" class="saas-form-control" value="0">
-            </div>
-            <div class="form-group">
-                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">COMPASSIONATE LEAVE (Days)</label>
-                <input type="number" step="0.5" id="adj_compassionate" class="saas-form-control" value="0">
-            </div>
-            <div class="form-group">
-                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">OVERTIME HOURS (Hrs)</label>
-                <input type="number" step="0.5" id="adj_ot" class="saas-form-control" value="0">
-            </div>
-            <div class="form-group">
-                <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">CARRY FORWARD DAYS (Days)</label>
-                <input type="number" step="0.5" id="adj_cf" class="saas-form-control" value="0">
-            </div>
+            <input type="number" step="0.5" id="adj_annual" class="saas-form-control"
+                   value="0" oninput="updateAdjustmentDirtyState()"
+                   style="border:none;box-shadow:none;height:46px;padding-left:14px;">
         </div>
+    </div>
+
+    <!-- Medical Leave -->
+    <div class="form-group">
+        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+            Medical Leave (Days)
+        </label>
+        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
+            <div style="width:56px;height:46px;background:#ecfdf5;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-clinic-medical" style="color:#10b981;font-size:1rem;"></i>
+            </div>
+            <input type="number" step="0.5" id="adj_medical" class="saas-form-control"
+                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+        </div>
+    </div>
+
+    <!-- Emergency Leave -->
+    <div class="form-group">
+        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+            Emergency Leave (Days)
+        </label>
+        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
+            <div style="width:56px;height:46px;background:#fffbeb;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-exclamation-triangle" style="color:#f59e0b;font-size:1rem;"></i>
+            </div>
+            <input type="number" step="0.5" id="adj_emergency" class="saas-form-control"
+                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+        </div>
+    </div>
+
+    <!-- Compassionate Leave -->
+    <div class="form-group">
+        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+            Compassionate Leave (Days)
+        </label>
+        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
+            <div style="width:56px;height:46px;background:#f5f3ff;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-heart-broken" style="color:#8b5cf6;font-size:1rem;"></i>
+            </div>
+            <input type="number" step="0.5" id="adj_compassionate" class="saas-form-control"
+                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+        </div>
+    </div>
+
+    <!-- Overtime -->
+    <div class="form-group">
+        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+            Overtime (Hours)
+        </label>
+        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
+            <div style="width:56px;height:46px;background:#fff7ed;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-business-time" style="color:#ea580c;font-size:1rem;"></i>
+            </div>
+            <input type="number" step="0.5" id="adj_ot" class="saas-form-control"
+                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+        </div>
+    </div>
+
+    <!-- Carry Forward -->
+    <div class="form-group">
+        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+            Carry Forward (Days)
+        </label>
+        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
+            <div style="width:56px;height:46px;background:#eef2ff;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-box-open" style="color:#4f46e5;font-size:1rem;"></i>
+            </div>
+            <input type="number" step="0.5" id="adj_cf" class="saas-form-control"
+                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+        </div>
+    </div>
+
+</div>
 
         <div class="form-group" style="margin-top: 20px;">
             <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">
