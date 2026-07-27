@@ -4974,6 +4974,67 @@ html.dark #card_unpaid {
     color: #f1f5f9 !important; /* High contrast white for Dark Mode */
 }
 
+/* ===========================================
+   HR Adjustment Workspace
+=========================================== */
+
+.adjustment-section {
+    margin-top: 28px;
+}
+
+.adjustment-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.adjustment-section-title i{
+    color:#2563eb;
+}
+
+.adjustment-summary{
+    margin-top:10px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    border-radius:10px;
+    padding:12px;
+}
+
+.adjustment-summary-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.adjustment-summary-row + .adjustment-summary-row{
+    margin-top:8px;
+}
+
+.adjustment-label{
+    font-size:.75rem;
+    color:#64748b;
+}
+
+.adjustment-value{
+    font-size:.78rem;
+    font-weight:700;
+}
+
+.adjustment-value.primary{
+    color:#2563eb;
+}
+
+.adjustment-value.success{
+    color:#16a34a;
+}
 
     </style>
   </head>
@@ -12317,6 +12378,7 @@ async function prefetchBalances(signal) {
                 const cfVal = parseFloat(data.carry_forward_total || 0);
                 const otBankVal = parseFloat(data.overtime_bank || approvedOTSum || 0);
                 const otBankDisplay = otBankVal.toFixed(1);
+                
 
                 const homeOtCard = document.getElementById("card_ot");
                 if (homeOtCard) {
@@ -19746,7 +19808,7 @@ async function submitHolidayEdit() {
         }
 
         section.innerHTML = `
-        <div class="card" style="border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border-radius: 16px; overflow: hidden; padding: 0;">
+        <div class="card" style="border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border-radius: 16px; box-sizing: border-box; padding: 0;">
             
             <div style="padding: 30px 30px 20px 30px; background: white; border-bottom: 1px solid #f1f5f9;">
                 <h2 style="margin: 0; font-size: 1.5rem; color: #1e293b; display: flex; align-items: center; gap: 10px;">
@@ -19775,7 +19837,7 @@ async function submitHolidayEdit() {
                 </div>
             </div>
 
-            <div style="padding: 30px; background: #fdfdfd; min-height: 400px;">
+            <div style="padding: 30px 30px 60px 30px; background: #fdfdfd;">
                 
                 <div id="policy_bulk_view">
                     <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 15px; margin-bottom: 25px; display: flex; align-items: start; gap: 12px;">
@@ -19840,8 +19902,13 @@ async function submitHolidayEdit() {
                     </div>
                 </div>
 
-                <div id="policy_individual_view" style="display: none;">
-                    
+<div id="policy_individual_view"
+     style="
+        display: none;
+        padding-bottom: 30px;
+        min-height: auto; /* 👈 Remove 100vh or fixed large min-heights */
+">
+                  
                   <div style="display: flex; gap: 15px; margin-bottom: 30px; align-items: center; max-width: 700px; position: relative;">
     <div style="flex: 1; position: relative; display: flex; align-items: center;">
         <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; z-index: 5;"></i>
@@ -19867,7 +19934,22 @@ async function submitHolidayEdit() {
         Search
     </button>
 </div>
-<div id="adjustment_form_container" style="display: none; background: #fff; padding: 30px; border-radius: 16px; border: 1px solid #e2e8f0; max-width: 800px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
+
+<div id="adjustment_form_container"
+     style="
+        display: none;
+        background: #fff;
+        padding: 30px 30px 40px 30px;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        max-width: 1280px;
+        width: 100%;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        max-height: calc(100vh - 300px);
+        overflow-y: auto;
+        box-sizing: border-box;
+">
+
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9;">
          <h4 id="adj_emp_name" style="margin: 0; color: #1e293b; font-size: 1.2rem; display:flex; align-items:center; gap:10px;">
             <div style="width:32px; height:32px; background:#e0f2fe; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#0369a1;"><i class="fas fa-user-edit"></i></div>
@@ -19881,110 +19963,517 @@ async function submitHolidayEdit() {
     </div>
 
     <!-- Wrapped in a form to intercept submission and trigger the confirmation review modal -->
-    <form id="individual-adj-form" onsubmit="openConfirmationModal(event)">
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+<form
+    id="individual-adj-form"
+    onsubmit="openConfirmationModal(event)">
+
+<!-- ==========================
+     Leave Entitlements
+=========================== -->
+
+<div class="adjustment-section">
+
+    <div class="adjustment-section-title">
+        <i class="fas fa-umbrella-beach"></i>
+        Leave Entitlements
+    </div>
+
+<div style="
+    display:grid;
+    grid-template-columns:repeat(3, minmax(280px, 1fr));
+    gap:20px;
+    align-items:start;
+">
 
     <!-- Annual Leave -->
     <div class="form-group">
-        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
-            Annual Leave (Days)
-        </label>
-        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
-            <div style="width:56px;height:46px;background:#eff6ff;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-umbrella-beach" style="color:#2563eb;font-size:1rem;"></i>
-            </div>
-            <input type="number" step="0.5" id="adj_annual" class="saas-form-control"
-                   value="0" oninput="updateAdjustmentDirtyState()"
-                   style="border:none;box-shadow:none;height:46px;padding-left:14px;">
-        </div>
+
+    <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+        Annual Leave (Days)
+    </label>
+
+    <!-- Input Helper -->
+    <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;margin-bottom:6px;">
+        New Entitlement
     </div>
 
-    <!-- Medical Leave -->
-    <div class="form-group">
-        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
-            Medical Leave (Days)
-        </label>
-        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
-            <div style="width:56px;height:46px;background:#ecfdf5;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-clinic-medical" style="color:#10b981;font-size:1rem;"></i>
-            </div>
-            <input type="number" step="0.5" id="adj_medical" class="saas-form-control"
-                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+    <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
+        <div style="width:56px;height:46px;background:#eff6ff;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-umbrella-beach" style="color:#2563eb;font-size:1rem;"></i>
         </div>
+
+        <input
+            type="number"
+            step="0.5"
+            id="adj_annual"
+            class="saas-form-control"
+            value="0"
+            oninput="updateAdjustmentDirtyState()"
+            style="border:none;box-shadow:none;height:46px;padding-left:14px;">
     </div>
 
-    <!-- Emergency Leave -->
-    <div class="form-group">
-        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
-            Emergency Leave (Days)
-        </label>
-        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
-            <div style="width:56px;height:46px;background:#fffbeb;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-exclamation-triangle" style="color:#f59e0b;font-size:1rem;"></i>
-            </div>
-            <input type="number" step="0.5" id="adj_emergency" class="saas-form-control"
-                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+    <!-- Emergency Leave (Uses Annual Leave Balance) -->
+
+<div style="margin-top:12px;">
+
+    <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;margin-bottom:6px;">
+    Emergency Leave (Days)
+</div>
+
+    <div style="
+        display:flex;
+        align-items:center;
+        border:1px solid #cbd5e1;
+        border-radius:10px;
+        background:#fff;
+        overflow:hidden;
+    ">
+
+        <div style="
+            width:56px;
+            height:46px;
+            background:#fffbeb;
+            border-right:1px solid #e2e8f0;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            flex-shrink:0;
+        ">
+            <i class="fas fa-exclamation-triangle"
+               style="color:#f59e0b;font-size:1rem;"></i>
         </div>
+
+        <input
+            type="number"
+            step="0.5"
+            id="adj_emergency"
+            class="saas-form-control"
+            value="0"
+            oninput="updateAdjustmentDirtyState()"
+            style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+
     </div>
 
-    <!-- Compassionate Leave -->
-    <div class="form-group">
-        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
-            Compassionate Leave (Days)
-        </label>
-        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
-            <div style="width:56px;height:46px;background:#f5f3ff;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-heart-broken" style="color:#8b5cf6;font-size:1rem;"></i>
-            </div>
-            <input type="number" step="0.5" id="adj_compassionate" class="saas-form-control"
-                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
-        </div>
-    </div>
-
-    <!-- Overtime -->
-    <div class="form-group">
-        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
-            Overtime (Hours)
-        </label>
-        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
-            <div style="width:56px;height:46px;background:#fff7ed;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-business-time" style="color:#ea580c;font-size:1rem;"></i>
-            </div>
-            <input type="number" step="0.5" id="adj_ot" class="saas-form-control"
-                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
-        </div>
-    </div>
-
-    <!-- Carry Forward -->
-    <div class="form-group">
-        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
-            Carry Forward (Days)
-        </label>
-        <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
-            <div style="width:56px;height:46px;background:#eef2ff;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-box-open" style="color:#4f46e5;font-size:1rem;"></i>
-            </div>
-            <input type="number" step="0.5" id="adj_cf" class="saas-form-control"
-                   value="0" style="border:none;box-shadow:none;height:46px;padding-left:14px;">
-        </div>
+    <div style="
+        margin-top:4px;
+        font-size:0.70rem;
+        color:#94a3b8;
+        font-style:italic;
+    ">
+        Shared with Annual Leave.
     </div>
 
 </div>
 
-        <div class="form-group" style="margin-top: 20px;">
-            <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 5px; display: block;">
-                MANDATORY HR AUDIT REMARK / REASON
-            </label>
+    <!-- Annual Leave Information -->
+    <div style="
+        margin-top:10px;
+        background:#f8fafc;
+        border:1px solid #e2e8f0;
+        border-radius:10px;
+        padding:12px;
+    ">
 
-            <textarea
-                id="adj_remark"
-                class="saas-form-control"
-                rows="3"
-                placeholder="Provide reason for adjustment (required for email notification & audit trail)..."
-                required
-                style="height:auto; padding:12px;">
-            </textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:0.75rem;color:#64748b;">
+                Current Entitlement
+            </span>
+
+            <strong
+                id="annual_current_value"
+                style="font-size:0.78rem;color:#2563eb;">
+                --
+            </strong>
         </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.75rem;color:#64748b;">
+                Remaining Balance
+            </span>
+
+            <strong
+                id="annual_remaining_value"
+                style="font-size:0.78rem;color:#16a34a;">
+                --
+            </strong>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Medical Leave -->
+<div class="form-group">
+
+    <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+        Medical Leave (Days)
+    </label>
+
+    <!-- Input Helper -->
+    <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;margin-bottom:6px;">
+        New Entitlement
+    </div>
+
+    <div style="display:flex;align-items:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden;">
+
+        <div style="width:56px;height:46px;background:#ecfdf5;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-clinic-medical" style="color:#10b981;font-size:1rem;"></i>
+        </div>
+
+        <input
+            type="number"
+            step="0.5"
+            id="adj_medical"
+            class="saas-form-control"
+            value="0"
+            oninput="updateAdjustmentDirtyState()"
+            style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+
+    </div>
+
+    <div class="adjustment-summary">
+
+        <div class="adjustment-summary-row">
+            <span class="adjustment-label">
+                Current Entitlement
+            </span>
+
+            <strong
+                id="medical_current_value"
+                class="adjustment-value primary">
+                --
+            </strong>
+        </div>
+
+        <div class="adjustment-summary-row">
+            <span class="adjustment-label">
+                Remaining Balance
+            </span>
+
+            <strong
+                id="medical_remaining_value"
+                class="adjustment-value success">
+                --
+            </strong>
+        </div>
+
+    </div>
+
+</div>
+
+
+ <!-- Compassionate Leave -->
+
+<div class="form-group">
+
+    <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+        Compassionate Leave (Days)
+    </label>
+
+    <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;margin-bottom:6px;">
+        New Entitlement
+    </div>
+
+    <div style="
+        display:flex;
+        align-items:center;
+        border:1px solid #cbd5e1;
+        border-radius:10px;
+        background:#fff;
+        overflow:hidden;
+    ">
+
+        <div style="
+            width:56px;
+            height:46px;
+            background:#f5f3ff;
+            border-right:1px solid #e2e8f0;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            flex-shrink:0;
+        ">
+            <i class="fas fa-heart-broken"
+               style="color:#8b5cf6;font-size:1rem;"></i>
+        </div>
+
+        <input
+            type="number"
+            step="0.5"
+            id="adj_compassionate"
+            class="saas-form-control"
+            value="0"
+            oninput="updateAdjustmentDirtyState()"
+            style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+
+    </div>
+
+    <div class="adjustment-summary">
+
+        <div class="adjustment-summary-row">
+            <span class="adjustment-label">
+                Current Entitlement
+            </span>
+
+            <strong
+                id="compassionate_current_value"
+                class="adjustment-value primary">
+                --
+            </strong>
+        </div>
+
+        <div class="adjustment-summary-row">
+            <span class="adjustment-label">
+                Remaining Balance
+            </span>
+
+            <strong
+                id="compassionate_remaining_value"
+                class="adjustment-value success">
+                --
+            </strong>
+        </div>
+
+    </div>
+
+</div>
+
+</div> <!-- End Leave Entitlements Grid -->
+
+<!-- ==========================================
+     Work Benefits
+=========================================== -->
+
+<div class="adjustment-section-title" style="margin-top:28px;">
+    <i class="fas fa-briefcase"></i>
+    Work Benefits
+</div>
+
+<div style="
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:20px;
+    align-items:start;
+">
+
+    <!-- ================= OVERTIME ================= -->
+
+    <div class="form-group">
+
+        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+            Overtime (Hours)
+        </label>
+
+        <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;margin-bottom:6px;">
+            New Balance
+        </div>
+
+        <div style="
+            display:flex;
+            align-items:center;
+            border:1px solid #cbd5e1;
+            border-radius:10px;
+            background:#fff;
+            overflow:hidden;
+        ">
+
+            <div style="
+                width:56px;
+                height:46px;
+                background:#fff7ed;
+                border-right:1px solid #e2e8f0;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                flex-shrink:0;
+            ">
+                <i class="fas fa-business-time"
+                   style="color:#ea580c;font-size:1rem;"></i>
+            </div>
+
+            <input
+                type="number"
+                step="0.5"
+                id="adj_ot"
+                class="saas-form-control"
+                value="0"
+                oninput="updateAdjustmentDirtyState()"
+                style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+
+        </div>
+
+        <div class="adjustment-summary">
+
+            <div class="adjustment-summary-row">
+                <span class="adjustment-label">
+                    Current Balance
+                </span>
+
+                <strong
+                    id="ot_current_value"
+                    class="adjustment-value primary">
+                    --
+                </strong>
+            </div>
+
+            <div class="adjustment-summary-row">
+                <span class="adjustment-label">
+                    Pending Approval
+                </span>
+
+                <strong
+                    id="ot_pending_value"
+                    class="adjustment-value warning">
+                    --
+                </strong>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ================= CARRY FORWARD ================= -->
+
+    <div class="form-group">
+
+        <label style="font-size:0.72rem;font-weight:800;color:#64748b;margin-bottom:8px;display:block;">
+            Carry Forward (Days)
+        </label>
+
+        <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;margin-bottom:6px;">
+            New Balance
+        </div>
+
+        <div style="
+            display:flex;
+            align-items:center;
+            border:1px solid #cbd5e1;
+            border-radius:10px;
+            background:#fff;
+            overflow:hidden;
+        ">
+
+            <div style="
+                width:56px;
+                height:46px;
+                background:#eef2ff;
+                border-right:1px solid #e2e8f0;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                flex-shrink:0;
+            ">
+                <i class="fas fa-box-open"
+                   style="color:#4f46e5;font-size:1rem;"></i>
+            </div>
+
+            <input
+                type="number"
+                step="0.5"
+                id="adj_cf"
+                class="saas-form-control"
+                value="0"
+                oninput="updateAdjustmentDirtyState()"
+                style="border:none;box-shadow:none;height:46px;padding-left:14px;">
+
+        </div>
+
+        <div class="adjustment-summary">
+
+            <div class="adjustment-summary-row">
+                <span class="adjustment-label">
+                    Current Balance
+                </span>
+
+                <strong
+                    id="cf_current_value"
+                    class="adjustment-value primary">
+                    --
+                </strong>
+            </div>
+
+            <div class="adjustment-summary-row">
+                <span class="adjustment-label">
+                    Expiry
+                </span>
+
+                <strong
+                    id="cf_expiry_value"
+                    class="adjustment-value success">
+                    --
+                </strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="adjustment-section-title" style="margin-top:28px;">
+    <i class="fas fa-clipboard-check"></i>
+    HR Audit Information
+</div>
+
+<div style="
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:20px;
+">
+
+    <div style="
+        display:flex;
+        align-items:flex-start;
+        gap:12px;
+        margin-bottom:14px;
+    ">
+
+        <div style="
+            width:34px;
+            height:34px;
+            border-radius:50%;
+            background:#eff6ff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#2563eb;
+            flex-shrink:0;
+        ">
+            <i class="fas fa-info-circle"></i>
+        </div>
+
+        <div>
+            <div style="
+                font-weight:700;
+                color:#1e293b;
+                margin-bottom:4px;
+            ">
+                Reason for Adjustment
+            </div>
+
+            <div style="
+                font-size:.82rem;
+                color:#64748b;
+                line-height:1.5;
+            ">
+                Every entitlement adjustment will be recorded in the Audit Trail and included in the employee notification email.
+            </div>
+        </div>
+
+    </div>
+
+<textarea
+    id="adj_remark"
+    class="saas-form-control"
+    rows="3"
+    placeholder="Enter the reason for this entitlement adjustment..."
+    required
+    style="height:auto;padding:12px;"></textarea>
+
+        </div>
+    </div>
 
         <!-- Action Buttons -->
 <div style="
@@ -20040,7 +20529,7 @@ async function submitHolidayEdit() {
 
 </div>
 
-<div id="adj_placeholder" style="text-align: center; padding: 40px; color: #cbd5e1;">
+<div id="adj_placeholder" style="display: block; text-align: center; padding: 40px; color: #cbd5e1;">
     <i class="fas fa-search" style="font-size:3rem; margin-bottom:15px;"></i>
     <p>Search for an employee to adjust their specific entitlements.</p>
 </div>
@@ -20594,10 +21083,12 @@ async function submitHolidayEdit() {
         const user = data.find(
             (u) => u.name.toLowerCase() === name.toLowerCase()
         );
+        console.log("Adjustment User:", user);
 
         if (user) {
 
             document.getElementById("adjustment_form_container").style.display = "block";
+            document.getElementById("adj_placeholder").style.display = "none";
 
             document.getElementById("adj_emp_name").innerText =
                 `Adjusting: ${user.name}`;
@@ -20619,6 +21110,53 @@ async function submitHolidayEdit() {
 
             document.getElementById("adj_cf").value =
                 user.carry_forward_total ?? 0;
+
+             // =====================================
+            // Annual Leave Summary
+            // =====================================
+            document.getElementById("annual_current_value").innerText =
+                Number(user.annual_entitlement ?? 0).toFixed(1);
+
+            document.getElementById("annual_remaining_value").innerText =
+                Number(user.annual_remaining ?? 0).toFixed(1);   
+
+            // =====================================
+            // Medical Leave Summary
+            // =====================================
+            document.getElementById("medical_current_value").innerText =
+                Number(user.medical_entitlement ?? 0).toFixed(1);
+
+            document.getElementById("medical_remaining_value").innerText =
+                Number(user.medical_remaining ?? 0).toFixed(1);
+
+            // =====================================
+            // Compassionate Leave Summary
+            // =====================================
+            document.getElementById("compassionate_current_value").innerText =
+                Number(user.compassionate_entitlement ?? 0).toFixed(1);
+
+            document.getElementById("compassionate_remaining_value").innerText =
+                Number(user.compassionate_remaining ?? 0).toFixed(1);
+                
+            // =====================================
+            // Overtime Summary
+            // =====================================
+            document.getElementById("ot_current_value").innerText =
+                Number(user.overtime_bank ?? 0).toFixed(1);
+
+            // We don't have pending approval from this endpoint,
+            // so default to 0.0 for now.
+            document.getElementById("ot_pending_value").innerText =
+                "0.0";
+
+            // =====================================
+            // Carry Forward Summary
+            // =====================================
+            document.getElementById("cf_current_value").innerText =
+                Number(user.carry_forward_total ?? 0).toFixed(1);
+
+            document.getElementById("cf_expiry_value").innerText =
+                user.expiry_human ?? "--";                
 
             // Current employee
             window.currentAdjustingUser = user.name;
