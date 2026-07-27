@@ -1426,11 +1426,17 @@ def get_team_entitlements(
                 # 🚀 Enforce expiry deadline
                 if l_type == "Annual Leave" and today > expiry_date:
                     cf_banked = spent_cf
-                            
+
+                remaining = (
+                    float(b.remaining)
+                    if b and b.remaining is not None
+                    else ent - spent_annual
+                )
+
                 return {
-                    "ent": ent, 
-                    "cf_rem": max(0, cf_banked - spent_cf), 
-                    "rem": ent - spent_annual
+                    "ent": ent,
+                    "cf_rem": max(0, cf_banked - spent_cf),
+                    "rem": remaining
                 }
 
             ann = get_bucket("Annual Leave")
