@@ -194,11 +194,16 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # 🔒 CORS Configuration
 allowed_origins = [
-    "http://127.0.0.1:5500", 
+    "http://127.0.0.1:5500",
     "http://localhost:5500",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "http://leave.psyap.com:8080"
+
+    # Production
+    "http://leave.psyap.com:8080",
+
+    # Temporary DDNS for deployment/testing
+    "http://psyap.synology.me:8080",
 ]
 
 # 🚀 Dynamically whitelist the production/Cloudflare domain and its variants

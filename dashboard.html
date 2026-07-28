@@ -16,12 +16,13 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"
       onerror="this.onerror=null; this.href='static/css/cropper.min.css';">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"
         onerror="this.onerror=null; this.src='static/js/cropper.min.js';"></script>
+        
     
 
     <!-- <script src="http://127.0.0.1:8000/static/sweetalert2.js"></script>
@@ -10819,7 +10820,7 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
 
 // 📡 DYNAMIC API HANDSHAKE (HARDENED)
-const getApiUrl = () => {
+    const getApiUrl = () => {
     const host = window.location.hostname;
     let url = "";
 
@@ -10827,15 +10828,15 @@ const getApiUrl = () => {
     if (host === "127.0.0.1" || host === "localhost") {
         url = "http://127.0.0.1:8081";
     } else {
-        // 2. PRODUCTION
-        url = "http://leave.psyap.com:8081"; 
+        // 2. PRODUCTION / VPN / IP Access
+        url = `http://${host}:8081`;
     }
 
-    // 🛡️ SANITIZER: Ensure we never include the broken "None/storage" path
+// 🛡️ SANITIZER: Ensure we never include the broken "None" path
     if (url.includes("/None/")) {
-        url = url.split("/None/")[0];
+    url = url.split("/None/")[0];
     }
-    
+
     return url;
 };
 

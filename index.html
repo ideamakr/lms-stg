@@ -631,20 +631,21 @@
        * 📡 DYNAMIC API URL DETECTION
        * This centralizes your API endpoint configuration.
        */
+// 🌐 Dynamic API Handshake
 const getApiUrl = () => {
-        const host = window.location.hostname;
-        
-        // 1. Local Development (Updated to port 8081)
-        if (host === "127.0.0.1" || host === "localhost") {
-          return "http://127.0.0.1:8081";
-        }
-        
-        // 2. PRODUCTION: Official Client Domain
-        return "http://leave.psyap.com:8081";
-      };
+    const host = window.location.hostname;
 
-      const API_URL = getApiUrl();
-      console.log("🌐 Initializing handshake with API:", API_URL);
+    // Local Development
+    if (host === "127.0.0.1" || host === "localhost") {
+        return "http://127.0.0.1:8081";
+    }
+
+    // Production / VPN / DDNS / Future Domain
+    return `http://${host}:8081`;
+};
+
+const API_URL = getApiUrl();
+console.log("🌐 Initializing handshake with API:", API_URL);
 
       // Initialize Particles background
       particlesJS("particles-js", {
