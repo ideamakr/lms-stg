@@ -423,6 +423,29 @@ async def create_leave(
         working_days = [d for d in all_dates if d.weekday() < 5]
         days_requested = float(len(working_days))
 
+        # 🚀 Validation: Prevent zero-day leave applications
+        # ============================================================
+        # BUSINESS RULE
+        #
+        # Public Holidays:
+        #   Allowed.
+        #   Malaysia has state-specific holidays, therefore we do not
+        #   block applications. HR/Admin will decide if necessary.
+        #
+        # Weekends:
+        #   Not allowed.
+        #   Employees should submit an Overtime Request instead.
+        # ============================================================
+
+    if days_requested <= 0:
+        return JSONResponse(
+        status_code=400,
+        content={
+            "detail": "Leave cannot be applied on weekends. If you worked during the weekend, please submit an Overtime Request instead."
+        }
+    )
+
+
     # 4. FETCH BALANCE
     balance = _calculate_shared_balance(db, employee_name, start_obj.year, leave_type, include_pending=True)
     if not balance:
