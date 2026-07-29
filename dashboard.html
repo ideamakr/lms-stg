@@ -23818,43 +23818,109 @@ function resetAdjustmentValues() {
             actionCenter.style.display = isActionCenterVisible ? "block" : "none";
         }
 
-        // Update the Header Month dynamically
-        const monthHeader = document.getElementById("upcoming_schedule_month");
-        if (monthHeader) {
-            monthHeader.innerText = now.toLocaleDateString("en-US", { month: "long", year: "numeric" }).toUpperCase();
-        }
+// Update the Header Month dynamically
+const monthHeader = document.getElementById("upcoming_schedule_month");
+if (monthHeader) {
+    monthHeader.innerText = now.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric"
+    }).toUpperCase();
+}
 
-        // --- 🗓️ 1. NEXT HOLIDAY ---
-        const nextHoliday = holidays.filter(h => h.holiday_date >= todayStr).sort((a, b) => a.holiday_date.localeCompare(b.holiday_date))[0];
-        if (nextHoliday) {
-            const [y, m, d] = nextHoliday.holiday_date.split('-');
-            const hDate = new Date(y, m - 1, d);
-            if (document.getElementById("holiday_day_display")) document.getElementById("holiday_day_display").innerText = hDate.toLocaleDateString("en-US", { weekday: 'short' }).toUpperCase();
-            if (document.getElementById("holiday_date_display")) document.getElementById("holiday_date_display").innerText = hDate.getDate();
-            if (document.getElementById("holiday_name_display")) document.getElementById("holiday_name_display").innerText = nextHoliday.name;
-        } else {
-            if (document.getElementById("holiday_day_display")) document.getElementById("holiday_day_display").innerHTML = "&nbsp;";
-            if (document.getElementById("holiday_date_display")) document.getElementById("holiday_date_display").innerHTML = '<i class="far fa-calendar" style="font-size: 1.5rem; opacity: 0.4;"></i>';
-            if (document.getElementById("holiday_name_display")) document.getElementById("holiday_name_display").innerText = "No Upcoming Holidays";
-        }
 
-        // --- ✈️ 2. MY UPCOMING LEAVE ---
-        const holidayLimit = new Date(year, now.getMonth(), now.getDate() + 30);
-        const holidayLimitStr = holidayLimit.toISOString().split('T')[0];
-        const personalUpcoming = myLeaves.filter(l => (l.status || "").toLowerCase() === "approved" && l.start_date > todayStr && l.start_date <= holidayLimitStr).sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
-        if (personalUpcoming) {
-            const [y, m, d] = personalUpcoming.start_date.split('-');
-            const lDate = new Date(y, m - 1, d);
-            if (document.getElementById("leave_day_display")) document.getElementById("leave_day_display").innerText = lDate.toLocaleDateString("en-US", { weekday: 'short' }).toUpperCase();
-            if (document.getElementById("leave_date_display")) document.getElementById("leave_date_display").innerText = lDate.getDate();
-            if (document.getElementById("leave_type_display")) document.getElementById("leave_type_display").innerText = personalUpcoming.leave_type;
-            if (document.getElementById("leave_status_display")) document.getElementById("leave_status_display").innerText = "APPROVED";
-        } else {
-            if (document.getElementById("leave_day_display")) document.getElementById("leave_day_display").innerHTML = "&nbsp;"; 
-            if (document.getElementById("leave_date_display")) document.getElementById("leave_date_display").innerHTML = '<i class="fas fa-briefcase" style="font-size: 1.5rem; opacity: 0.4;"></i>';
-            if (document.getElementById("leave_type_display")) document.getElementById("leave_type_display").innerText = "No Upcoming Leave";
-            if (document.getElementById("leave_status_display")) document.getElementById("leave_status_display").innerText = "";
-        }
+// ====================================================================
+// SHARED 30-DAY UPCOMING WINDOW
+// Used by both Upcoming Public Holiday and My Upcoming Leave
+// ====================================================================
+    const UPCOMING_WINDOW_DAYS = 30;
+
+    const upcomingWindow = new Date(
+        year,
+        now.getMonth(),
+        now.getDate() + UPCOMING_WINDOW_DAYS
+    );
+    
+const upcomingWindowStr = upcomingWindow.toISOString().split('T')[0];
+
+// --- 🗓️ 1. NEXT HOLIDAY ---
+// BUSINESS RULE:
+// Display the next public holiday only if it falls within the next 30 days.
+// Otherwise, show "No Upcoming Holidays".
+const nextHoliday = holidays
+    .filter(h =>
+        h.holiday_date >= todayStr &&
+        h.holiday_date <= upcomingWindowStr
+    )
+    .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date))[0];
+
+if (nextHoliday) {
+    const [y, m, d] = nextHoliday.holiday_date.split('-');
+    const hDate = new Date(y, m - 1, d);
+
+    if (document.getElementById("holiday_day_display"))
+        document.getElementById("holiday_day_display").innerText =
+            hDate.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+
+    if (document.getElementById("holiday_date_display"))
+        document.getElementById("holiday_date_display").innerText = hDate.getDate();
+
+    if (document.getElementById("holiday_name_display"))
+        document.getElementById("holiday_name_display").innerText = nextHoliday.name;
+
+} else {
+    if (document.getElementById("holiday_day_display"))
+        document.getElementById("holiday_day_display").innerHTML = "&nbsp;";
+
+    if (document.getElementById("holiday_date_display"))
+        document.getElementById("holiday_date_display").innerHTML =
+            '<i class="far fa-calendar" style="font-size: 1.5rem; opacity: 0.4;"></i>';
+
+    if (document.getElementById("holiday_name_display"))
+        document.getElementById("holiday_name_display").innerText = "No Upcoming Holidays";
+}
+
+// --- ✈️ 2. MY UPCOMING LEAVE ---
+// BUSINESS RULE:
+// Display only approved leave that starts within the next 30 days.
+const personalUpcoming = myLeaves
+    .filter(l =>
+        (l.status || "").toLowerCase() === "approved" &&
+        l.start_date > todayStr &&
+        l.start_date <= upcomingWindowStr
+    )
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
+
+if (personalUpcoming) {
+    const [y, m, d] = personalUpcoming.start_date.split('-');
+    const lDate = new Date(y, m - 1, d);
+
+    if (document.getElementById("leave_day_display"))
+        document.getElementById("leave_day_display").innerText =
+            lDate.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+
+    if (document.getElementById("leave_date_display"))
+        document.getElementById("leave_date_display").innerText = lDate.getDate();
+
+    if (document.getElementById("leave_type_display"))
+        document.getElementById("leave_type_display").innerText = personalUpcoming.leave_type;
+
+    if (document.getElementById("leave_status_display"))
+        document.getElementById("leave_status_display").innerText = "APPROVED";
+
+} else {
+    if (document.getElementById("leave_day_display"))
+        document.getElementById("leave_day_display").innerHTML = "&nbsp;";
+
+    if (document.getElementById("leave_date_display"))
+        document.getElementById("leave_date_display").innerHTML =
+            '<i class="fas fa-briefcase" style="font-size: 1.5rem; opacity: 0.4;"></i>';
+
+    if (document.getElementById("leave_type_display"))
+        document.getElementById("leave_type_display").innerText = "No Upcoming Leave";
+
+    if (document.getElementById("leave_status_display"))
+        document.getElementById("leave_status_display").innerText = "";
+}
 
         // --- 🔵 3. PENDING LEAVE shortcuts ---
         if (document.getElementById("home_leave_count")) {
