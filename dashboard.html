@@ -5037,6 +5037,8 @@ html.dark #card_unpaid {
     color:#16a34a;
 }
 
+
+
     </style>
   </head>
   <body>
@@ -5482,40 +5484,141 @@ html.dark #card_unpaid {
                                         <span id="upcoming_schedule_month" style="font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;"><span class="skeleton-text" style="width: 80px; height: 12px;"></span></span>
                                     </div>
                                     
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 25px;">
-                                        <div style="background: #fff5f6; border: 1px solid #fce7f3; border-radius: 8px; padding: 15px 20px; display: flex; align-items: center; gap: 20px;">
-                                            <div style="text-align: center; min-width: 45px;">
-                                                <p id="holiday_day_display" style="font-size: 0.65rem; font-weight: 800; color: #f43f5e; margin: 0; text-transform: uppercase;"><span class="skeleton-text" style="width: 25px; height: 10px; margin-bottom: 4px;"></span></p>
-                                                <p id="holiday_date_display" style="font-size: 1.8rem; font-weight: 900; color: #e11d48; margin: 0; line-height: 1.1;"><span class="skeleton-text" style="width: 35px; height: 28px;"></span></p>
-                                            </div>
-                                            <div style="width: 1px; height: 35px; background: rgba(225, 29, 72, 0.2);"></div>
-                                            <div style="flex: 1;">
-                                                <p style="font-size: 0.65rem; font-weight: 800; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 4px 0;">Public Holiday</p>
-                                                <h4 id="holiday_name_display" style="font-size: 1.1rem; font-weight: 900; color: #1e293b; margin: 0;"><span class="skeleton-text" style="width: 120px; height: 18px;"></span></h4>
-                                            </div>
-                                            <div style="color: #f43f5e; opacity: 0.15; font-size: 2.2rem; display: flex; align-items: center; justify-content: center; padding-left: 10px;">
-                                                <i class="fas fa-umbrella-beach"></i>
-                                            </div>
-                                        </div>
-                            
-                                        <div style="background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 15px 20px; display: flex; align-items: center; gap: 20px;">
-                                            <div style="text-align: center; min-width: 45px;">
-                                                <p id="leave_day_display" style="font-size: 0.65rem; font-weight: 800; color: #10b981; margin: 0; text-transform: uppercase;"><span class="skeleton-text" style="width: 25px; height: 10px; margin-bottom: 4px;"></span></p>
-                                                <p id="leave_date_display" style="font-size: 1.8rem; font-weight: 900; color: #059669; margin: 0; line-height: 1.1;"><span class="skeleton-text" style="width: 35px; height: 28px;"></span></p>
-                                            </div>
-                                            <div style="width: 1px; height: 35px; background: rgba(16, 185, 129, 0.2);"></div>
-                                            <div style="flex: 1;">
-                                                <p style="font-size: 0.65rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 4px 0;">Next Leave</p>
-                                                <div style="display: flex; flex-direction: column; gap: 4px;">
-                                                    <h4 id="leave_type_display" style="font-size: 1.1rem; font-weight: 900; color: #1e293b; margin: 0;"><span class="skeleton-text" style="width: 100px; height: 18px;"></span></h4>
-                                                    <span id="leave_status_display" style="font-size: 0.6rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.5px;"><span class="skeleton-text" style="width: 60px; height: 10px;"></span></span>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 25px;">
+
+                                    <!-- ========================= PUBLIC HOLIDAY ========================= -->
+                                <div style="
+                                    background:#ffffff;
+                                    border:1px solid #fce7f3;
+                                    border-left:4px solid #f43f5e;
+                                    border-radius:8px;
+                                    padding:15px 20px;
+                                    display:flex;
+                                    align-items:stretch;
+                                    gap:15px;
+                                ">
+
+                                        <div style="flex:1; display:flex; flex-direction:column;">
+
+                                            <p style="font-size:0.65rem; font-weight:800; color:#5b5b5b; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 12px 0;">
+                                                Public Holidays
+                                            </p>
+
+                                            <div id="holiday_list_display" style="flex:1;">
+
+                                                <div style="margin-bottom:8px;">
+                                                    <span class="skeleton-text" style="width:100%; height:14px;"></span>
                                                 </div>
+
+                                                <div style="margin-bottom:8px;">
+                                                    <span class="skeleton-text" style="width:90%; height:14px;"></span>
+                                                </div>
+
+                                                <div>
+                                                    <span class="skeleton-text" style="width:75%; height:14px;"></span>
+                                                </div>
+
                                             </div>
-                                            <div style="color: #10b981; opacity: 0.15; font-size: 2.2rem; display: flex; align-items: center; justify-content: center; padding-left: 10px;">
-                                                <i class="fas fa-plane"></i>
+
+                                        </div>
+
+                                       <div style="
+                                        width:80px;
+                                        display:flex;
+                                        align-items:flex-end;
+                                        justify-content:center;
+                                        flex-shrink:0;
+                                        margin-right:5px;
+                                    ">
+
+                                        <i class="fas fa-umbrella-beach" style="
+                                            color:#f43f5e;
+                                            font-size:4.8rem;
+                                            opacity:0.08;
+                                            transform:rotate(-8deg);
+                                        "></i>
+
+                                    </div>
+
+                                    </div>
+
+                                    <!-- ========================= NEXT LEAVE ========================= -->
+
+                                    <div style="background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 15px 20px; display: flex; align-items: center; gap: 20px;">
+                                        <div style="
+                                            width:72px;
+                                            height:72px;
+                                            border-radius:12px;
+                                            background:#f0fdf4;
+                                            border:2px solid #bbf7d0;
+                                            display:flex;
+                                            flex-direction:column;
+                                            align-items:center;
+                                            justify-content:center;
+                                            flex-shrink:0;
+                                            box-shadow:0 2px 6px rgba(16,185,129,.08);
+                                        ">
+
+                                            <div style="
+                                                width:32px;
+                                                height:5px;
+                                                background:#10b981;
+                                                border-radius:999px;
+                                                margin-bottom:8px;
+                                            "></div>
+
+                                            <p id="leave_date_display"
+                                            style="font-size:2.2rem;font-weight:900;color:#059669;margin:0;line-height:1;">
+                                                <span class="skeleton-text" style="width:40px;height:34px;"></span>
+                                            </p>
+
+                                            <p id="leave_day_display"
+                                            style="font-size:.75rem;font-weight:800;color:#10b981;margin-top:4px;text-transform:uppercase;">
+                                                <span class="skeleton-text" style="width:30px;height:10px;"></span>
+                                            </p>
+
+                                        </div>
+
+                                        <div style="width: 1px; height: 35px; background: rgba(16, 185, 129, 0.2);"></div>
+
+                                        <div style="flex: 1;">
+                                            <p style="font-size: 0.65rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 4px 0;">
+                                                Next Leave
+                                            </p>
+
+                                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                <h4 id="leave_type_display" style="font-size: 1.1rem; font-weight: 900; color: #1e293b; margin: 0;">
+                                                    <span class="skeleton-text" style="width: 100px; height: 18px;"></span>
+                                                </h4>
+
+                                                <span id="leave_status_display" style="font-size: 0.6rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                    <span class="skeleton-text" style="width: 60px; height: 10px;"></span>
+                                                </span>
                                             </div>
                                         </div>
+
+                                    <div style="
+                                    width:100px;
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    flex-shrink:0;
+                                    margin-left:10px;
+                                    margin-right:5px;
+                                ">
+
+                                    <i class="fas fa-plane" style="
+                                        color:#10b981;
+                                        font-size:6rem;
+                                        opacity:0.08;
+                                        transform:rotate(-18deg);
+                                    "></i>
+
+                                </div>
+
                                     </div>
+
+                                </div>
                                 </div>
                             </div> <div id="superuser_home_view" style="display: none; padding: 0; margin-bottom: 30px; width: 100%; box-sizing: border-box;">
                                 
@@ -7064,10 +7167,27 @@ html.dark #card_unpaid {
         
         <div style="padding: 25px 30px; border-bottom: 1px solid #f1f5f9; background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div>
-                <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b; display: flex; align-items: center; gap: 10px; border: none; padding: 0;">
-                    <i class="fas fa-umbrella-beach" style="color: #0ea5e9"></i>
-                    Public Holidays
-                </h2>
+<h2 style="
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: none;
+    padding: 0;
+">
+    <i class="fas fa-umbrella-beach" style="
+        color:#0ea5e9;
+        font-size:1.9rem;
+        width:34px;
+        text-align:center;
+        flex-shrink:0;
+    "></i>
+
+    Public Holidays
+</h2>
                 <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.9rem">
                     View official corporate office closures and reference historical cycles.
                 </p>
@@ -22372,7 +22492,42 @@ async function submitNewUser(event) {
                 </div>
             </div>
             
-            </div>`;
+            <div id="sum_step_2" style="display: none;">
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.85rem;">
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">PREFERRED NAME</b>${getDisplayVal("reg_pref_name_new")}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">IC / PASSPORT NO</b>${getDisplayVal("reg_ic_new")}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">DATE / PLACE OF BIRTH</b>${getDisplayVal("reg_dob_new")} <br> <span style="color:#64748b;">${getDisplayVal("reg_place_of_birth")}</span></div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">GENDER / MARITAL STATUS</b>${getDisplayVal("reg_gender_new")} / ${getDisplayVal("reg_marital_new")}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">NATIONALITY / RACE</b>${getDisplayVal("reg_nat_new")} / ${getDisplayVal("reg_race_new")}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">RELIGION</b>${getDisplayVal("reg_religion_new")}</div>
+                        <div style="grid-column: span 2; border-top: 1px dashed #e2e8f0; padding-top: 12px; margin-top: 5px;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HIGHEST QUALIFICATION</b>${getDisplayVal("reg_highest_qualification")}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sum_step_3" style="display: none;">
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+                    <h5 style="margin: 0 0 10px 0; font-size: 0.75rem; color: #f59e0b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Logistics & Emergency</h5>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem;">
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">PERSONAL MOBILE</b>${mobile}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">PERSONAL EMAIL</b>${getDisplayVal("reg_personal_email_new")}</div>
+                        <div style="grid-column: span 2;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HOME ADDRESS</b>${getDisplayVal("reg_home_address_new")}</div>
+                        <div style="grid-column: span 2;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">CURRENT ADDRESS</b>${getDisplayVal("reg_current_address_new")}</div>
+                        <div style="grid-column: span 2; background: #ffffff; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">EMERGENCY RELIEF CONTACT</b>${getDisplayVal("reg_em_name")} (${getDisplayVal("reg_em_rel")}) • <span style="font-family:monospace; font-weight:700;">${getDisplayVal("reg_em_mobile")}</span></div>
+                    </div>
+                </div>
+                <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fde68a;">
+                    <h5 style="margin: 0 0 10px 0; font-size: 0.75rem; color: #b45309; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Disbursal Salary Bank Node</h5>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem;">
+                        <div><b style="color: #b45309; font-size: 0.65rem; display:block;">BANK NAME</b>${getDisplayVal("reg_bank_name")}</div>
+                        <div><b style="color: #b45309; font-size: 0.65rem; display:block;">ACCOUNT NUMBER / STATUS</b>${getDisplayVal("reg_bank_account_number")} <br> <span style="font-weight:700; color:#10b981;">${getDisplayVal("reg_bank_account_status")}</span></div>
+                        <div style="grid-column: span 2;"><b style="color: #b45309; font-size: 0.65rem; display:block;">ACCOUNT HOLDER NAME</b>${getDisplayVal("reg_bank_holder_name")}</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>`;
 
         const confirmReview = await Swal.fire({
         title: window.isEditingUser ? 'Verify Profile Changes' : 'Final Review: New Onboarding',
@@ -23839,44 +23994,132 @@ if (monthHeader) {
         now.getMonth(),
         now.getDate() + UPCOMING_WINDOW_DAYS
     );
-    
+
 const upcomingWindowStr = upcomingWindow.toISOString().split('T')[0];
 
-// --- 🗓️ 1. NEXT HOLIDAY ---
-// BUSINESS RULE:
-// Display the next public holiday only if it falls within the next 30 days.
-// Otherwise, show "No Upcoming Holidays".
-const nextHoliday = holidays
-    .filter(h =>
-        h.holiday_date >= todayStr &&
-        h.holiday_date <= upcomingWindowStr
-    )
-    .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date))[0];
+// ====================================================================
+// 🗓️ 1. UPCOMING PUBLIC HOLIDAYS
+// Display up to 3 upcoming public holidays within the next 30 days.
+// ====================================================================
 
-if (nextHoliday) {
-    const [y, m, d] = nextHoliday.holiday_date.split('-');
-    const hDate = new Date(y, m - 1, d);
+const holidayList = document.getElementById("holiday_list_display");
 
-    if (document.getElementById("holiday_day_display"))
-        document.getElementById("holiday_day_display").innerText =
-            hDate.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+if (holidayList) {
 
-    if (document.getElementById("holiday_date_display"))
-        document.getElementById("holiday_date_display").innerText = hDate.getDate();
+    const upcomingHolidays = holidays
+        .filter(h =>
+            h.holiday_date >= todayStr &&
+            h.holiday_date <= upcomingWindowStr
+        )
+        .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date))
+        .slice(0, 3);
 
-    if (document.getElementById("holiday_name_display"))
-        document.getElementById("holiday_name_display").innerText = nextHoliday.name;
+    if (upcomingHolidays.length > 0) {
 
-} else {
-    if (document.getElementById("holiday_day_display"))
-        document.getElementById("holiday_day_display").innerHTML = "&nbsp;";
+        holidayList.innerHTML = upcomingHolidays.map((h, index) => {
 
-    if (document.getElementById("holiday_date_display"))
-        document.getElementById("holiday_date_display").innerHTML =
-            '<i class="far fa-calendar" style="font-size: 1.5rem; opacity: 0.4;"></i>';
+            const [y, m, d] = h.holiday_date.split("-");
+            const holidayDate = new Date(y, m - 1, d);
 
-    if (document.getElementById("holiday_name_display"))
-        document.getElementById("holiday_name_display").innerText = "No Upcoming Holidays";
+            const day = holidayDate.getDate();
+            const month = holidayDate.toLocaleDateString("en-US", {
+                month: "short"
+            }).toUpperCase();
+
+            const weekday = holidayDate.toLocaleDateString("en-US", {
+                weekday: "short"
+            }).toUpperCase();
+
+            return `
+                <div style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:space-between;
+                    padding:6px 0;
+                    border-bottom:${index < upcomingHolidays.length - 1 ? "1px solid #ffe4e6" : "none"};
+                ">
+
+                <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+
+                    <div style="
+                        width:42px;
+                        height:42px;
+                        border-radius:10px;
+                        background:#fff5f6;
+                        border:1px solid #fecdd3;
+                        display:flex;
+                        flex-direction:column;
+                        justify-content:center;
+                        align-items:center;
+                        flex-shrink:0;
+                    ">
+
+                        <div style="
+                            font-size:1rem;
+                            font-weight:900;
+                            line-height:1;
+                            color:#e11d48;
+                        ">
+                            ${day}
+                        </div>
+
+                        <div style="
+                            font-size:0.55rem;
+                            font-weight:800;
+                            letter-spacing:1px;
+                            color:#f43f5e;
+                            margin-top:2px;
+                        ">
+                            ${month}
+                        </div>
+
+                    </div>
+
+                    <div style="
+                    flex:1;
+                    min-width:0;
+                    font-size:0.82rem;
+                    font-weight:700;
+                    color:#1e293b;
+                    white-space:nowrap;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                ">
+                    ${h.name}
+                </div>
+
+                </div>
+
+            <div style="
+                font-size:0.68rem;
+                font-weight:800;
+                color:#94a3b8;
+                letter-spacing:0.8px;
+                flex-shrink:0;
+            ">
+                ${weekday}
+            </div>
+
+                </div>
+            `;
+
+        }).join("");
+
+    } else {
+
+            holidayList.innerHTML = `
+                <h4 style="
+                    margin:18px 0 0;
+                    text-align:center;
+                    font-size:1.1rem;
+                    font-weight:900;
+                    color:#1e293b;
+                ">
+                    No Upcoming Holidays
+                </h4>
+            `;
+
+    }
 }
 
 // --- ✈️ 2. MY UPCOMING LEAVE ---
