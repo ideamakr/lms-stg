@@ -10940,7 +10940,7 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
 
 // 📡 DYNAMIC API HANDSHAKE (HARDENED)
-    const getApiUrl = () => {
+const getApiUrl = () => {
     const host = window.location.hostname;
     let url = "";
 
@@ -10948,13 +10948,13 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
     if (host === "127.0.0.1" || host === "localhost") {
         url = "http://127.0.0.1:8081";
     } else {
-        // 2. PRODUCTION / VPN / IP Access
-        url = `http://${host}:8081`;
+        // 2. Production / Staging / DDNS
+        url = `https://${host}:8443`;
     }
 
-// 🛡️ SANITIZER: Ensure we never include the broken "None" path
+    // 🛡️ SANITIZER: Ensure we never include the broken "None" path
     if (url.includes("/None/")) {
-    url = url.split("/None/")[0];
+        url = url.split("/None/")[0];
     }
 
     return url;
@@ -10962,6 +10962,7 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 
 // Define once. Use "const" so it cannot be changed later.
 const API_URL = getApiUrl();
+
 console.log("🌐 System Handshake confirmed with:", API_URL);
 
 // ============================================================
@@ -33385,7 +33386,7 @@ async function executeFinalAdjustment() {
             "admin";
 
         // Explicitly target FastAPI backend
-        const backendUrl = `${window.location.protocol}//${window.location.hostname}:8081/leaves/admin/adjust-individual`;
+        const backendUrl = `${API_URL}/leaves/admin/adjust-individual`;
 
         const response = await fetch(backendUrl, {
             method: "POST",

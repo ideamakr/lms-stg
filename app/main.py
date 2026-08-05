@@ -192,39 +192,40 @@ if not os.path.exists("uploads"):
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# 🔒 CORS Configuration
+# ============================================================
+# 🔒 CORS CONFIGURATION
+# ============================================================
+
+# Environment-specific frontend domain
+# Example:
+# Production: CLIENT_DOMAIN=https://psyap.synology.me
+# Staging:    CLIENT_DOMAIN=https://<staging-domain>
+CLIENT_DOMAIN = os.getenv("CLIENT_DOMAIN")
+
+# Local development origins remain available in all environments
 allowed_origins = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-
-    # Production
-    "http://leave.psyap.com:8080",
-
-    # Temporary DDNS for deployment/testing
-    "http://psyap.synology.me:8080",
 ]
 
-# 🚀 Dynamically whitelist the production/Cloudflare domain and its variants
-CLIENT_DOMAIN = os.getenv("CLIENT_DOMAIN")
+# Add the frontend domain configured for the current environment
 if CLIENT_DOMAIN:
-    # Add the base domain
-    allowed_origins.append(CLIENT_DOMAIN)
-    
-    # If the domain doesn't already end with a port, add the 8081 variant
-    if ":" not in CLIENT_DOMAIN.split("//")[-1]:
-        # Construct the port 8081 variant
-        port_8081_domain = f"{CLIENT_DOMAIN}:8081"
-        allowed_origins.append(port_8081_domain)
+    client_origin = CLIENT_DOMAIN.rstrip("/")
 
+    if client_origin not in allowed_origins:
+        allowed_origins.append(client_origin)
+
+# Apply CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins, 
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"], 
-    allow_headers=["*"], 
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
 # ============================================================
 # 📸 UTILITIES
 # ============================================================

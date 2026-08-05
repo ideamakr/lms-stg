@@ -640,8 +640,8 @@ const getApiUrl = () => {
         return "http://127.0.0.1:8081";
     }
 
-    // Production / VPN / DDNS / Future Domain
-    return `http://${host}:8081`;
+    // Production / Staging / DDNS
+    return `https://${host}:8443`;
 };
 
 const API_URL = getApiUrl();

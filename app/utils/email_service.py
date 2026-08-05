@@ -34,7 +34,10 @@ def send_email(to_email: str, subject: str, body: str):
     # 🎯 FIX: Looks for BREVO_API_KEY first; if empty, automatically grabs BREVO_SMTP_PASS!
     current_api_key = os.getenv("BREVO_API_KEY") or os.getenv("BREVO_SMTP_PASS")
     current_sender = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
-    SYSTEM_URL = "http://psyap.synology.me:8080/"
+
+    # 🌐 System URL - Environment controlled
+    # Production / Staging URL is supplied through .env
+    SYSTEM_URL = os.getenv("CLIENT_DOMAIN", "http://127.0.0.1:8000").rstrip("/") + "/"
 
     # 🛑 Crash Prevention Guard
     if not current_api_key:
