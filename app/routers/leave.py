@@ -1477,6 +1477,7 @@ def get_team_entitlements(
 
             results.append({
                 "name": emp_name,
+                "company": u.company or "",
                 "status": "Active" if u.is_active else "Inactive",
                 "is_active": u.is_active,
                 "annual_remaining": ann["rem"],

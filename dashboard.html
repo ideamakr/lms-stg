@@ -23542,6 +23542,7 @@ async function exportEntitlementsCSV() {
     // 5. CSV Generation (Refined Header Sequence & Naming)
 // 5. CSV Generation (Refined Header Sequence & Naming)
 const headers = [
+    "Company",
     "Employee Name",
     "Status",
 
@@ -23573,6 +23574,7 @@ let csvContent =
 
 dataToExport.forEach((emp) => {
     const row = [
+        clean(emp.company || "—"),
         clean(emp.name || "Unknown"),
         clean(emp.status || "Active"),
 
