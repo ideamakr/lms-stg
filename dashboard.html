@@ -10942,11 +10942,20 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 // 📡 DYNAMIC API HANDSHAKE (HARDENED)
 const getApiUrl = () => {
     const host = window.location.hostname;
+    const port = window.location.port;
     let url = "";
 
     // 1. Local Development
     if (host === "127.0.0.1" || host === "localhost") {
-        url = "http://127.0.0.1:8081";
+
+        // Staging frontend :8083 → Staging API :8082
+        if (port === "8083") {
+            url = "http://127.0.0.1:8082";
+        } else {
+            // Production frontend → Production API :8081
+            url = "http://127.0.0.1:8081";
+        }
+
     } else {
         // 2. Production / Staging / DDNS
         url = `https://${host}:8443`;
