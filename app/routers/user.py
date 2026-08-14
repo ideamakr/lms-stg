@@ -1475,7 +1475,7 @@ async def bulk_onboard_validate(
     existing_full_names = {u.full_name.strip().lower() for u in db.query(models.User.full_name).filter(models.User.full_name != None).all()}
 
     # ⚡ PRESERVED EXACTLY: Your active sequencing numbers to keep '009' alignment
-    next_sim_num = 1001 
+    next_sim_num = 1 
     last_user = db.query(models.User).filter(models.User.employee_id.like("EMP-%")).order_by(models.User.id.desc()).first()
     if last_user and last_user.employee_id:
         try:
@@ -1489,7 +1489,7 @@ async def bulk_onboard_validate(
 
         if not f_name or not email_addr: row_errors.append("Missing mandatory fields.")
         
-        sim_id = emp_id if emp_id else f"EMP-2026-{next_sim_num:03d}"
+        sim_id = emp_id if emp_id else f"EMP-{datetime.now().year}-{next_sim_num:03d}"
         if not emp_id: next_sim_num += 1
         elif sim_id in existing_emp_ids: row_errors.append(f"ID Conflict: {sim_id}")
 
@@ -1614,7 +1614,7 @@ async def bulk_onboard_commit(
             pass # Keep dict empty if parsing fails to avoid dropping the batch execution
 
     # Auto-numbering logic (Preserved exactly to match your tracking codes)
-    next_num = 1001
+    next_num = 1
     last = db.query(models.User).filter(models.User.employee_id.like("EMP-%")).order_by(models.User.id.desc()).first()
     if last:
         try: 
@@ -1629,7 +1629,7 @@ async def bulk_onboard_commit(
         f_name, first_n, last_n = row.get('full_name','').strip(), row.get('first_name','').strip(), row.get('last_name','').strip()
         email, emp_id, uname = row.get('email','').strip().lower(), row.get('employee_id','').strip(), row.get('username','').strip().lower()
 
-        final_id = emp_id if emp_id else f"EMP-2026-{next_num:03d}"
+        final_id = emp_id if emp_id else f"EMP-{datetime.now().year}-{next_num:03d}"
         if not emp_id: next_num += 1
 
         if not uname:
