@@ -45,3 +45,9 @@ upgrade_db.py
 inspect_db.py
 
 logs/
+# Staging temporary files
+*.bak
+staging_server_log.txt
+start_server_staging.bat
+
+*.bak-before-username-fix

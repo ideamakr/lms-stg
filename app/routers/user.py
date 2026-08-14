@@ -1432,7 +1432,7 @@ def get_global_stats(db: Session = Depends(get_db), current_user_role: str = Hea
         raise HTTPException(status_code=500, detail=f"Failed to fetch global stats: {str(e)}")
     
 # 🎯 Ensure this regex rule is defined above the endpoint in user.py
-USERNAME_REGEX = re.compile(r"^[a-z0-9-]{1,10}$")
+USERNAME_REGEX = re.compile(r"^[a-z0-9.-]{1,50}$")
 
 # ============================================================
 # 🔍 PHASE 1: IN-MEMORY DATA INTEGRITY DIAGNOSTICS
