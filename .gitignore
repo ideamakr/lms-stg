@@ -45,3 +45,6 @@ upgrade_db.py
 inspect_db.py
 
 logs/
+# Local backup files
+*.bak
+*.bak-before-username-fix
