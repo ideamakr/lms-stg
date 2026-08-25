@@ -22379,9 +22379,9 @@ async function submitNewUser(event) {
     const mobile = safeGet("reg_mobile_new"); 
 
     // 🛡️ INLINE VALIDATION GUARD
-    const mgrContainer = document.getElementById("reg_mgr_container");
-    const hasLineManager = mgrContainer && mgrContainer.querySelectorAll('input[type="checkbox"]:checked').length > 0;
-    
+    // Line Manager and HOD are optional during onboarding.
+    // They can be configured after the employee is created.
+
     let hasMissingFields = false;
     let targetErrorStep = null; 
 
@@ -22410,10 +22410,6 @@ async function submitNewUser(event) {
     if (!username) flagError("reg_username_new", "Username is required.", 1);
     if (!email) flagError("reg_office_email_new", "Office Email is required.", 1);
     if (!joinedDate) flagError("reg_joined_new", "Joined Date is required.", 1);
-    if (!hasLineManager) {
-        if (mgrContainer) mgrContainer.style.borderColor = "#ef4444";
-        flagError("reg_mgr_container", "At least one Line Manager must be selected.", 1);
-    }
     if (!mobile) flagError("reg_mobile_new", "Mobile Number is required.", 3);
 
     if (hasMissingFields) {
@@ -22423,11 +22419,17 @@ async function submitNewUser(event) {
             text: "Please fill in all mandatory fields highlighted in red.",
             confirmButtonColor: "#3b82f6"
         }).then(() => {
-            if (targetErrorStep && typeof currentRegStep !== 'undefined' && currentRegStep !== targetErrorStep) {
-                if (typeof navRegStep === 'function') navRegStep(targetErrorStep - currentRegStep); 
+            if (targetErrorStep &&
+                typeof currentRegStep !== 'undefined' &&
+                currentRegStep !== targetErrorStep) {
+
+                if (typeof navRegStep === "function") {
+                    navRegStep(targetErrorStep - currentRegStep);
+                }
             }
         });
-        return; 
+
+        return;
     }
 
     // ==========================================
@@ -24911,9 +24913,9 @@ async function clearBrandingFavicon() {
     async function submitProfileUpdate(event, userId) {
     if (event) event.preventDefault();
 
-    // 1. --- RESET PHASE (Solves Issue #2) ---
+    // 1. --- RESET PHASE ---
     // Clear all red borders and hide messages before re-validating
-    const errorSlots = ["name_error", "user_error", "mobile_error", "date_error", "manager_error"];
+    const errorSlots = ["name_error", "user_error", "mobile_error", "date_error"];
     errorSlots.forEach(id => clearError(id));
 
     // 2. --- DATA GATHERING ---
@@ -24926,47 +24928,51 @@ async function clearBrandingFavicon() {
     const email = getVal("reg_email");
     const mobile = getVal("reg_mobile");
     const joinedDate = getVal("reg_joined");
-    const lineManager = getVal("reg_manager"); // 🚀 Gathered for validation
+    const lineManager = getVal("reg_manager");
 
-    // 3. --- FRONTEND VALIDATION (Solves Issue #1) ---
+    // 3. --- FRONTEND VALIDATION ---
+    // Line Manager and HOD are OPTIONAL during onboarding.
+    // They can be configured later by HR.
     let hasError = false;
 
-    if (!fullName) { 
-        showInlineError("name_error", "Full Name is required"); 
-        hasError = true; 
-    }
-    if (!email) { 
-        showInlineError("user_error", "Business Email is required"); 
-        hasError = true; 
-    }
-    if (!mobile) { 
-        showInlineError("mobile_error", "Mobile number is required"); 
-        hasError = true; 
-    }
-    if (!joinedDate) { 
-        showInlineError("date_error", "Joined Date is required"); 
-        hasError = true; 
-    }
-    // 🚀 NEW: Validate Line Manager Selection
-    if (!lineManager) {
-        showInlineError("manager_error", "Please select a Line Manager");
+    if (!fullName) {
+        showInlineError("name_error", "Full Name is required");
         hasError = true;
     }
 
-    if (hasError) return; // Stop if any inline errors exist
+    if (!email) {
+        showInlineError("user_error", "Business Email is required");
+        hasError = true;
+    }
+
+    if (!mobile) {
+        showInlineError("mobile_error", "Mobile number is required");
+        hasError = true;
+    }
+
+    if (!joinedDate) {
+        showInlineError("date_error", "Joined Date is required");
+        hasError = true;
+    }
+
+    if (hasError) return;
 
     // 4. --- PREPARE PAYLOAD ---
     const formData = new FormData();
+
     formData.append("full_name", fullName);
     formData.append("employee_id", getVal("reg_emp_id"));
     formData.append("gender", getVal("reg_gender"));
     formData.append("marital_status", getVal("reg_marital"));
-    formData.append("email", email.toLowerCase()); 
+    formData.append("email", email.toLowerCase());
     formData.append("mobile", mobile);
     formData.append("job_title", getVal("reg_job_title"));
     formData.append("business_unit", getVal("reg_unit"));
     formData.append("department", getVal("reg_dept"));
+
+    // Optional hierarchy mapping
     formData.append("line_manager", lineManager);
+
     formData.append("joined_date", joinedDate);
 
     try {
@@ -24974,7 +24980,9 @@ async function clearBrandingFavicon() {
         Swal.fire({
             title: 'Updating Profile...',
             allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); }
+            didOpen: () => {
+                Swal.showLoading();
+            }
         });
 
         const res = await fetchWithAuth(
@@ -24988,7 +24996,6 @@ async function clearBrandingFavicon() {
         if (!res) return;
 
         if (res.ok) {
-            // 🚀 SUCCESS (Issue #3 Upgrade)
             Swal.fire({
                 icon: 'success',
                 title: 'Success!',
@@ -24996,26 +25003,46 @@ async function clearBrandingFavicon() {
                 timer: 2000,
                 showConfirmButton: false
             });
+
             closeRegisterModal();
             await loadAllUsers();
+
         } else {
             const err = await res.json();
-            // Handle backend validation errors inline
+
             if (err.detail && Array.isArray(err.detail)) {
                 err.detail.forEach(e => {
                     const field = e.loc[e.loc.length - 1];
-                    if (field === "full_name") showInlineError("name_error", e.msg);
-                    if (field === "email") showInlineError("user_error", e.msg);
-                    if (field === "mobile") showInlineError("mobile_error", e.msg);
+
+                    if (field === "full_name")
+                        showInlineError("name_error", e.msg);
+
+                    if (field === "email")
+                        showInlineError("user_error", e.msg);
+
+                    if (field === "mobile")
+                        showInlineError("mobile_error", e.msg);
                 });
-                Swal.close(); // Close loading if showing inline errors
+
+                Swal.close();
+
             } else {
-                Swal.fire('Update Failed', err.detail || 'Check all fields', 'error');
+                Swal.fire(
+                    'Update Failed',
+                    err.detail || 'Check all fields',
+                    'error'
+                );
             }
         }
+
     } catch (e) {
         console.error("Profile Update Error:", e);
-        Swal.fire('System Error', 'Could not reach server. Please check your connection.', 'error');
+
+        Swal.fire(
+            'System Error',
+            'Could not reach server. Please check your connection.',
+            'error'
+        );
     }
 }
 
@@ -29459,71 +29486,97 @@ function clearManagerError() {
     if (mgrError) mgrError.style.display = "none";
 }
 
-//   # =========================================================
-//          NEW EMPLOYEE REGISTRATION FORM - ENHANCED
-//   # ========================================================= 
+// =========================================================
+//        NEW EMPLOYEE REGISTRATION FORM - ENHANCED
+// =========================================================
 
 /**
- * 🛡️ STEP 1 VALIDATION GUARD (The Security Guard)
- * Checks mandatory fields before allowing the user to move to Step 2.
+ * 🛡️ STEP 1 VALIDATION GUARD
+ *
+ * Validates only the mandatory employee onboarding fields.
+ *
+ * Approval hierarchy is intentionally OPTIONAL during onboarding:
+ *   L1 = Team Lead
+ *   L2 = Line Manager
+ *   L3 = HOD / Department Head
+ *
+ * These approval mappings can be configured after
+ * the employee has been successfully onboarded.
  */
- function validateStep1() {
+function validateStep1() {
     let isValid = true;
-    
-    // Standard Inputs
+
+    // =========================================================
+    // STANDARD MANDATORY INPUTS
+    // =========================================================
     const first = document.getElementById("reg_first_name")?.value.trim();
     const last = document.getElementById("reg_last_name")?.value.trim();
     const username = document.getElementById("reg_username_new")?.value.trim();
     const joinedDate = document.getElementById("reg_joined_new")?.value;
 
-    // 🚀 Checkbox Containers
-    const mgrContainer = document.getElementById("reg_mgr_container");
-    const checkedManagers = mgrContainer ? mgrContainer.querySelectorAll('input[type="checkbox"]:checked') : [];
-    const hasLineManager = checkedManagers.length > 0;
-
-    // 🆕 HOD Container Check
-    const hodContainer = document.getElementById("reg_hod_container");
-    const checkedHODs = hodContainer ? hodContainer.querySelectorAll('input[type="checkbox"]:checked') : [];
-    const hasHOD = checkedHODs.length > 0;
-
+    // =========================================================
+    // INLINE ERROR HANDLER
+    // =========================================================
     const flagError = (inputId, errorSpanId, message) => {
         const inputEl = document.getElementById(inputId);
         const errorEl = document.getElementById(errorSpanId);
-        if (inputEl) inputEl.style.borderColor = "#ef4444";
+
+        if (inputEl) {
+            inputEl.style.borderColor = "#ef4444";
+        }
+
         if (errorEl) {
             errorEl.innerText = message;
             errorEl.style.display = "block";
         }
+
         isValid = false;
     };
 
-    // Validate Standard Inputs
-    if (!first) flagError("reg_first_name", "first_name_error", "First Name is required.");
-    if (!last) flagError("reg_last_name", "last_name_error", "Surname is required.");
-    if (!username) flagError("reg_username_new", "user_error_new", "Username is required.");
-    if (!joinedDate) flagError("reg_joined_new", "date_error_new", "Joined Date is required.");
-    
-// 🛡️ Line Manager Validation (Clean version)
-if (!hasLineManager) {
-        if (mgrContainer) mgrContainer.style.borderColor = "#ef4444";
-        const mgrError = document.getElementById("manager_error");
-        if (mgrError) {
-            mgrError.innerText = "⚠️ At least one Line Manager must be selected.";
-            mgrError.style.display = "block";
-        }
-        isValid = false;
+    // =========================================================
+    // VALIDATE MANDATORY EMPLOYEE FIELDS
+    // =========================================================
+    if (!first) {
+        flagError(
+            "reg_first_name",
+            "first_name_error",
+            "First Name is required."
+        );
     }
 
-    // 🛡️ HOD Validation (Clean version)
-    if (!hasHOD) {
-        if (hodContainer) hodContainer.style.borderColor = "#ef4444";
-        const hodError = document.getElementById("hod_error");
-        if (hodError) {
-            hodError.innerText = "⚠️ At least one HOD must be selected.";
-            hodError.style.display = "block";
-        }
-        isValid = false;
+    if (!last) {
+        flagError(
+            "reg_last_name",
+            "last_name_error",
+            "Surname is required."
+        );
     }
+
+    if (!username) {
+        flagError(
+            "reg_username_new",
+            "user_error_new",
+            "Username is required."
+        );
+    }
+
+    if (!joinedDate) {
+        flagError(
+            "reg_joined_new",
+            "date_error_new",
+            "Joined Date is required."
+        );
+    }
+
+    // =========================================================
+    // APPROVAL HIERARCHY
+    // =========================================================
+    // L1 Team Lead, L2 Line Manager and L3 HOD are OPTIONAL
+    // during employee onboarding.
+    //
+    // They can be configured after the employee is created.
+    // Therefore, NO validation or blocking is performed here.
+    // =========================================================
 
     if (!isValid) {
         Swal.fire({
@@ -31218,35 +31271,25 @@ function applyBulkAssignments() {
 }
 
 /**
- * 🛡️ Real-time workspace lookups evaluator logic locks/unlocks action execution button
+ * 🛡️ Real-time workspace evaluator
+ *
+ * L1 / L2 / HOD are OPTIONAL during onboarding.
+ * HR can proceed with bulk onboarding even when the
+ * approval hierarchy has not been configured yet.
  */
 function validateHierarchyCompletion() {
     const rows = document.querySelectorAll("#excel-table-body tr:not(#empty-state-row)");
     const commitBtn = document.getElementById("btn-commit-upload");
-    if (rows.length === 0) return;
 
-    let allAssigned = true;
+    if (!commitBtn) return;
 
-    rows.forEach(row => {
-        const mgrDropdown = row.querySelector(".row-manager-dropdown");
-        const hodDropdown = row.querySelector(".row-hod-dropdown");
-
-        if (mgrDropdown && !mgrDropdown.disabled) {
-            if (!mgrDropdown.value || !hodDropdown.value) {
-                allAssigned = false;
-            }
-        }
-    });
-
-    if (allAssigned) {
-        commitBtn.disabled = false;
-        commitBtn.style.opacity = "1";
-        commitBtn.style.cursor = "pointer";
-    } else {
-        commitBtn.disabled = true;
-        commitBtn.style.opacity = "0.4";
-        commitBtn.style.cursor = "not-allowed";
-    }
+    // Hierarchy mapping is NOT required during onboarding.
+    // HR can onboard employees first and configure
+    // Team Lead (L1) -> Line Manager (L2) -> HOD (L3)
+    // later.
+    commitBtn.disabled = false;
+    commitBtn.style.opacity = "1";
+    commitBtn.style.cursor = "pointer";
 }
 
 /**
