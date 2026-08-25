@@ -1450,11 +1450,7 @@ def get_team_entitlements(
                 if l_type == "Annual Leave" and today > expiry_date:
                     cf_banked = spent_cf
 
-                remaining = (
-                    float(b.remaining)
-                    if b and b.remaining is not None
-                    else ent - spent_annual
-                )
+                remaining = ent - spent_annual
 
                 return {
                     "ent": ent,
@@ -2116,10 +2112,10 @@ def merge_cf_bulk(payload: dict = Body(...), db: Session = Depends(get_db)):
 # 🧹 V1.5.0: The Carry-Forward "Grim Reaper" with Audit Trail
 def check_and_wipe_expired_cf(db: Session):
     today = date.today()
-    
+
     # 🚀 THE FIX: Target the exact row key
     setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
-    
+
     if not setting or not setting.value:
         return
 
@@ -2131,23 +2127,30 @@ def check_and_wipe_expired_cf(db: Session):
         else:
             expiry_date = date.fromisoformat(date_str)
     except:
-        return 
+        return
 
     # 2. 🛑 THE KILL SWITCH: If today is AFTER the deadline
     if today > expiry_date:
         # Find all balances for the current year that still have CF days > 0
-        expired_records = db.query(models.LeaveBalance).filter(
-            models.LeaveBalance.carry_forward_total > 0,
-            models.LeaveBalance.year == today.year
-        ).all()
+        # 🔒 Lock the balance rows while processing to prevent duplicate cleanup
+        # when multiple dashboard/balance requests arrive at the same time.
+        expired_records = (
+            db.query(models.LeaveBalance)
+            .filter(
+                models.LeaveBalance.carry_forward_total > 0,
+                models.LeaveBalance.year == today.year
+            )
+            .with_for_update()
+            .all()
+        )
 
         if expired_records:
             # 🚀 FIXED: Call the local timestamp helper to enforce KL (UTC+8) time
             timestamp = get_utc_timestamp()
-            
+
             for record in expired_records:
                 old_val = record.carry_forward_total
-                
+
                 # A. Create an Audit Record in the Leave table
                 expiry_log = models.Leave(
                     employee_name=record.employee_name,
@@ -2155,16 +2158,24 @@ def check_and_wipe_expired_cf(db: Session):
                     start_date=today,
                     end_date=today,
                     days_taken=old_val,
-                    status="Cancelled", 
+                    status="Cancelled",
                     reason=f"[SYSTEM AUTO-CLEANUP] {old_val} banked days expired on {expiry_date}.",
-                    status_history=f"Expired ({timestamp})", 
+                    status_history=f"Expired ({timestamp})",
                     approver_name="System Administrator"
                 )
                 db.add(expiry_log)
 
-                # B. Wipe the balance
+                # B. Wipe the expired carry-forward balance
+                old_cf = float(record.carry_forward_total or 0.0)
+
                 record.carry_forward_total = 0.0
-            
+
+                # Remove the expired CF days from the total remaining balance
+                record.remaining = max(
+                    0.0,
+                    float(record.remaining or 0.0) - old_cf
+                )
+
             # Don't forget to commit outside the loop to keep the transaction efficient!
             db.commit()
             print(f"🕒 {today}: Cleanup complete. {len(expired_records)} wallets emptied.")
