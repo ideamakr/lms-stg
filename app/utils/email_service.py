@@ -278,6 +278,36 @@ Best regards,
 Leave System
 """
 
+def template_l3_request(
+    l3_manager_name,
+    l2_manager_name,
+    employee_name,
+    type,
+    start,
+    end
+):
+    return f"""
+Hi {l3_manager_name},
+
+Action Required: HOD Approval Needed (L3)
+
+{l2_manager_name} has completed the second level approval for {employee_name}.
+This request now requires your approval as the HOD.
+
+--------------------------------
+Employee:   {employee_name}
+Leave Type: {type}
+Dates:      {start} to {end}
+L2 Status:  ✅ Approved by {l2_manager_name}
+--------------------------------
+
+Please log in to the Manager Dashboard to review and approve this request.
+
+Best regards,
+Leave System
+"""
+
+
 def template_new_ot_request(manager_name, employee_name, ot_type, ot_date, duration, admin_name=None):
     """
     🚀 FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.

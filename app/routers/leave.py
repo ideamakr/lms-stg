@@ -75,12 +75,13 @@ def _find_user_by_name_or_username(db: Session, identifier: str):
 # Robust import strategy to handle different environment paths
 try:
     from app.utils.email_service import (
-        send_email, 
+        send_email,
         template_new_request,
         template_medical_request,
         template_request_approved,
         template_request_rejected,
         template_l2_request,
+        template_l3_request,
         template_cancellation_request,
         template_l2_cancellation_request,
         template_cancellation_approved,
@@ -88,20 +89,21 @@ try:
         template_cf_request,
         template_cf_approved,
         template_cf_rejected,
-        template_cf_cancellation_approved,   
-        template_cf_cancellation_rejected,    
+        template_cf_cancellation_approved,
+        template_cf_cancellation_rejected,
         template_l2_cf_cancellation_request,
         template_cf_cancellation_request
     )
 except ImportError:
     # Fallback for local testing
     from utils.email_service import (
-        send_email, 
+        send_email,
         template_new_request,
         template_medical_request,
         template_request_approved,
         template_request_rejected,
         template_l2_request,
+        template_l3_request,
         template_cancellation_request,
         template_l2_cancellation_request,
         template_cancellation_approved,
@@ -109,11 +111,10 @@ except ImportError:
         template_cf_request,
         template_cf_approved,
         template_cf_rejected,
-        template_cf_cancellation_approved,   
-        template_cf_cancellation_rejected,    
+        template_cf_cancellation_approved,
+        template_cf_cancellation_rejected,
         template_l2_cf_cancellation_request,
         template_cf_cancellation_request
-
     )
 
 # ============================================================
@@ -347,27 +348,30 @@ def get_leave_balance(
     
     return balance
 
-# --- 2. UPDATED CREATE LEAVE: STRICT VALIDATION (V1.4.9 FINAL) ---
+# --- 2. UPDATED CREATE LEAVE: STRICT VALIDATION + L1 TEAM LEAD ---
 @router.post("/")
 async def create_leave(
-    background_tasks: BackgroundTasks, 
-    employee_name: str = Form(...), 
-    approver_name: str = Form(...),
+    background_tasks: BackgroundTasks,
+    employee_name: str = Form(...),
+    team_lead_name: Optional[str] = Form(None),  # NEW - L1 Team Lead
+    approver_name: str = Form(...),              # Existing L2 Line Manager
     leave_type: str = Form(...),
-    start_date: str = Form(...), 
+    start_date: str = Form(...),
     end_date: str = Form(...),
-    reason: str = Form(...), 
-    cf_days: float = Form(0.0), 
+    reason: str = Form(...),
+    cf_days: float = Form(0.0),
     is_half_day: Union[bool, str] = Form(False),
     applied_by: Optional[str] = Form(None),
-    holiday_info: Optional[str] = Form(None), # 👈 1. Safely capture public holiday info
-    file: UploadFile = File(None), 
+    holiday_info: Optional[str] = Form(None),
+    file: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
     # 1. PARSE & SANITIZE
     employee_name = employee_name.strip()
+    team_lead_name = (team_lead_name or "").strip()
     approver_name = approver_name.strip()
     leave_type = leave_type.strip()
+
     start_obj = date.fromisoformat(start_date)
     end_obj = date.fromisoformat(end_date)
     is_half_day_bool = is_half_day in (True, "true")
@@ -375,32 +379,52 @@ async def create_leave(
     # 2. DUPLICATE / OVERLAP & EXPIRY POLICY CHECK
     is_cf_request = "[CARRY FORWARD:" in (reason or "").upper()
     is_cf_claim = "carry forward" in leave_type.lower()
-    
+
     # 🚀 FETCH DYNAMIC EXPIRY DATE
-    expiry_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
-    cf_expiry = date.fromisoformat(expiry_setting.value) if expiry_setting and expiry_setting.value else None
+    expiry_setting = db.query(models.SystemSetting).filter(
+        models.SystemSetting.key == "cf_expiry_date"
+    ).first()
+
+    cf_expiry = (
+        date.fromisoformat(expiry_setting.value)
+        if expiry_setting and expiry_setting.value
+        else None
+    )
 
     # 2a. Overlap Check
     if is_cf_request:
         collision = db.query(models.Leave).filter(
             models.Leave.employee_name == employee_name,
-            models.Leave.reason.ilike("%[CARRY FORWARD:%"), 
-            models.Leave.status.in_(["Pending", "Pending L2 Approval", "Pending Cancel"])
+            models.Leave.reason.ilike("%[CARRY FORWARD:%"),
+            models.Leave.status.in_([
+                "Pending",
+                "Pending L2 Approval",
+                "Pending Cancel"
+            ])
         ).first()
     else:
         # Global Overlap: Block if ANY leave type overlaps on these dates
         collision = db.query(models.Leave).filter(
             models.Leave.employee_name == employee_name,
-            models.Leave.status.in_(["Pending", "Pending L2 Approval", "Approved", "Pending Cancel"]),
+            models.Leave.status.in_([
+                "Pending",
+                "Pending L2 Approval",
+                "Approved",
+                "Pending Cancel"
+            ]),
             models.Leave.start_date <= end_obj,
             models.Leave.end_date >= start_obj
         ).first()
 
     if collision:
         return JSONResponse(
-            status_code=400, 
+            status_code=400,
             content={
-                "detail": f"Date Conflict: You already have a {collision.status} '{collision.leave_type}' request for these dates."
+                "detail": (
+                    f"Date Conflict: You already have a "
+                    f"{collision.status} '{collision.leave_type}' "
+                    f"request for these dates."
+                )
             }
         )
 
@@ -410,20 +434,32 @@ async def create_leave(
             return JSONResponse(
                 status_code=400,
                 content={
-                    "detail": f"Policy Violation: Carry Forward leave must be consumed on or before the expiry date set by admin ({cf_expiry.strftime('%d %B %Y')})."
+                    "detail": (
+                        "Policy Violation: Carry Forward leave must be "
+                        "consumed on or before the expiry date set by admin "
+                        f"({cf_expiry.strftime('%d %B %Y')})."
+                    )
                 }
             )
 
-# 3. HOLIDAY & DURATION CALCULATION (Simplified: Public holidays do not block or reduce leave days)
+    # 3. HOLIDAY & DURATION CALCULATION
+    # Public holidays do not block or reduce leave days
     if is_half_day_bool:
         days_requested = 0.5
     else:
-        all_dates = pd.date_range(start=start_obj, end=end_obj)
-        # 🚀 Open the gate: Count all weekdays between start and end, ignoring public holiday deductions
-        working_days = [d for d in all_dates if d.weekday() < 5]
+        all_dates = pd.date_range(
+            start=start_obj,
+            end=end_obj
+        )
+
+        # Count all weekdays between start and end
+        working_days = [
+            d for d in all_dates
+            if d.weekday() < 5
+        ]
+
         days_requested = float(len(working_days))
 
-        # 🚀 Validation: Prevent zero-day leave applications
         # ============================================================
         # BUSINESS RULE
         #
@@ -437,50 +473,86 @@ async def create_leave(
         #   Employees should submit an Overtime Request instead.
         # ============================================================
 
+    # 🚀 Validation: Prevent zero-day leave applications
     if days_requested <= 0:
         return JSONResponse(
-        status_code=400,
-        content={
-            "detail": "Leave cannot be applied on weekends. If you worked during the weekend, please submit an Overtime Request instead."
-        }
-    )
-
+            status_code=400,
+            content={
+                "detail": (
+                    "Leave cannot be applied on weekends. "
+                    "If you worked during the weekend, please submit "
+                    "an Overtime Request instead."
+                )
+            }
+        )
 
     # 4. FETCH BALANCE
-    balance = _calculate_shared_balance(db, employee_name, start_obj.year, leave_type, include_pending=True)
+    balance = _calculate_shared_balance(
+        db,
+        employee_name,
+        start_obj.year,
+        leave_type,
+        include_pending=True
+    )
+
     if not balance:
-        return JSONResponse(status_code=404, content={"detail": "Balance record not found."})
-    
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Balance record not found."}
+        )
+
     # 5. 🛡️ DETERMINE WALLET (HARDENED LOGIC - PRODUCTION)
-    cf_max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
-    cf_max_days = float(cf_max_setting.value) if (cf_max_setting and cf_max_setting.value) else 5.0
+    cf_max_setting = db.query(models.SystemSetting).filter(
+        models.SystemSetting.key == "cf_max_days"
+    ).first()
+
+    cf_max_days = (
+        float(cf_max_setting.value)
+        if (cf_max_setting and cf_max_setting.value)
+        else 5.0
+    )
 
     annual_rem = float(balance.get("remaining", 0))
     cf_rem = float(balance.get("carry_forward_total", 0))
-    
+
     is_cf_request = "[CARRY FORWARD:" in (reason or "").upper()
     is_cf_claim = "claim carry forward" in leave_type.lower()
 
     # --- MANDATORY POLICY GATE ---
     if is_cf_request:
         if cf_days > cf_max_days:
-            return JSONResponse(status_code=400, content={"detail": f"Policy Error: The maximum allowed to carry forward is {cf_max_days} days."})
-        
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": (
+                        f"Policy Error: The maximum allowed to carry "
+                        f"forward is {cf_max_days} days."
+                    )
+                }
+            )
+
         if cf_days > annual_rem:
-            return JSONResponse(status_code=400, content={"detail": "Insufficient Annual Balance to carry forward."})
-        
-        days_requested = cf_days 
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": (
+                        "Insufficient Annual Balance to carry forward."
+                    )
+                }
+            )
+
+        days_requested = cf_days
         wallet_available = annual_rem
         wallet_name = "Annual Leave (to Carry Forward)"
-    
+
     elif is_cf_claim:
         wallet_available = cf_rem
         wallet_name = "Carry Forward Balance"
-        
+
     elif leave_type in ["Annual Leave", "Emergency Leave"]:
         wallet_available = annual_rem + cf_rem
         wallet_name = "Annual/Emergency/CF"
-        
+
     else:
         wallet_available = annual_rem
         wallet_name = leave_type
@@ -488,77 +560,286 @@ async def create_leave(
     if leave_type != "Unpaid Leave":
         if round(days_requested, 2) > round(wallet_available, 2):
             return JSONResponse(
-                status_code=400, 
-                content={"detail": f"Insufficient {wallet_name} balance: Requested {days_requested} days, but only {wallet_available} available."}
+                status_code=400,
+                content={
+                    "detail": (
+                        f"Insufficient {wallet_name} balance: "
+                        f"Requested {days_requested} days, "
+                        f"but only {wallet_available} available."
+                    )
+                }
             )
 
     # 6. FILE HANDLING
-    attachment_url = None 
+    attachment_url = None
+
     if file and file.filename:
         try:
             await file.seek(0)
             from app.main import compress_and_upload
-            attachment_url = compress_and_upload(file, folder="mcs")
+            attachment_url = compress_and_upload(
+                file,
+                folder="mcs"
+            )
         except Exception as e:
-            return JSONResponse(status_code=500, content={"detail": "System Error: Failed to process attachment."})
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "detail": (
+                        "System Error: Failed to process attachment."
+                    )
+                }
+            )
 
-    # 7. MANAGER ID RESOLUTION
-    manager = _find_user_by_name_or_username(db, approver_name)
+    # ============================================================
+    # 7. APPROVAL ID RESOLUTION
+    # ============================================================
+    # CR APPROVAL HIERARCHY:
+    #
+    # L1 = Team Lead       -> approver_l1_id
+    # L2 = Line Manager    -> approver_id
+    # L3 = HOD             -> approver_l2_id
+    #
+    # IMPORTANT:
+    # The employee's hierarchy is used even when HR Admin
+    # submits the leave on behalf of the employee.
+    # ============================================================
+
+    employee_user = db.query(models.User).filter(
+        models.User.full_name == employee_name
+    ).first()
+
+    if not employee_user:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "detail": "Employee record not found."
+            }
+        )
+
+    # ------------------------------------------------------------
+    # L1 - TEAM LEAD
+    # ------------------------------------------------------------
+    assigned_team_leads = employee_user.team_lead or []
+
+    if not isinstance(assigned_team_leads, list):
+        assigned_team_leads = [str(assigned_team_leads)]
+
+    assigned_team_leads = [
+        str(x).strip()
+        for x in assigned_team_leads
+        if x and str(x).strip()
+    ]
+
+    # No Team Lead assigned -> BLOCK SUBMISSION
+    if not assigned_team_leads:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": (
+                    "Please contact HR Admin to assign a "
+                    "Team Lead approver before submitting "
+                    "this leave request."
+                )
+            }
+        )
+
+    # Team Lead must be selected
+    if not team_lead_name:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": (
+                    "Please select a Team Lead approver "
+                    "before submitting this leave request."
+                )
+            }
+        )
+
+    # Validate selected Team Lead belongs to employee's
+    # assigned Team Lead list
+    if team_lead_name not in assigned_team_leads:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": (
+                    "Invalid Team Lead approver selected. "
+                    "Please contact HR Admin."
+                )
+            }
+        )
+
+    team_lead = _find_user_by_name_or_username(
+        db,
+        team_lead_name
+    )
+
+    if not team_lead or not team_lead.is_active:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": (
+                    "The selected Team Lead approver is not "
+                    "available. Please contact HR Admin."
+                )
+            }
+        )
+
+    approver_l1_id = team_lead.id
+
+    # ------------------------------------------------------------
+    # EXISTING L2 - LINE MANAGER
+    # ------------------------------------------------------------
+    manager = _find_user_by_name_or_username(
+        db,
+        approver_name
+    )
+
     approver_id = manager.id if manager else None
 
+    # IMPORTANT:
+    # Existing HOD / approver_l2_id logic remains untouched.
+    # It will continue through the existing approval flow.
+
+    # ============================================================
     # 8. SAVE RECORD
+    # ============================================================
     timestamp = get_utc_timestamp()
-    
-    # 🚀 2. Format holiday note securely for database records & approver visibility
-    holiday_note = f" [Note: Applied on Public Holiday - {holiday_info}]" if holiday_info else ""
-    final_reason = f"{reason}{holiday_note}" if holiday_info else reason
+
+    # 🚀 Format holiday note securely for database records
+    # & approver visibility
+    holiday_note = (
+        f" [Note: Applied on Public Holiday - {holiday_info}]"
+        if holiday_info
+        else ""
+    )
+
+    final_reason = (
+        f"{reason}{holiday_note}"
+        if holiday_info
+        else reason
+    )
 
     new_leave = models.Leave(
-        employee_name=employee_name, 
-        approver_name=approver_name, 
+        employee_name=employee_name,
+
+        # L1 - Team Lead
+        approver_l1_id=approver_l1_id,
+
+        # Existing L2 - Line Manager
+        approver_name=approver_name,
         approver_id=approver_id,
+
         leave_type=leave_type,
-        start_date=start_obj, 
-        end_date=end_obj, 
-        reason=final_reason, 
+        start_date=start_obj,
+        end_date=end_obj,
+        reason=final_reason,
         days_taken=days_requested,
         attachment_path=attachment_url,
-        status="Pending", 
+        status="Pending",
         status_history=f"Submitted ({timestamp}){holiday_note}"
     )
+
     db.add(new_leave)
     db.commit()
     db.refresh(new_leave)
 
-    # 9. NOTIFY MANAGER & LOG ACTIVITY
+    # ============================================================
+    # 9. NOTIFY L1 TEAM LEAD & LOG ACTIVITY
+    # ============================================================
     try:
-        user_record = db.query(models.User).filter(models.User.full_name == employee_name).first()
-        if user_record:
-            log_activity(db=db, user_id=user_record.id, action_type="SUBMISSION", category=leave_type, message=f"You submitted a {leave_type} request for {start_date}", reference_id=new_leave.id)
+        user_record = db.query(models.User).filter(
+            models.User.full_name == employee_name
+        ).first()
 
-        if manager and manager.email:
-            admin_name = applied_by if applied_by and applied_by != employee_name else None
-            
-            # --- 🚀 CONDITIONAL EMAIL ROUTING ---
+        if user_record:
+            log_activity(
+                db=db,
+                user_id=user_record.id,
+                action_type="SUBMISSION",
+                category=leave_type,
+                message=(
+                    f"You submitted a {leave_type} request "
+                    f"for {start_date}"
+                ),
+                reference_id=new_leave.id
+            )
+
+        # 🚀 CR:
+        # Initial leave submission notification goes to
+        # the selected Team Lead, NOT Line Manager.
+        if team_lead and team_lead.email:
+
+            admin_name = (
+                applied_by
+                if applied_by and applied_by != employee_name
+                else None
+            )
+
+            # --- CONDITIONAL EMAIL ROUTING ---
             if leave_type == "Medical Leave":
-                subject = f"Action Required: Medical Leave Reported ({employee_name})"
-                body = template_medical_request(manager.full_name, employee_name, str(start_obj), str(end_obj), days_requested)
-            
+                subject = (
+                    f"Action Required: Medical Leave Reported "
+                    f"({employee_name})"
+                )
+
+                body = template_medical_request(
+                    team_lead.full_name,
+                    employee_name,
+                    str(start_obj),
+                    str(end_obj),
+                    days_requested
+                )
+
             elif is_cf_request:
-                clean_reason = re.sub(r"\[CARRY FORWARD REQUEST:\s*[\d\.]+\s*DAY(S)\]", "", reason).strip()
-                subject = f"Action Required: Carry Forward Request ({employee_name})"
-                body = template_cf_request(manager.full_name, employee_name, days_requested, clean_reason)
-            
+                clean_reason = re.sub(
+                    r"\[CARRY FORWARD REQUEST:\s*[\d\.]+\s*DAY(S)\]",
+                    "",
+                    reason
+                ).strip()
+
+                subject = (
+                    f"Action Required: Carry Forward Request "
+                    f"({employee_name})"
+                )
+
+                body = template_cf_request(
+                    team_lead.full_name,
+                    employee_name,
+                    days_requested,
+                    clean_reason
+                )
+
             else:
-                subject = f"Action Required: New Leave Request ({employee_name})"
-                body = template_new_request(manager.full_name, employee_name, leave_type, str(start_obj), str(end_obj), days_requested, admin_name)
-            
-            background_tasks.add_task(send_email, manager.email, subject, body)
-    
+                subject = (
+                    f"Action Required: New Leave Request "
+                    f"({employee_name})"
+                )
+
+                body = template_new_request(
+                    team_lead.full_name,
+                    employee_name,
+                    leave_type,
+                    str(start_obj),
+                    str(end_obj),
+                    days_requested,
+                    admin_name
+                )
+
+            background_tasks.add_task(
+                send_email,
+                team_lead.email,
+                subject,
+                body
+            )
+
     except Exception as e:
         print(f"⚠️ Post-Submission Error: {e}")
 
-    return {"message": "Leave request submitted successfully", "leave_id": new_leave.id}
+    return {
+        "message": "Leave request submitted successfully",
+        "leave_id": new_leave.id
+    }
 
 
 
@@ -858,21 +1139,44 @@ def get_manager_pending(
     if user and user.role == "superuser":
         # 👑 God Mode Base Query: Expose all active workflow lines company-wide
         query = db.query(models.Leave).filter(
-            models.Leave.status.in_(["Pending", "Pending Cancel", "Pending L2 Approval"])
+            models.Leave.status.in_([
+                "Pending",
+                "Pending Cancel",
+                "Pending L2 Approval",
+                "Pending L3 Approval"
+            ])
         )
     else:
-        # --- 🚀 NEW ID-BASED LOOKUP START ---
-        # 1. Resolve the string name to a secure user ID to prevent name-change bugs.
-        manager = db.query(models.User).filter(models.User.full_name == approver_name).first()
-        
-        # If manager isn't found, use -1 to safely return an empty list rather than breaking
-        manager_id = manager.id if manager else -1 
-        
-        # 2. Base Query: Matches Lane 1 (L1) and Lane 2 (L2) logic using the robust IDs
+        # --- ID-BASED APPROVAL HIERARCHY ---
+        # L1 = Team Lead
+        # L2 = Line Manager
+        # L3 = HOD
+
+        approver = db.query(models.User).filter(
+            models.User.full_name == approver_name
+        ).first()
+
+        approver_id = approver.id if approver else -1
+
         query = db.query(models.Leave).filter(
             or_(
-                and_(models.Leave.approver_id == manager_id, models.Leave.status.in_(["Pending", "Pending Cancel"])),
-                and_(models.Leave.approver_l2_id == manager_id, models.Leave.status == "Pending L2 Approval")
+                # L1 - Team Lead
+                and_(
+                    models.Leave.approver_l1_id == approver_id,
+                    models.Leave.status.in_(["Pending", "Pending Cancel"])
+                ),
+
+                # L2 - Line Manager
+                and_(
+                    models.Leave.approver_id == approver_id,
+                    models.Leave.status == "Pending L2 Approval"
+                ),
+
+                # L3 - HOD
+                and_(
+                    models.Leave.approver_l2_id == approver_id,
+                    models.Leave.status == "Pending L3 Approval"
+                )
             )
         )
         # --- 🚀 NEW ID-BASED LOOKUP END ---
@@ -947,216 +1251,887 @@ def fix_db_schema(db: Session = Depends(get_db)):
 
 
 @router.post("/manager/action/{leave_id}")
-async def approve_leave( 
-    leave_id: int, 
-    background_tasks: BackgroundTasks, 
-    status: str = Query(...),        
-    remarks: str = Query(""),        
-    approver_name: str = Query(""), 
-    l2_name: str = Query(None), 
+async def approve_leave(
+    leave_id: int,
+    background_tasks: BackgroundTasks,
+    status: str = Query(...),
+    remarks: str = Query(""),
+    approver_name: str = Query(""),
+    l2_name: str = Query(None),
     db: Session = Depends(get_db),
-    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
+    x_username: Optional[str] = Header(None)
 ):
-    # --- 🛡️ 1. SANITIZE NAMES ---
+    # =========================================================================
+    # 1. SANITIZE INPUT
+    # =========================================================================
     approver_name = approver_name.strip()
-    if l2_name: l2_name = l2_name.strip()
 
-    leave = db.query(models.Leave).filter(models.Leave.id == leave_id).first()
+    if l2_name:
+        l2_name = l2_name.strip()
+
+    # =========================================================================
+    # 2. FETCH LEAVE REQUEST
+    # =========================================================================
+    leave = (
+        db.query(models.Leave)
+        .filter(models.Leave.id == leave_id)
+        .first()
+    )
+
     if not leave:
-        raise HTTPException(status_code=404, detail="Leave request not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Leave request not found"
+        )
 
-    # 👑 Identify the acting user from header
-    acting_user = db.query(models.User).filter(models.User.username == x_username).first()
-    is_superuser_override = acting_user and acting_user.role == "superuser"
+    # =========================================================================
+    # 3. IDENTIFY ACTING USER
+    # =========================================================================
+    acting_user = (
+        db.query(models.User)
+        .filter(models.User.username == x_username)
+        .first()
+    )
 
-    # --- 🚀 2. IDENTITY & PERMISSION CHECKS (HYBRID ID/NAME LOGIC) ---
+    is_superuser_override = (
+        acting_user
+        and acting_user.role == "superuser"
+    )
+
+    # =========================================================================
+    # 4. APPROVAL AUTHORIZATION
+    #
+    # L1 = Team Lead      -> approver_l1_id / approver_name
+    # L2 = Line Manager   -> approver_id / approver
+    # L3 = HOD            -> approver_l2_id / approver_l2
+    #
+    # Superuser is allowed to override.
+    # =========================================================================
     is_authorized = is_superuser_override
+
     if not is_authorized and acting_user:
-        # Check if acting user is L1 (by ID or Name fallback)
-        is_l1_match = (leave.approver_id and acting_user.id == leave.approver_id) or \
-                      (approver_name and leave.approver_name and approver_name.strip().lower() == leave.approver_name.strip().lower())
-        
-        # Check if acting user is L2 (by ID or Name fallback) - FIXES TONY STARK ISSUE
-        is_l2_match = (leave.approver_l2_id and acting_user.id == leave.approver_l2_id) or \
-                      (approver_name and leave.approver_l2 and approver_name.strip().lower() == leave.approver_l2.strip().lower())
 
-        if is_l1_match or is_l2_match:
+        # ---------------------------------------------------------------------
+        # L1 - Team Lead
+        # ---------------------------------------------------------------------
+        is_l1_match = (
+            leave.approver_l1_id
+            and acting_user.id == leave.approver_l1_id
+        ) or (
+            approver_name
+            and leave.approver_name
+            and approver_name.strip().lower()
+            == leave.approver_name.strip().lower()
+        )
+
+        # ---------------------------------------------------------------------
+        # L2 - Line Manager
+        # ---------------------------------------------------------------------
+        is_l2_match = (
+            leave.approver_id
+            and acting_user.id == leave.approver_id
+        ) or (
+            approver_name
+            and leave.approver
+            and approver_name.strip().lower()
+            == leave.approver.strip().lower()
+        )
+
+        # ---------------------------------------------------------------------
+        # L3 - HOD
+        # ---------------------------------------------------------------------
+        is_l3_match = (
+            leave.approver_l2_id
+            and acting_user.id == leave.approver_l2_id
+        ) or (
+            approver_name
+            and leave.approver_l2
+            and approver_name.strip().lower()
+            == leave.approver_l2.strip().lower()
+        )
+
+        if is_l1_match or is_l2_match or is_l3_match:
             is_authorized = True
-            
-    if not is_authorized:
-        raise HTTPException(status_code=403, detail="You are not authorized to approve this request.")
 
-    # Manager context
-    acting_mgr = _find_user_by_name_or_username(db, approver_name)
-    is_senior = acting_mgr.is_senior_manager if acting_mgr else False
-    
-    # Is the user acting as L1?
-    is_l1 = (leave.approver_id and acting_user and acting_user.id == leave.approver_id) or \
-            (approver_name and leave.approver_name and approver_name.strip().lower() == leave.approver_name.strip().lower())
-    
-    policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
-    l2_active = policy.l2_approval_enabled if policy else False
+    if not is_authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to approve this request."
+        )
+
+    # =========================================================================
+    # 5. MANAGER / POLICY CONTEXT
+    # =========================================================================
+    acting_mgr = _find_user_by_name_or_username(
+        db,
+        approver_name
+    )
+
+    is_senior = (
+        acting_mgr.is_senior_manager
+        if acting_mgr
+        else False
+    )
+
+    # -------------------------------------------------------------------------
+    # Determine current approval level
+    # -------------------------------------------------------------------------
+    is_l1 = (
+        leave.approver_l1_id
+        and acting_user
+        and acting_user.id == leave.approver_l1_id
+    ) or (
+        approver_name
+        and leave.approver_name
+        and approver_name.strip().lower()
+        == leave.approver_name.strip().lower()
+    )
+
+    is_l2 = (
+        leave.approver_id
+        and acting_user
+        and acting_user.id == leave.approver_id
+    ) or (
+        approver_name
+        and leave.approver
+        and approver_name.strip().lower()
+        == leave.approver.strip().lower()
+    )
+
+    is_l3 = (
+        leave.approver_l2_id
+        and acting_user
+        and acting_user.id == leave.approver_l2_id
+    ) or (
+        approver_name
+        and leave.approver_l2
+        and approver_name.strip().lower()
+        == leave.approver_l2.strip().lower()
+    )
+
+    # -------------------------------------------------------------------------
+    # Global L2 approval policy
+    # -------------------------------------------------------------------------
+    policy = (
+        db.query(models.GlobalPolicy)
+        .filter(models.GlobalPolicy.id == 1)
+        .first()
+    )
+
+    l2_active = (
+        policy.l2_approval_enabled
+        if policy
+        else False
+    )
 
     timestamp = get_utc_timestamp()
-    note_str = f" | Note: {remarks}" if remarks else ""
-    l_type_str = str(leave.leave_type.value) if hasattr(leave.leave_type, 'value') else str(leave.leave_type)
-    
-    history_log = leave.status_history or ""
-    is_cancellation_journey = (leave.status == "Pending Cancel" or "Cancellation" in history_log)
 
-    # 👑 Set audit trail naming context based on authority level
+    note_str = (
+        f" | Note: {remarks}"
+        if remarks
+        else ""
+    )
+
+    l_type_str = (
+        str(leave.leave_type.value)
+        if hasattr(leave.leave_type, "value")
+        else str(leave.leave_type)
+    )
+
+    history_log = leave.status_history or ""
+
+    is_cancellation_journey = (
+        leave.status == "Pending Cancel"
+        or "Cancellation" in history_log
+    )
+
+    # =========================================================================
+    # 6. AUDIT DISPLAY NAME
+    # =========================================================================
     if is_superuser_override:
-        display_approver = f"System Administrator (Override on behalf of {leave.approver_name or 'Manager'})"
+        display_approver = (
+            f"System Administrator "
+            f"(Override on behalf of "
+            f"{leave.approver_name or 'Manager'})"
+        )
     else:
         display_approver = approver_name
 
-    final_response_message = "Request processed successfully"
+    final_response_message = (
+        "Request processed successfully"
+    )
+
+    # -------------------------------------------------------------------------
+    # Routing flags used by email notification logic
+    # -------------------------------------------------------------------------
     route_to_l2 = False
+    route_to_l3 = False
+
     l2_user = None
+    l3_user = None
 
     # =========================================================================
-    # 3. HANDLE CANCELLATION LOGIC
+    # 7. HANDLE CANCELLATION REQUESTS
     # =========================================================================
     if is_cancellation_journey:
-        if status == "Approved":
-            is_hr_admin = acting_mgr and (acting_mgr.role == "hr_admin" or any(r.role_name == "hr_admin" for r in acting_mgr.assigned_roles))
 
-            if leave.status == "Pending Cancel" and not is_hr_admin and l2_active and is_l1 and not is_senior and leave.approver_l2 and not is_superuser_override:
-                l2_user = _find_user_by_name_or_username(db, leave.approver_l2)
+        if status == "Approved":
+
+            is_hr_admin = (
+                acting_mgr
+                and (
+                    acting_mgr.role == "hr_admin"
+                    or any(
+                        r.role_name == "hr_admin"
+                        for r in acting_mgr.assigned_roles
+                    )
+                )
+            )
+
+            # -----------------------------------------------------------------
+            # L1 Cancellation Approval -> L2
+            # -----------------------------------------------------------------
+            if (
+                leave.status == "Pending Cancel"
+                and not is_hr_admin
+                and l2_active
+                and is_l1
+                and not is_senior
+                and leave.approver_l2
+                and not is_superuser_override
+            ):
+
+                l2_user = _find_user_by_name_or_username(
+                    db,
+                    leave.approver_l2
+                )
+
                 if l2_user and l2_user.is_active:
+
                     leave.status = "Pending L2 Approval"
-                    leave.status_history += f" > L1 Approved Cancellation by {display_approver}. Routed to {leave.approver_l2} ({timestamp}){note_str}"
-                    final_response_message = "Cancellation approved by L1. Routed to L2."
-                    try:
-                        if l2_user.email:
-                            body = template_l2_cancellation_request(l2_user.full_name, approver_name, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                            background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: L2 Cancellation - {leave.employee_name}", body)
-                    except Exception as e: print(f"⚠️ Email Error: {e}")
+
+                    leave.status_history += (
+                        f" > L1 Approved Cancellation by "
+                        f"{display_approver}. "
+                        f"Routed to {leave.approver_l2} "
+                        f"({timestamp}){note_str}"
+                    )
+
+                    final_response_message = (
+                        "Cancellation approved by L1. "
+                        "Routed to L2."
+                    )
+
+                    route_to_l2 = True
+
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "L2 approver could not be found "
+                            "or is inactive."
+                        )
+                    )
+
+            # -----------------------------------------------------------------
+            # Cancellation Final Approval
+            # -----------------------------------------------------------------
             else:
+
                 leave.status = "Cancelled"
-                leave.status_history += f" > Cancellation FINALIZED by {display_approver} ({timestamp}){note_str}"
-                final_response_message = "Cancellation finalized"
+
+                leave.status_history += (
+                    f" > Cancellation FINALIZED by "
+                    f"{display_approver} "
+                    f"({timestamp}){note_str}"
+                )
+
+                final_response_message = (
+                    "Cancellation finalized"
+                )
+
         else:
-            leave.status = "Approved" 
-            leave.status_history += f" > Cancellation REJECTED by {display_approver} ({timestamp}){note_str}"
-            final_response_message = "Cancellation rejected"
+
+            # -----------------------------------------------------------------
+            # Cancellation Rejected
+            # -----------------------------------------------------------------
+            leave.status = "Approved"
+
+            leave.status_history += (
+                f" > Cancellation REJECTED by "
+                f"{display_approver} "
+                f"({timestamp}){note_str}"
+            )
+
+            final_response_message = (
+                "Cancellation rejected"
+            )
 
     # =========================================================================
-    # 4. HANDLE NORMAL LEAVE REQUESTS
+    # 8. HANDLE NORMAL LEAVE REQUESTS
+    #
+    # L1 -> L2 -> L3 -> Approved
     # =========================================================================
     else:
+
+        # =====================================================================
+        # 8A. APPROVAL
+        # =====================================================================
         if status == "Approved":
-            if l2_active and leave.status in ["Pending", "Pending L2 Approval"] and not is_senior and not is_superuser_override:
-                if l2_name:
-                    leave.status = "Pending L2 Approval"
-                    leave.approver_l2 = l2_name
-                    # 🚀 ID-MAPPING: Capture L2 ID
-                    l2_user = _find_user_by_name_or_username(db, l2_name)
-                    if l2_user: leave.approver_l2_id = l2_user.id
-                    
-                    leave.status_history += f" > L1 Approved by {approver_name}. Routed to {l2_name} ({timestamp}){note_str}"
-                    final_response_message = f"L1 Approved. Routed to {l2_name} for final approval"
-                    route_to_l2 = True
-                else:
-                    leave.status = "Approved"
-                    leave.approved_at = datetime.now()
-                    leave.status_history += f" > Fully Approved by {display_approver} ({timestamp}){note_str}"
-                    final_response_message = "Request fully approved"
-            else:
+
+            # -----------------------------------------------------------------
+            # L1 -> L2
+            # -----------------------------------------------------------------
+            if (
+                leave.status == "Pending"
+                and is_l1
+                and l2_active
+                and not is_senior
+                and not is_superuser_override
+            ):
+
+                # IMPORTANT:
+                # Use the configured L2 from the leave record.
+                # Do not depend on browser-supplied l2_name.
+                if not leave.approver_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "L2 Line Manager is not configured "
+                            "for this request."
+                        )
+                    )
+
+                l2_user = (
+                    db.query(models.User)
+                    .filter(
+                        models.User.id == leave.approver_id
+                    )
+                    .first()
+                )
+
+                if not l2_user or not l2_user.is_active:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "L2 Line Manager could not be found "
+                            "or is inactive."
+                        )
+                    )
+
+                leave.status = "Pending L2 Approval"
+
+                leave.status_history += (
+                    f" > L1 Approved by "
+                    f"{display_approver}. "
+                    f"Routed to L2 "
+                    f"{l2_user.full_name} "
+                    f"({timestamp}){note_str}"
+                )
+
+                final_response_message = (
+                    "L1 approval completed. "
+                    "Request routed to L2."
+                )
+
+                route_to_l2 = True
+
+            # -----------------------------------------------------------------
+            # L2 -> L3
+            # -----------------------------------------------------------------
+            elif (
+                leave.status == "Pending L2 Approval"
+                and is_l2
+            ):
+
+                # approver_l2_id = L3 / HOD
+                if not leave.approver_l2_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "L3 HOD approver is not configured "
+                            "for this request."
+                        )
+                    )
+
+                l3_user = (
+                    db.query(models.User)
+                    .filter(
+                        models.User.id == leave.approver_l2_id
+                    )
+                    .first()
+                )
+
+                if not l3_user or not l3_user.is_active:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "L3 HOD approver could not be found "
+                            "or is inactive."
+                        )
+                    )
+
+                leave.status = "Pending L3 Approval"
+
+                leave.status_history += (
+                    f" > L2 Approved by "
+                    f"{display_approver}. "
+                    f"Routed to L3 HOD "
+                    f"{l3_user.full_name} "
+                    f"({timestamp}){note_str}"
+                )
+
+                final_response_message = (
+                    "L2 approval completed. "
+                    "Request routed to L3."
+                )
+
+                route_to_l3 = True
+
+            # -----------------------------------------------------------------
+            # L3 -> FINAL APPROVAL
+            # -----------------------------------------------------------------
+            elif (
+                leave.status == "Pending L3 Approval"
+                and is_l3
+            ):
+
                 leave.status = "Approved"
                 leave.approved_at = datetime.now()
-                leave.status_history += f" > Fully Approved by {display_approver} ({timestamp}){note_str}"
-                final_response_message = "Request fully approved"
-        else: 
+
+                leave.status_history += (
+                    f" > Fully Approved by "
+                    f"{display_approver} "
+                    f"({timestamp}){note_str}"
+                )
+
+                final_response_message = (
+                    "Request fully approved"
+                )
+
+            # -----------------------------------------------------------------
+            # DIRECT / EXISTING APPROVAL
+            #
+            # Senior manager / superuser / L2 disabled
+            # -----------------------------------------------------------------
+            else:
+
+                leave.status = "Approved"
+                leave.approved_at = datetime.now()
+
+                leave.status_history += (
+                    f" > Fully Approved by "
+                    f"{display_approver} "
+                    f"({timestamp}){note_str}"
+                )
+
+                final_response_message = (
+                    "Request fully approved"
+                )
+
+        # =====================================================================
+        # 8B. REJECTION
+        # =====================================================================
+        else:
+
             leave.status = "Rejected"
             leave.rejected_at = datetime.now()
-            leave.status_history += f" > Rejected by {display_approver} ({timestamp}){note_str}"
-            final_response_message = "Request rejected"
 
+            leave.status_history += (
+                f" > Rejected by "
+                f"{display_approver} "
+                f"({timestamp}){note_str}"
+            )
+
+            final_response_message = (
+                "Request rejected"
+            )
+
+    # =========================================================================
+    # 9. SAVE DATABASE CHANGES
+    # =========================================================================
     db.commit()
 
-    # ============================================================
-    # 5. LOGGING & EMAIL (PRESERVED LOGIC)
-    # ============================================================
+    # =========================================================================
+    # 10. ACTIVITY LOGGING & EMAIL NOTIFICATIONS
+    # =========================================================================
     try:
-        emp_record = db.query(models.User).filter(or_(models.User.full_name == leave.employee_name, models.User.username == leave.employee_name)).first()
-        mgr_record = db.query(models.User).filter(or_(models.User.full_name == approver_name, models.User.username == approver_name)).first()
 
-        # 1. Determine if this is a Carry Forward request
-        is_cf = "[CARRY FORWARD:" in (leave.reason or "").upper()
+        emp_record = (
+            db.query(models.User)
+            .filter(
+                or_(
+                    models.User.full_name
+                    == leave.employee_name,
+                    models.User.username
+                    == leave.employee_name
+                )
+            )
+            .first()
+        )
 
+        mgr_record = (
+            db.query(models.User)
+            .filter(
+                or_(
+                    models.User.full_name
+                    == approver_name,
+                    models.User.username
+                    == approver_name
+                )
+            )
+            .first()
+        )
+
+        # ---------------------------------------------------------------------
+        # Carry Forward detection
+        # ---------------------------------------------------------------------
+        is_cf = (
+            "[CARRY FORWARD:" in
+            (leave.reason or "").upper()
+        )
+
+        # ---------------------------------------------------------------------
+        # Activity logging
+        # ---------------------------------------------------------------------
         if status == "Approved":
-            suffix = " (Pending L2)" if "Pending L2" in leave.status else ""
-            log_msg_emp = f"Your {l_type_str} request was approved via administrative override" if is_superuser_override else f"Your {l_type_str} request was APPROVED{suffix}"
-            log_msg_mgr = f"You APPROVED {leave.employee_name}'s {l_type_str}{suffix}"
+
+            if "Pending L3" in leave.status:
+                suffix = " (Pending L3)"
+            elif "Pending L2" in leave.status:
+                suffix = " (Pending L2)"
+            else:
+                suffix = ""
+
+            log_msg_emp = (
+                f"Your {l_type_str} request was approved "
+                f"via administrative override"
+                if is_superuser_override
+                else
+                f"Your {l_type_str} request was "
+                f"APPROVED{suffix}"
+            )
+
+            log_msg_mgr = (
+                f"You APPROVED "
+                f"{leave.employee_name}'s "
+                f"{l_type_str}{suffix}"
+            )
+
             act_type = "APPROVAL"
+
         else:
-            log_msg_emp = f"Your {l_type_str} request was rejected via administrative override" if is_superuser_override else f"Your {l_type_str} request was REJECTED"
-            log_msg_mgr = f"You REJECTED {leave.employee_name}'s {l_type_str}"
+
+            log_msg_emp = (
+                f"Your {l_type_str} request was rejected "
+                f"via administrative override"
+                if is_superuser_override
+                else
+                f"Your {l_type_str} request was REJECTED"
+            )
+
+            log_msg_mgr = (
+                f"You REJECTED "
+                f"{leave.employee_name}'s "
+                f"{l_type_str}"
+            )
+
             act_type = "REJECTION"
 
+        # Employee activity
         if emp_record:
-            log_activity(db=db, user_id=emp_record.id, action_type=act_type, category=l_type_str, message=log_msg_emp, reference_id=leave.id, actor_id=acting_user.id if acting_user else (mgr_record.id if mgr_record else None))
+
+            log_activity(
+                db=db,
+                user_id=emp_record.id,
+                action_type=act_type,
+                category=l_type_str,
+                message=log_msg_emp,
+                reference_id=leave.id,
+                actor_id=(
+                    acting_user.id
+                    if acting_user
+                    else (
+                        mgr_record.id
+                        if mgr_record
+                        else None
+                    )
+                )
+            )
+
+        # Manager activity
         if mgr_record and not is_superuser_override:
-            log_activity(db=db, user_id=mgr_record.id, action_type=act_type, category=l_type_str, message=log_msg_mgr, reference_id=leave.id)
 
-# 2. Email Notification Logic
+            log_activity(
+                db=db,
+                user_id=mgr_record.id,
+                action_type=act_type,
+                category=l_type_str,
+                message=log_msg_mgr,
+                reference_id=leave.id
+            )
+
+        # =====================================================================
+        # EMAIL NOTIFICATION
+        # =====================================================================
         if status == "Approved":
-            # Priority 1: L2 Routing (Handles L2 Cancellation OR L2 Standard)
-            if route_to_l2 and l2_user and l2_user.email:
-                if is_cancellation_journey:
-                    if is_cf: # 👈 L2 CF Cancellation
-                        body = template_l2_cf_cancellation_request(l2_user.full_name, approver_name, leave.employee_name, leave.days_taken)
-                        subject = f"ACTION REQUIRED: L2 CF Cancellation - {leave.employee_name}"
-                    else:     # Standard Cancellation L2
-                        body = template_l2_cancellation_request(l2_user.full_name, approver_name, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                        subject = f"ACTION REQUIRED: L2 Cancellation - {leave.employee_name}"
-                else:         # Standard L2 Request
-                    body = template_l2_request(l2_user.full_name or l2_user.username, approver_name or display_approver, leave.employee_name, l_type_str, str(leave.start_date), str(leave.end_date))
-                    subject = f"ACTION REQUIRED: Final Approval Needed - {leave.employee_name}"
-                
-                background_tasks.add_task(send_email, l2_user.email, subject, body)
-            
-            # Priority 2: Direct Approval (Branch between Cancellation, CF, or Standard)
-            elif not route_to_l2 and emp_record and emp_record.email:
-                if is_cancellation_journey:
-                    if is_cf: # ✅ CF Cancellation Approved
-                        body = template_cf_cancellation_approved(leave.employee_name, display_approver, leave.days_taken)
-                        subject = "✅ Carry Forward Cancellation Approved"
-                    else:     # ✅ Standard Cancellation Approved
-                        body = template_cancellation_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
-                        subject = "✅ Leave Cancellation Approved"
-                elif is_cf:   # ✅ CF Approved
-                    body = template_cf_approved(leave.employee_name, display_approver, leave.days_taken)
-                    subject = "✅ Carry Forward Request Approved"
-                else:         # ✅ Standard Approved
-                    body = template_request_approved(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date))
-                    subject = f"✅ Leave Request Approved - {l_type_str}"
-                
-                background_tasks.add_task(send_email, emp_record.email, subject, body)
 
-        # Rejection Logic (Branch between Cancellation, CF, or Standard)
-        elif status == "Rejected" and emp_record and emp_record.email:
-             if is_cancellation_journey:
-                 if is_cf: # ❌ CF Cancellation Rejected
-                     body = template_cf_cancellation_rejected(leave.employee_name, display_approver, remarks or "Processed via Admin Override.")
-                     subject = "⚠️ Carry Forward Cancellation Rejected"
-                 else:     # ❌ Standard Cancellation Rejected
-                     body = template_cancellation_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
-                     subject = "⚠️ Leave Cancellation Rejected"
-             elif is_cf: # ❌ CF Rejected
-                 body = template_cf_rejected(leave.employee_name, display_approver, remarks or "Processed via Admin Override.")
-                 subject = "❌ Carry Forward Request Rejected"
-             else:       # ❌ Standard Rejected
-                 body = template_request_rejected(leave.employee_name, display_approver, l_type_str, str(leave.start_date), str(leave.end_date), remarks or "Processed via Admin Override.")
-                 subject = f"❌ Leave Request Rejected - {l_type_str}"
-             
-             background_tasks.add_task(send_email, emp_record.email, subject, body)
+            # -----------------------------------------------------------------
+            # Priority 1: L1 -> L2
+            # -----------------------------------------------------------------
+            if route_to_l2 and l2_user and l2_user.email:
+
+                if is_cancellation_journey:
+
+                    if is_cf:
+
+                        body = template_l2_cf_cancellation_request(
+                            l2_user.full_name,
+                            approver_name,
+                            leave.employee_name,
+                            leave.days_taken
+                        )
+
+                        subject = (
+                            f"ACTION REQUIRED: "
+                            f"L2 CF Cancellation - "
+                            f"{leave.employee_name}"
+                        )
+
+                    else:
+
+                        body = template_l2_cancellation_request(
+                            l2_user.full_name,
+                            approver_name,
+                            leave.employee_name,
+                            l_type_str,
+                            str(leave.start_date),
+                            str(leave.end_date)
+                        )
+
+                        subject = (
+                            f"ACTION REQUIRED: "
+                            f"L2 Cancellation - "
+                            f"{leave.employee_name}"
+                        )
+
+                else:
+
+                    body = template_l2_request(
+                        l2_user.full_name
+                        or l2_user.username,
+                        approver_name
+                        or display_approver,
+                        leave.employee_name,
+                        l_type_str,
+                        str(leave.start_date),
+                        str(leave.end_date)
+                    )
+
+                    subject = (
+                        f"ACTION REQUIRED: "
+                        f"Final Approval Needed - "
+                        f"{leave.employee_name}"
+                    )
+
+                background_tasks.add_task(
+                    send_email,
+                    l2_user.email,
+                    subject,
+                    body
+                )
+
+            # -----------------------------------------------------------------
+            # Priority 2: L2 -> L3 / HOD
+            # -----------------------------------------------------------------
+            elif route_to_l3 and l3_user and l3_user.email:
+
+                body = template_l3_request(
+                    l3_user.full_name
+                    or l3_user.username,
+                    l2_user.full_name
+                    if l2_user
+                    else display_approver,
+                    leave.employee_name,
+                    l_type_str,
+                    str(leave.start_date),
+                    str(leave.end_date)
+                )
+
+                subject = (
+                    f"ACTION REQUIRED: "
+                    f"HOD Approval Needed - "
+                    f"{leave.employee_name}"
+                )
+
+                background_tasks.add_task(
+                    send_email,
+                    l3_user.email,
+                    subject,
+                    body
+                )
+
+            # -----------------------------------------------------------------
+            # Priority 3: Final approval notification to employee
+            # -----------------------------------------------------------------
+            elif (
+                not route_to_l2
+                and not route_to_l3
+                and emp_record
+                and emp_record.email
+            ):
+
+                if is_cancellation_journey:
+
+                    if is_cf:
+
+                        body = template_cf_cancellation_approved(
+                            leave.employee_name,
+                            display_approver,
+                            leave.days_taken
+                        )
+
+                        subject = (
+                            "✅ Carry Forward "
+                            "Cancellation Approved"
+                        )
+
+                    else:
+
+                        body = template_cancellation_approved(
+                            leave.employee_name,
+                            display_approver,
+                            l_type_str,
+                            str(leave.start_date),
+                            str(leave.end_date)
+                        )
+
+                        subject = (
+                            "✅ Leave Cancellation Approved"
+                        )
+
+                elif is_cf:
+
+                    body = template_cf_approved(
+                        leave.employee_name,
+                        display_approver,
+                        leave.days_taken
+                    )
+
+                    subject = (
+                        "✅ Carry Forward "
+                        "Request Approved"
+                    )
+
+                else:
+
+                    body = template_request_approved(
+                        leave.employee_name,
+                        display_approver,
+                        l_type_str,
+                        str(leave.start_date),
+                        str(leave.end_date)
+                    )
+
+                    subject = (
+                        f"✅ Leave Request Approved - "
+                        f"{l_type_str}"
+                    )
+
+                background_tasks.add_task(
+                    send_email,
+                    emp_record.email,
+                    subject,
+                    body
+                )
+
+        # =====================================================================
+        # REJECTION NOTIFICATION
+        # =====================================================================
+        elif (
+            status == "Rejected"
+            and emp_record
+            and emp_record.email
+        ):
+
+            if is_cancellation_journey:
+
+                if is_cf:
+
+                    body = template_cf_cancellation_rejected(
+                        leave.employee_name,
+                        display_approver,
+                        remarks
+                        or "Processed via Admin Override."
+                    )
+
+                    subject = (
+                        "⚠️ Carry Forward "
+                        "Cancellation Rejected"
+                    )
+
+                else:
+
+                    body = template_cancellation_rejected(
+                        leave.employee_name,
+                        display_approver,
+                        l_type_str,
+                        str(leave.start_date),
+                        str(leave.end_date),
+                        remarks
+                        or "Processed via Admin Override."
+                    )
+
+                    subject = (
+                        "⚠️ Leave Cancellation Rejected"
+                    )
+
+            elif is_cf:
+
+                body = template_cf_rejected(
+                    leave.employee_name,
+                    display_approver,
+                    remarks
+                    or "Processed via Admin Override."
+                )
+
+                subject = (
+                    "❌ Carry Forward "
+                    "Request Rejected"
+                )
+
+            else:
+
+                body = template_request_rejected(
+                    leave.employee_name,
+                    display_approver,
+                    l_type_str,
+                    str(leave.start_date),
+                    str(leave.end_date),
+                    remarks
+                    or "Processed via Admin Override."
+                )
+
+                subject = (
+                    f"❌ Leave Request Rejected - "
+                    f"{l_type_str}"
+                )
+
+            background_tasks.add_task(
+                send_email,
+                emp_record.email,
+                subject,
+                body
+            )
 
     except Exception as e:
-        print(f"⚠️ Activity/Email Error: {e}")
+        print(
+            f"⚠️ Activity/Email Error: {e}"
+        )
 
-    return {"message": final_response_message}
+    return {
+        "message": final_response_message
+    }
 
 @router.get("/manager/all")
 def get_all_manager_leaves(

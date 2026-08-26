@@ -9588,7 +9588,7 @@ html.dark #card_unpaid {
 </div>
 
 
-    <!-- ==========================================
+        <!-- ==========================================
              REVIEW REQUEST - id="reviewModal"
             ========================================== -->
 
@@ -16593,21 +16593,55 @@ let attachmentHtml = "";
         timelineHtml += `</div></div>`;
     }
 
-    // --- 6. L2 LOGIC ---
-    const isSenior = localStorage.getItem("is_senior_manager") === "true";
-    if (actionType === "Approved" && currentStatus === "Pending" && !isSenior && !isCancellationFlow) {
-        try {
-            const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
-            if (res && res.ok) {
-                const policy = await res.json();
-                if (policy.l2_approval_enabled && l2Container) {
-                    l2Container.style.display = "block";
-                    // 🚀 FIX #2: Pass the applicant's name so we get THEIR HOD
-                    await populateL2ManagerDropdown(employeeName);
-                }
+// --- 6. APPROVAL HIERARCHY LOGIC ---
+// L1 = Team Lead
+// L2 = Line Manager
+// L3 = HOD
+//
+// IMPORTANT:
+// The existing l2_approval_enabled policy controls whether
+// the multi-level approval workflow is enabled.
+// We are NOT changing the policy setting itself here.
+
+const isSenior = localStorage.getItem("is_senior_manager") === "true";
+
+const isL1Approval =
+    currentStatus === "Pending";
+
+const isL2Approval =
+    currentStatus === "Pending L2 Approval";
+
+const isL3Approval =
+    currentStatus === "Pending L3 Approval";
+
+// L1 Team Lead:
+// Do NOT route directly to HOD here.
+// The backend will determine the next approval level.
+if (
+    actionType === "Approved" &&
+    isL1Approval &&
+    !isSenior &&
+    !isCancellationFlow
+) {
+    try {
+        const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
+
+        if (res && res.ok) {
+            const policy = await res.json();
+
+            if (policy.l2_approval_enabled) {
+                console.log(
+                    "Approval workflow enabled: L1 Team Lead approval will proceed to L2 Line Manager."
+                );
             }
-        } catch (e) { console.error("L2 Policy Check Error:", e); }
+        }
+    } catch (e) {
+        console.error("Approval Policy Check Error:", e);
     }
+}
+
+// L2 and L3 are handled by their respective backend workflow states.
+// Do not show the old HOD selector here yet.
 
     // --- 7. RENDER SUMMARY (Aligned with Leave Details) ---
     const currentApprover = (currentStatus === "Pending L2 Approval") 
@@ -16832,127 +16866,218 @@ async function populateL2ManagerDropdown(applicantName) {
        * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
        * This function is called by the modal buttons in processApproval()
        */
-/**
- * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
- * This function is called by the modal buttons in processApproval()
- */
-async function submitDecision(leaveId, status) {
-    const remarks = document.getElementById("mgr_review_remarks").value;
-    const l2Container = document.getElementById("l2SelectorContainer");
-    
-    // 🛡️ Safe Access
-    const l2Select = document.getElementById("l2_manager_select");
-    let l2Name = l2Select ? l2Select.value : ""; 
+        /**
+         * ⚖️ Handle Leave Approval / Rejection
+         *
+         * Approval workflow:
+         * L1 Team Lead
+         *     ↓
+         * L2 Line Manager
+         *     ↓
+         * L3 HOD
+         *     ↓
+         * Final Approved
+         *
+         * The frontend does NOT manually select the next approver.
+         * The backend determines the next approval level based on
+         * the employee's configured approval hierarchy.
+         */
+        async function submitDecision(leaveId, status) {
+            const remarksElement = document.getElementById("mgr_review_remarks");
+            const remarks = remarksElement ? remarksElement.value : "";
 
-    // ✅ STEP 1 FIX: Use our new centralized identity resolver
-    // This guarantees we never send "null" or "undefined" strings to the backend.
-    const approverName = getSafeUserName() || "System Administrator";
+            // Centralized requester identity
+            const approverName = getSafeUserName() || "System Administrator";
 
-    // 🚀 THE FAILSAFE: If L2 is OFF (Container Hidden), wipe the L2 name 
-    if (l2Container && l2Container.style.display === "none") {
-        l2Name = "";
-    }
+            // 🛡️ Prevent accidental duplicate submission
+            if (
+                typeof processedActionIds !== "undefined" &&
+                processedActionIds.has(leaveId)
+            ) {
+                console.warn(`Leave ${leaveId} has already been processed.`);
+                return;
+            }
 
-    // 1. Validation: L2 Selection Check
-    if (status === "Approved" && l2Container && l2Container.style.display !== "none" && !l2Name) {
-        Swal.fire({
-            title: "Routing Required",
-            text: "Please select a Department Head (L2 Approver) to route this request.",
-            icon: "warning",
-            confirmButtonColor: "#f59e0b"
-        });
-        return;
-    }
+            try {
+                // ------------------------------------------------------------
+                // 1. Build approval action URL
+                // ------------------------------------------------------------
+                //
+                // IMPORTANT:
+                // We intentionally DO NOT send l2_name here.
+                //
+                // The backend will determine whether this approval moves:
+                // L1 → L2
+                // L2 → L3
+                // L3 → Final Approved
+                //
+                let url =
+                    `${API_URL}/leaves/manager/action/${leaveId}` +
+                    `?status=${encodeURIComponent(status)}` +
+                    `&remarks=${encodeURIComponent(remarks)}` +
+                    `&approver_name=${encodeURIComponent(approverName)}`;
 
-    try {
-        let url = `${API_URL}/leaves/manager/action/${leaveId}?status=${status}&remarks=${encodeURIComponent(remarks)}&approver_name=${encodeURIComponent(approverName)}`;
+                // ------------------------------------------------------------
+                // 2. Show processing state
+                // ------------------------------------------------------------
+                Swal.fire({
+                    title: "Processing Decision...",
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-        if (status === "Approved" && l2Name) {
-            url += `&l2_name=${encodeURIComponent(l2Name)}`;
+                const res = await fetchWithAuth(url, {
+                    method: "POST"
+                });
+
+                if (!res) {
+                    return;
+                }
+
+                // ------------------------------------------------------------
+                // 3. Successful action
+                // ------------------------------------------------------------
+                if (res.ok) {
+
+                    // Lock this ID immediately
+                    if (typeof processedActionIds !== "undefined") {
+                        processedActionIds.add(leaveId);
+                    }
+
+                    // Remove the processed request from the current queue
+                    const row = document.getElementById(`mgr_row_${leaveId}`);
+
+                    if (row) {
+                        row.style.opacity = "0";
+                        row.style.transform = "translateX(20px)";
+
+                        setTimeout(() => {
+                            row.remove();
+                        }, 300);
+                    }
+
+                    // --------------------------------------------------------
+                    // 4. Read backend response
+                    // --------------------------------------------------------
+                    //
+                    // The backend should tell us the resulting workflow state.
+                    //
+                    let result = {};
+
+                    try {
+                        result = await res.json();
+                    } catch (e) {
+                        console.warn("Approval response is not JSON.");
+                    }
+
+                    const resultingStatus =
+                        result.status ||
+                        result.new_status ||
+                        result.leave_status ||
+                        "";
+
+                    // --------------------------------------------------------
+                    // 5. User messaging
+                    // --------------------------------------------------------
+                    let modalTitle = "";
+                    let modalMsg = "";
+                    let iconType = "success";
+
+                    if (status === "Rejected") {
+
+                        modalTitle = "Request Rejected";
+                        modalMsg =
+                            "The leave request has been rejected and closed.";
+                        iconType = "info";
+
+                    } else if (resultingStatus === "Pending L2 Approval") {
+
+                        modalTitle = "Request Sent to L2";
+                        modalMsg =
+                            "L1 approval is complete. The request has been routed to the Line Manager for Level 2 approval.";
+
+                    } else if (resultingStatus === "Pending L3 Approval") {
+
+                        modalTitle = "Request Sent to L3";
+                        modalMsg =
+                            "L2 approval is complete. The request has been routed to the HOD for Level 3 approval.";
+
+                    } else if (resultingStatus === "Approved") {
+
+                        modalTitle = "Request Approved";
+                        modalMsg =
+                            "The leave request has received all required approvals.";
+
+                    } else {
+
+                        // Safe fallback if the backend does not return
+                        // the resulting status.
+                        modalTitle = "Request Processed";
+                        modalMsg =
+                            "The leave request has been successfully processed.";
+                    }
+
+                    // Close review modal
+                    closeReviewModal();
+
+                    // Show result
+                    await Swal.fire({
+                        title: modalTitle,
+                        html: modalMsg,
+                        icon: iconType,
+                        confirmButtonColor: "#2563eb",
+                        confirmButtonText: "OK",
+                        allowOutsideClick: false
+                    });
+
+                    // --------------------------------------------------------
+                    // 6. Refresh manager queue
+                    // --------------------------------------------------------
+                    console.log("🔄 Synchronizing approval queue...");
+
+                    await loadManagerRequests();
+
+                    if (typeof refreshManagerBadges === "function") {
+                        refreshManagerBadges();
+                    }
+
+                } else {
+
+                    // --------------------------------------------------------
+                    // 7. Backend rejected the action
+                    // --------------------------------------------------------
+                    let err = {};
+
+                    try {
+                        err = await res.json();
+                    } catch (e) {
+                        console.warn("Unable to parse backend error response.");
+                    }
+
+                    Swal.fire({
+                        title: "Action Failed",
+                        text:
+                            err.detail ||
+                            "The leave request could not be processed.",
+                        icon: "error",
+                        confirmButtonColor: "#ef4444"
+                    });
+                }
+
+            } catch (e) {
+
+                console.error("Decision Submission Error:", e);
+
+                Swal.fire({
+                    title: "Network Error",
+                    text: "Could not reach the server.",
+                    icon: "error",
+                    confirmButtonColor: "#ef4444"
+                });
+            }
         }
-
-        // Show a subtle loading state
-        Swal.fire({
-            title: 'Processing Decision...',
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); }
-        });
-
-        const res = await fetchWithAuth(url, { method: "POST" });
-        if (!res) return;
-
-        if (res.ok) {
-            // 🛡️ 1. LOCK THIS ID: Prevents opening the modal again
-            if (typeof processedActionIds !== 'undefined') {
-                processedActionIds.add(leaveId);
-            }
-
-            // 🚀 2. OPTIMISTIC UI: Remove row INSTANTLY using the unique ID
-            // This is the specific fix for the "Pending Leave still showing" bug
-            const row = document.getElementById(`mgr_row_${leaveId}`);
-            if (row) {
-                row.style.opacity = "0";
-                row.style.transform = "translateX(20px)";
-                setTimeout(() => row.remove(), 300); // Remove from DOM after fade
-            }
-
-            // --- SMART MESSAGING LOGIC ---
-            let modalTitle = "";
-            let modalMsg = "";
-            let iconType = "success";
-
-            if (status === "Rejected") {
-                modalTitle = "Request Rejected";
-                modalMsg = "The request has been rejected and closed.";
-                iconType = "info"; 
-            } else if (l2Name) {
-                modalTitle = "Routed for Final Approval";
-                modalMsg = `Request routed to <strong>${l2Name}</strong>.`;
-            } else {
-                modalTitle = "Request Approved";
-                modalMsg = "The request has been successfully processed.";
-            }
-
-            // Close the Review Modal FIRST
-            closeReviewModal();
-
-            // Show Success Message
-            await Swal.fire({
-                title: modalTitle,
-                html: modalMsg,
-                icon: iconType,
-                confirmButtonColor: '#2563eb',
-                confirmButtonText: 'OK',
-                allowOutsideClick: false
-            });
-
-            // 3. REFRESH DATA (Background Sync)
-            console.log("🔄 Synchronizing queue...");
-            await loadManagerRequests(); 
-            
-            if (typeof refreshManagerBadges === "function") {
-                refreshManagerBadges();
-            }
-
-        } else {
-            const err = await res.json();
-            Swal.fire({
-                title: "Action Failed",
-                text: err.detail || "Could not process request.",
-                icon: "error",
-                confirmButtonColor: "#ef4444"
-            });
-        }
-    } catch (e) {
-        console.error("Decision Submission Error:", e);
-        Swal.fire({
-            title: "Network Error",
-            text: "Could not reach the server.",
-            icon: "error",
-            confirmButtonColor: "#ef4444"
-        });
-    }
-}
 
  // 🚀 THE FIX: Unified Cancel Logic (Fixed ReferenceError & Zero-Freeze)
  async function cancelLeave(id, currentStatus) {

@@ -13,7 +13,7 @@ class LeaveType(str, enum.Enum):
     COMPASSIONATE = "Compassionate Leave"
     UNPAID = "Unpaid Leave"
 
-class LeaveStatus(str, enum.Enum):  
+class LeaveStatus(str, enum.Enum):
     PENDING = "Pending"
     APPROVED = "Approved"
     REJECTED = "Rejected"
@@ -21,6 +21,7 @@ class LeaveStatus(str, enum.Enum):
     PENDING_CANCEL = "Pending Cancel"
     WITHDRAWN = "Withdrawn"
     PENDING_L2 = "Pending L2 Approval"
+    PENDING_L3 = "Pending L3 Approval"
 
 class OTStatus(str, enum.Enum):
     PENDING = "Pending"
@@ -55,11 +56,17 @@ class Leave(Base):
     approver_name = Column(String, index=True)
     approver_l2 = Column(String, nullable=True)  
     
-    # 🚀 NEW ID-BASED RELATIONSHIPS
+    # 🚀 NEW ID-BASED APPROVAL RELATIONSHIPS
+    # L1 = Team Lead (NEW)
+    # L2 = Line Manager (existing approver_id)
+    # L3 = HOD (existing approver_l2_id)
+
+    approver_l1_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     approver_l2_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    
-    # 🚀 ORM RELATIONSHIPS (Makes querying "leave.approver.full_name" easy)
+
+    # 🚀 ORM RELATIONSHIPS
+    approver_l1_ref = relationship("User", foreign_keys=[approver_l1_id])
     approver = relationship("User", foreign_keys=[approver_id])
     approver_l2_ref = relationship("User", foreign_keys=[approver_l2_id])
     
@@ -129,8 +136,10 @@ class User(Base):
     job_title = Column(String, nullable=True)
     department = Column(String, nullable=True)
     business_unit = Column(String, nullable=True)
-    line_manager = Column(JSON, nullable=True, default=list) 
-    hod_name = Column(JSON, nullable=True, default=list)
+    # Department / Approval Hierarchy
+    team_lead = Column(JSON, nullable=True, default=list)      # L1 - Team Lead
+    line_manager = Column(JSON, nullable=True, default=list)   # L2 - Line Manager
+    hod_name = Column(JSON, nullable=True, default=list)       # L3 - HOD
     contract_type = Column(String, nullable=True) 
     work_location = Column(String, nullable=True) 
 
@@ -225,11 +234,17 @@ class Overtime(Base):
     approver_name = Column(String, index=True)
     approver_l2 = Column(String, nullable=True) 
     
-    # 🚀 NEW ID-BASED RELATIONSHIPS
+    # 🚀 NEW ID-BASED APPROVAL RELATIONSHIPS
+    # L1 = Team Lead (NEW)
+    # L2 = Line Manager (existing approver_id)
+    # L3 = HOD (existing approver_l2_id)
+
+    approver_l1_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     approver_l2_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    
+
     # 🚀 ORM RELATIONSHIPS
+    approver_l1_ref = relationship("User", foreign_keys=[approver_l1_id])
     approver = relationship("User", foreign_keys=[approver_id])
     approver_l2_ref = relationship("User", foreign_keys=[approver_l2_id])
     
