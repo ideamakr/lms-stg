@@ -13317,135 +13317,256 @@ function updateCarryForwardMath() {
       /**
        * 💾 Step 2: Saves the updated roles to the database
        */
-       async function saveUserRoles() {
+      async function saveUserRoles() {
     const userId = window.editingUserId;
     if (!userId) return;
 
-    // 1. Capture Current Form State
-          const currentManager = document.getElementById("edit_role_manager").checked;
-          const currentHR = document.getElementById("edit_role_hr").checked;
-          const currentSenior = document.getElementById("edit_is_senior").checked;
+    // ==============================================================
+    // 1. CAPTURE CURRENT FORM STATE
+    // ==============================================================
 
-// L1 Team Lead permission
-          const l1Cb = document.getElementById("edit_role_l1");
-          const currentL1 = l1Cb ? l1Cb.checked : false;
-    const userName = document.getElementById("userEditModalTitle").innerText.replace("Manage Permissions: ", "");
+    const managerCb = document.getElementById("edit_role_manager");
+    const hrCb = document.getElementById("edit_role_hr");
+    const seniorCb = document.getElementById("edit_is_senior");
+    const l1Cb = document.getElementById("edit_role_l1");
 
-    // 2. Snapshot Comparison (The "Shake" logic)
-          const hasChanged = (
-              currentManager !== initialPermissionState.manager ||
-              currentHR !== initialPermissionState.hr ||
-              currentSenior !== initialPermissionState.senior ||
-              currentL1 !== initialPermissionState.l1
-          );
+    const currentManager = managerCb ? managerCb.checked : false;
+    const currentHR = hrCb ? hrCb.checked : false;
+    const currentSenior = seniorCb ? seniorCb.checked : false;
+    const currentL1 = l1Cb ? l1Cb.checked : false;
+
+    const titleEl = document.getElementById("userEditModalTitle");
+    const userName = titleEl
+        ? titleEl.innerText.replace("Manage Permissions: ", "").trim()
+        : "";
+
+    // ==============================================================
+    // 2. SNAPSHOT COMPARISON
+    // ==============================================================
+
+    const hasChanged = (
+        currentManager !== initialPermissionState.manager ||
+        currentHR !== initialPermissionState.hr ||
+        currentSenior !== initialPermissionState.senior ||
+        currentL1 !== initialPermissionState.l1
+    );
 
     if (!hasChanged) {
         const btn = document.getElementById("btnUpdatePermissions");
         const msg = document.getElementById("noChangeMsg");
-        if (msg) msg.style.display = "block";
+
+        if (msg) {
+            msg.style.display = "block";
+        }
+
         if (btn) {
-            btn.classList.remove("shake-animation"); 
-            void btn.offsetWidth; 
+            btn.classList.remove("shake-animation");
+            void btn.offsetWidth;
             btn.classList.add("shake-animation");
         }
-        return; 
+
+        return;
     }
 
-    // 3. User Confirmation
-    Swal.fire({
-        title: 'Update Permissions?',
+    // ==============================================================
+    // 3. USER CONFIRMATION
+    // ==============================================================
+
+    const result = await Swal.fire({
+        title: "Update Permissions?",
         text: `Apply these access level changes to ${userName}?`,
-        icon: 'question',
+        icon: "question",
         showCancelButton: true,
-        confirmButtonColor: '#2563eb',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, Update User',
-        cancelButtonText: 'Cancel'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            
-            // 🛡️ GUARD C: THE "APPROVAL LIMBO" SAFETY NET
-            // If Natasha is trying to UNCHECK 'Manager', we must check if Tony has work to do.
-            if (initialPermissionState.manager === true && currentManager === false) {
-                try {
-                    // Check if user has Pending/Pending Cancel leaves as an assigned approver
-                    const checkRes = await fetchWithAuth(`${API_URL}/leaves/manager/pending?approver_name=${encodeURIComponent(userName)}&page_size=1`);
-                    if (checkRes && checkRes.ok) {
-                        const checkData = await checkRes.json();
-                        if (checkData.total > 0) {
-                            // 🛑 HARD STOP: Prevent demotion while work is pending
-                            await Swal.fire({
-                                icon: 'warning',
-                                title: 'Action Blocked',
-                                html: `<strong>${userName}</strong> has <strong>${checkData.total} request(s)</strong> awaiting their approval.<br><br>Reassign or process these requests before removing the Manager role.`,
-                                confirmButtonColor: '#f59e0b'
-                            });
-                            return; // Exit the function entirely
-                        }
-                    }
-                } catch (e) { console.error("Guard C Check failed:", e); }
-            }
+        confirmButtonColor: "#2563eb",
+        cancelButtonColor: "#64748b",
+        confirmButtonText: "Yes, Update User",
+        cancelButtonText: "Cancel"
+    });
 
-            // 🚀 PROCEED: Show Loading Spinner
-            Swal.fire({
-                title: 'Updating Permissions...',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
+    if (!result.isConfirmed) {
+        return;
+    }
 
-            // 🛡️ GUARD B: THE FAIL-SAFE IDENTITY PROTECTION
-            const selectedRoles = ["employee"];
-            
-            // Logic: Even if UI glitches, if Senior Power is true, Manager Role is forced.
-            if (currentManager || currentSenior) {
-                selectedRoles.push("manager");
-            }
-            
-            if (currentHR) {
-                selectedRoles.push("hr_admin");
-            }
+    // ==============================================================
+    // 4. MANAGER APPROVAL SAFETY CHECK
+    // Prevent removing Manager role while pending work exists.
+    // ==============================================================
 
-            const formData = new FormData();
-            formData.append("roles", JSON.stringify(selectedRoles));
-            formData.append("is_senior_manager", currentSenior);
+    if (
+        initialPermissionState.manager === true &&
+        currentManager === false
+    ) {
+        try {
+            const checkRes = await fetchWithAuth(
+                `${API_URL}/leaves/manager/pending?approver_name=${encodeURIComponent(userName)}&page_size=1`
+            );
 
-            try {
-                const res = await fetchWithAuth(`${API_URL}/users/${userId}/roles-update`, {
-                    method: "PUT",
-                    body: formData,
-                });
+            if (checkRes && checkRes.ok) {
+                const checkData = await checkRes.json();
 
-                if (res && res.ok) {
-                    const data = await res.json();
-                    closeUserEditModal();
-                    await loadAllUsers(); // Refresh background table
-
-                    Swal.fire({
-                        title: 'Updated!',
-                        html: data.message,
-                        icon: 'success',
-                        confirmButtonColor: '#2563eb'
+                if (checkData.total > 0) {
+                    await Swal.fire({
+                        icon: "warning",
+                        title: "Action Blocked",
+                        html:
+                            `<strong>${userName}</strong> has ` +
+                            `<strong>${checkData.total} request(s)</strong> ` +
+                            `awaiting their approval.<br><br>` +
+                            `Reassign or process these requests before ` +
+                            `removing the Manager role.`,
+                        confirmButtonColor: "#f59e0b"
                     });
-                } else {
-                    const err = await res.json();
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Update Failed',
-                        text: err.detail || "Could not modify user roles.",
-                        confirmButtonColor: '#ef4444'
-                    });
+
+                    return;
                 }
-            } catch (e) {
-                console.error("Role Update Error:", e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Network Error',
-                    text: "Connection lost. Please try again.",
-                    confirmButtonColor: '#ef4444'
-                });
             }
+        } catch (e) {
+            console.error("Guard C Check failed:", e);
+        }
+    }
+
+    // ==============================================================
+    // 5. SHOW LOADING
+    // ==============================================================
+
+    Swal.fire({
+        title: "Updating Permissions...",
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
         }
     });
+
+    // ==============================================================
+    // 6. BUILD SELECTED ROLES
+    // ==============================================================
+
+    const selectedRoles = ["employee"];
+
+    // --------------------------------------------------------------
+    // Manager
+    // Senior Manager automatically requires Manager authority.
+    // --------------------------------------------------------------
+
+    if (currentManager || currentSenior) {
+        selectedRoles.push("manager");
+    }
+
+    // --------------------------------------------------------------
+    // L1 TEAM LEAD
+    // --------------------------------------------------------------
+    // IMPORTANT:
+    // This was missing in the previous version.
+    // Without this, the checkbox can appear selected in the UI,
+    // but "team_lead" is never sent to the backend.
+    // --------------------------------------------------------------
+
+    if (currentL1) {
+        selectedRoles.push("team_lead");
+    }
+
+    // --------------------------------------------------------------
+    // HR Admin
+    // --------------------------------------------------------------
+
+    if (currentHR) {
+        selectedRoles.push("hr_admin");
+    }
+
+    // ==============================================================
+    // 7. PREPARE REQUEST
+    // ==============================================================
+
+    const formData = new FormData();
+
+    formData.append(
+        "roles",
+        JSON.stringify(selectedRoles)
+    );
+
+    formData.append(
+        "is_senior_manager",
+        currentSenior
+    );
+
+    // ==============================================================
+    // 8. SEND UPDATE
+    // ==============================================================
+
+    try {
+        const res = await fetchWithAuth(
+            `${API_URL}/users/${userId}/roles-update`,
+            {
+                method: "PUT",
+                body: formData
+            }
+        );
+
+        // ----------------------------------------------------------
+        // SUCCESS
+        // ----------------------------------------------------------
+
+        if (res && res.ok) {
+            const data = await res.json();
+
+            closeUserEditModal();
+
+            // Refresh user table so the new role is immediately visible.
+            await loadAllUsers();
+
+            await Swal.fire({
+                title: "Updated!",
+                html: data.message,
+                icon: "success",
+                confirmButtonColor: "#2563eb"
+            });
+
+            return;
+        }
+
+        // ----------------------------------------------------------
+        // API ERROR
+        // ----------------------------------------------------------
+
+        let err = {};
+
+        try {
+            err = await res.json();
+        } catch (parseError) {
+            console.error(
+                "Unable to parse role update error response:",
+                parseError
+            );
+        }
+
+        await Swal.fire({
+            icon: "error",
+            title: "Update Failed",
+            text:
+                err.detail ||
+                "Could not modify user roles.",
+            confirmButtonColor: "#ef4444"
+        });
+
+    } catch (e) {
+
+        // ----------------------------------------------------------
+        // NETWORK ERROR
+        // ----------------------------------------------------------
+
+        console.error(
+            "Role Update Error:",
+            e
+        );
+
+        await Swal.fire({
+            icon: "error",
+            title: "Network Error",
+            text:
+                "Connection lost. Please try again.",
+            confirmButtonColor: "#ef4444"
+        });
+    }
 }
 
       // Run this immediately when the dashboard scripts load
@@ -26267,8 +26388,11 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
     }
 
 // L1 Team Lead permission
+// Backend uses "team_lead"; "l1" is also supported for compatibility.
     if (l1Cb) {
-        l1Cb.checked = currentRoles.includes("l1");
+        l1Cb.checked =
+            currentRoles.includes("team_lead") ||
+            currentRoles.includes("l1");
     }
 
     const seniorStatus = (isSenior === true || isSenior === 1);
