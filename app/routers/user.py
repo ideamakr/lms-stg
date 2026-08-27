@@ -235,124 +235,313 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}/roles-update")
-async def update_user_roles_multiple( # 🚀 Changed to async
-    user_id: int, 
-    background_tasks: BackgroundTasks, # 🚀 INJECTED: Background worker
-    roles: str = Form(...), 
-    is_senior_manager: bool = Form(False),
-    x_requester_name: str = Header(None, alias="X-Requester-Name"),
-    db: Session = Depends(get_db)
+async def update_user_roles_multiple(
+        user_id: int,
+        background_tasks: BackgroundTasks,
+        roles: str = Form(...),
+        is_senior_manager: bool = Form(False),
+        x_requester_name: str = Header(None, alias="X-Requester-Name"),
+        db: Session = Depends(get_db)
 ):
+    # ==============================================================
+    # 1. PARSE ROLE DATA
+    # ==============================================================
     try:
         role_list = json.loads(roles)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid role data format")
-    
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid role data format"
+        )
 
-    # Block role changes for Inactive employees
+    # ==============================================================
+    # 2. FIND USER
+    # ==============================================================
+    user = db.query(models.User).filter(
+        models.User.id == user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    # ==============================================================
+    # 3. BLOCK ROLE CHANGES FOR INACTIVE EMPLOYEES
+    # ==============================================================
     if not user.is_active:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Modification Denied: {user.full_name} is currently Inactive."
         )
 
-    # 🛡️ Security Lock for HR Admin
+    # ==============================================================
+    # 4. SECURITY LOCK FOR HR ADMIN
+    # Prevent removing the last active HR Admin.
+    # ==============================================================
     if user.role == "hr_admin" and "hr_admin" not in role_list:
+
         other_active_admins = db.query(models.User).filter(
             models.User.role == "hr_admin",
             models.User.is_active == True,
             models.User.id != user_id
         ).count()
-        
+
         if other_active_admins < 1:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Security Lock: Cannot remove the last active HR Admin."
             )
 
     # ==============================================================
-    # 🚀 AUTO-ESCALATE ORPHANED TASKS (Safety Net logic preserved)
+    # 5. CAPTURE CURRENT APPROVAL ROLE STATES
+    # These values represent the user's state BEFORE the change.
     # ==============================================================
-    was_manager = any(r.role_name == "manager" for r in user.assigned_roles) or user.role == "manager"
+
+    # Manager / L1 approval authority
+    was_manager = (
+            any(
+                r.role_name == "manager"
+                for r in user.assigned_roles
+            )
+            or user.role == "manager"
+    )
+
     is_now_manager = "manager" in role_list
+
+    # L1 = Team Lead
+    was_l1 = any(
+        r.role_name in ("team_lead", "l1")
+        for r in user.assigned_roles
+    )
+
+    is_now_l1 = (
+            "team_lead" in role_list
+            or "l1" in role_list
+    )
+
+    # L2 = Senior Manager / HOD authority
     was_senior = user.is_senior_manager
     is_now_senior = is_senior_manager
 
-    acting_admin = x_requester_name if x_requester_name else "HR Admin"
+    # ==============================================================
+    # 6. IDENTIFY THE PERSON RECEIVING ESCALATED WORK
+    # ==============================================================
+    acting_admin = (
+        x_requester_name
+        if x_requester_name
+        else "HR Admin"
+    )
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     reassigned_count = 0
 
+    # ==============================================================
+    # 7. MANAGER ROLE REVOCATION
+    # Reassign pending Manager approval tasks.
+    # ==============================================================
+
     if was_manager and not is_now_manager:
-        l1_leaves = db.query(models.Leave).filter(models.Leave.approver_name == user.full_name, models.Leave.status.in_(["Pending", "Pending Cancel"])).all()
+
+        l1_leaves = db.query(models.Leave).filter(
+            models.Leave.approver_name == user.full_name,
+            models.Leave.status.in_([
+                "Pending",
+                "Pending Cancel"
+            ])
+        ).all()
+
         for l in l1_leaves:
             l.approver_name = acting_admin
-            l.status_history += f" > Auto-Escalated to {acting_admin} {{Note: Manager Role Revoked}} ({timestamp})"
+            l.status_history += (
+                f" > Auto-Escalated to {acting_admin} "
+                f"{{Note: Manager Role Revoked}} "
+                f"({timestamp})"
+            )
             reassigned_count += 1
 
-        l1_ots = db.query(models.Overtime).filter(models.Overtime.approver_name == user.full_name, models.Overtime.status.in_(["Pending", "Pending Cancel"])).all()
+        l1_ots = db.query(models.Overtime).filter(
+            models.Overtime.approver_name == user.full_name,
+            models.Overtime.status.in_([
+                "Pending",
+                "Pending Cancel"
+            ])
+        ).all()
+
         for ot in l1_ots:
             ot.approver_name = acting_admin
-            ot.status_history += f" > Auto-Escalated to {acting_admin} {{Note: Manager Role Revoked}} ({timestamp})"
+            ot.status_history += (
+                f" > Auto-Escalated to {acting_admin} "
+                f"{{Note: Manager Role Revoked}} "
+                f"({timestamp})"
+            )
             reassigned_count += 1
+
+    # ==============================================================
+    # 8. L1 TEAM LEAD ROLE REVOCATION
+    # Prevent pending L1 approval tasks from remaining assigned
+    # to a user whose Team Lead role has been removed.
+    # ==============================================================
+
+    if was_l1 and not is_now_l1:
+
+        l1_leaves = db.query(models.Leave).filter(
+            models.Leave.approver_l1_id == user.id,
+            models.Leave.status.in_([
+                "Pending",
+                "Pending Cancel"
+            ])
+        ).all()
+
+        for l in l1_leaves:
+            l.approver_l1_id = None
+            l.status_history += (
+                f" > L1 Team Lead Role Revoked - "
+                f"Escalated to {acting_admin} "
+                f"({timestamp})"
+            )
+            reassigned_count += 1
+
+    # ==============================================================
+    # 9. L2 / SENIOR MANAGER ROLE REVOCATION
+    # Reassign pending L2 approval tasks.
+    # ==============================================================
 
     if was_senior and not is_now_senior:
-        l2_leaves = db.query(models.Leave).filter(models.Leave.approver_l2 == user.full_name, models.Leave.status.in_(["Pending L2 Approval", "Pending Cancel"])).all()
+
+        l2_leaves = db.query(models.Leave).filter(
+            models.Leave.approver_l2 == user.full_name,
+            models.Leave.status.in_([
+                "Pending L2 Approval",
+                "Pending Cancel"
+            ])
+        ).all()
+
         for l in l2_leaves:
             l.approver_l2 = acting_admin
-            l.status_history += f" > Auto-Escalated to {acting_admin} {{Note: L2 Role Revoked}} ({timestamp})"
+            l.status_history += (
+                f" > Auto-Escalated to {acting_admin} "
+                f"{{Note: L2 Role Revoked}} "
+                f"({timestamp})"
+            )
             reassigned_count += 1
 
-        l2_ots = db.query(models.Overtime).filter(models.Overtime.approver_l2 == user.full_name, models.Overtime.status.in_(["Pending L2 Approval", "Pending Cancel"])).all()
+        l2_ots = db.query(models.Overtime).filter(
+            models.Overtime.approver_l2 == user.full_name,
+            models.Overtime.status.in_([
+                "Pending L2 Approval",
+                "Pending Cancel"
+            ])
+        ).all()
+
         for ot in l2_ots:
             ot.approver_l2 = acting_admin
-            ot.status_history += f" > Auto-Escalated to {acting_admin} {{Note: L2 Role Revoked}} ({timestamp})"
+            ot.status_history += (
+                f" > Auto-Escalated to {acting_admin} "
+                f"{{Note: L2 Role Revoked}} "
+                f"({timestamp})"
+            )
             reassigned_count += 1
 
     # ==============================================================
-    # 🚀 UPDATE ROLES IN DATABASE
+    # 10. UPDATE ROLES IN DATABASE
     # ==============================================================
+
     user.is_senior_manager = is_senior_manager
-    db.query(models.UserRole).filter(models.UserRole.user_id == user_id).delete()
-    
+
+    # Remove existing role mappings
+    db.query(models.UserRole).filter(
+        models.UserRole.user_id == user_id
+    ).delete()
+
+    # Always retain at least Employee role
     if not role_list:
         role_list = ["employee"]
 
+    # Insert new role mappings
     for r_name in role_list:
-        db.add(models.UserRole(user_id=user_id, role_name=r_name))
-    
+        db.add(
+            models.UserRole(
+                user_id=user_id,
+                role_name=r_name
+            )
+        )
+
+    # Maintain legacy/main role field
     if "hr_admin" in role_list:
         user.role = "hr_admin"
+
     elif "manager" in role_list:
         user.role = "manager"
+
     else:
         user.role = "employee"
+
+    # ==============================================================
+    # 11. COMMIT DATABASE CHANGES
+    # ==============================================================
 
     try:
         db.commit()
 
-        # 🚀 EMAIL NOTIFICATION TRIGGER (Background Task)
+        # ==========================================================
+        # 12. EMAIL NOTIFICATION
+        # ==========================================================
+
         if user.email and "@" in str(user.email):
+
             subject = "🛡️ System Permissions Updated"
+
             body = template_role_update(
                 name=user.full_name,
                 roles=role_list,
                 is_senior=is_senior_manager
             )
-            background_tasks.add_task(send_email, user.email, subject, body)
 
-        msg = f"User account updated successfully for {user.full_name}."
+            background_tasks.add_task(
+                send_email,
+                user.email,
+                subject,
+                body
+            )
+
+        # ==========================================================
+        # 13. SUCCESS RESPONSE
+        # ==========================================================
+
+        msg = (
+            f"User account updated successfully for "
+            f"{user.full_name}."
+        )
+
         if reassigned_count > 0:
-            msg += f"<br><br>⚠️ <b>{reassigned_count} pending request(s)</b> were automatically transferred to your queue."
+            msg += (
+                f"<br><br>⚠️ <b>{reassigned_count} pending request(s)"
+                f"</b> were automatically transferred to your queue."
+            )
 
-        return {"message": msg, "reassigned": reassigned_count}
+        return {
+            "message": msg,
+            "reassigned": reassigned_count
+        }
+
+    # ==============================================================
+    # 14. DATABASE ERROR / ROLLBACK
+    # ==============================================================
 
     except Exception as e:
+
         db.rollback()
-        print(f"❌ DB Error during role update: {e}")
-        raise HTTPException(status_code=500, detail="Database error during permission update.")
+
+        print(
+            f"❌ DB Error during role update: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error during permission update."
+        )
 
 @router.post("/login")
 def login(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):

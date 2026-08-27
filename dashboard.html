@@ -9644,66 +9644,250 @@ html.dark #card_unpaid {
              !!!USER MANAGEMENT > MANAGER PERMISSION - id="userEditModal"
             ========================================== -->
 
-            <div id="userEditModal" class="modal" style="
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 10006;
-            align-items: center;
-            justify-content: center;
+    <div id="userEditModal" class="modal" style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.6);
+          z-index: 10006;
+          align-items: center;
+          justify-content: center;
+        ">
+        <div style="
+            background: white;
+            border-radius: 16px;
+            width: 95%;
+            max-width: 600px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: none;
           ">
-  <div style="
-              background: white;
-              border-radius: 16px;
-              width: 95%;
-              max-width: 600px;
-              overflow: hidden; 
-              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-              border: none;
-            ">
-      
-      <div style="
-                background: #1e293b;
-                color: white;
-                padding: 20px 25px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin: 0;
-              ">
-          <div>
-              <h3 id="userEditModalTitle" style="
-                    margin: 0;
-                    font-size: 1.25rem;
-                    font-weight: 700;
-                    background: transparent !important;
-                    border: none !important;
-                  ">
-                  Manage Permissions
-              </h3>
-              <p style="
-                    margin: 4px 0 0 0;
-                    font-size: 0.75rem;
-                    color: #94a3b8;
-                    letter-spacing: 0.3px;
-                  ">
-                  Configure system access levels and security
-              </p>
-          </div>
-          <i class="fas fa-times" onclick="closeUserEditModal()" style="
-                  cursor: pointer;
-                  font-size: 1.2rem;
-                  opacity: 0.7;
-                  transition: 0.2s;
-                " onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"></i>
-      </div>
 
-      <div style="padding: 25px">
-          <label style="
+            <div style="
+              background: #1e293b;
+              color: white;
+              padding: 20px 25px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin: 0;
+            ">
+                <div>
+                    <h3 id="userEditModalTitle" style="
+                  margin: 0;
+                  font-size: 1.25rem;
+                  font-weight: 700;
+                  background: transparent !important;
+                  border: none !important;
+                ">
+                        Manage Permissions
+                    </h3>
+                    <p style="
+                  margin: 4px 0 0 0;
+                  font-size: 0.75rem;
+                  color: #94a3b8;
+                  letter-spacing: 0.3px;
+                ">
+                        Configure system access levels and security
+                    </p>
+                </div>
+                <i class="fas fa-times" onclick="closeUserEditModal()" style="
+                cursor: pointer;
+                font-size: 1.2rem;
+                opacity: 0.7;
+                transition: 0.2s;
+              " onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"></i>
+            </div>
+
+            <div style="padding: 25px">
+                <label style="
+                font-weight: 800;
+                display: block;
+                margin-bottom: 15px;
+                font-size: 0.75rem;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              ">
+                    <i class="fas fa-user-shield" style="margin-right: 8px"></i>
+                    Access Roles
+                </label>
+
+                <div style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                background: #f8fafc;
+                padding: 20px;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                margin-bottom: 30px;
+              ">
+
+                    <!-- EMPLOYEE -->
+                    <label style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: not-allowed;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: #f1f5f9;
+                  border: 1px solid #e2e8f0;
+                ">
+                        <input type="checkbox" id="edit_role_employee" checked disabled style="width: 20px; height: 20px" />
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #64748b;
+                    ">
+                                Employee
+                            </div>
+                            <div style="font-size: 0.7rem; color: #94a3b8">
+                                Base System Access
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- HR ADMIN -->
+                    <label style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: pointer;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: white;
+                  border: 1px solid #e2e8f0;
+                  transition: 0.2s;
+                " onmouseover="this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'">
+                        <input type="checkbox" id="edit_role_hr" value="hr_admin" style="width: 20px; height: 20px" />
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #1e293b;
+                    ">
+                                HR Admin
+                            </div>
+                            <div style="font-size: 0.7rem; color: #64748b">
+                                Full System Control
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- L2 / MANAGER -->
+                    <label style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: pointer;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: white;
+                  border: 1px solid #e2e8f0;
+                  transition: 0.2s;
+                " onmouseover="this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'">
+                        <input type="checkbox" id="edit_role_manager" value="manager" style="width: 20px; height: 20px" />
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #1e293b;
+                    ">
+                                Manager
+                            </div>
+                            <div style="font-size: 0.7rem; color: #64748b">
+                                Approval Authority
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- L1 / TEAM LEAD -->
+                    <label id="l1_team_lead_wrapper" style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: pointer;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: #f0fdf4;
+                  border: 1px solid #bbf7d0;
+                  transition: 0.2s;
+                " onmouseover="this.style.background='#dcfce7'; this.style.borderColor='#86efac';"
+                           onmouseout="this.style.background='#f0fdf4'; this.style.borderColor='#bbf7d0';">
+
+                        <input type="checkbox"
+                               id="edit_role_l1"
+                               value="l1"
+                               style="width: 20px; height: 20px" />
+
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #166534;
+                    ">
+                                <i class="fas fa-user-check"></i> L1 Team Lead
+                            </div>
+
+                            <div style="
+                      font-size: 0.7rem;
+                      color: #15803d;
+                    ">
+                                First-Level Leave Approval
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- L2 POWER -->
+                    <label id="senior_manager_wrapper" style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: pointer;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: #eff6ff;
+                  border: 1px solid #bfdbfe;
+                  transition: 0.2s;
+                " onmouseover="this.style.background='#dbeafe'">
+
+                        <input type="checkbox"
+                               id="edit_is_senior"
+                               style="width: 20px; height: 20px" />
+
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #1e40af;
+                    ">
+                                <i class="fas fa-award"></i> L2 Power
+                            </div>
+
+                            <div style="
+                      font-size: 0.7rem;
+                      color: #1e40af;
+                      opacity: 0.8
+                    ">
+                                Dept Head Level
+                            </div>
+                        </div>
+                    </label>
+
+                </div>
+
+                <div style="
+                margin-top: 25px;
+                padding-top: 20px;
+                border-top: 1px dashed #e2e8f0;
+              ">
+                    <label style="
                   font-weight: 800;
                   display: block;
                   margin-bottom: 15px;
@@ -9712,141 +9896,9 @@ html.dark #card_unpaid {
                   text-transform: uppercase;
                   letter-spacing: 1px;
                 ">
-              <i class="fas fa-user-shield" style="margin-right: 8px"></i>
-              Access Roles
-          </label>
-
-          <div style="
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 15px;
-                  background: #f8fafc;
-                  padding: 20px;
-                  border-radius: 12px;
-                  border: 1px solid #e2e8f0;
-                  margin-bottom: 30px;
-                ">
-              <label style="
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: not-allowed;
-                    padding: 12px;
-                    border-radius: 10px;
-                    background: #f1f5f9;
-                    border: 1px solid #e2e8f0;
-                  ">
-                  <input type="checkbox" id="edit_role_employee" checked disabled style="width: 20px; height: 20px" />
-                  <div>
-                      <div style="
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        color: #64748b;
-                      ">
-                          Employee
-                      </div>
-                      <div style="font-size: 0.7rem; color: #94a3b8">
-                          Base System Access
-                      </div>
-                  </div>
-              </label>
-
-              <label style="
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    padding: 12px;
-                    border-radius: 10px;
-                    background: white;
-                    border: 1px solid #e2e8f0;
-                    transition: 0.2s;
-                  " onmouseover="this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'">
-                  <input type="checkbox" id="edit_role_hr" value="hr_admin" style="width: 20px; height: 20px" />
-                  <div>
-                      <div style="
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        color: #1e293b;
-                      ">
-                          HR Admin
-                      </div>
-                      <div style="font-size: 0.7rem; color: #64748b">
-                          Full System Control
-                      </div>
-                  </div>
-              </label>
-
-              <label style="
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    padding: 12px;
-                    border-radius: 10px;
-                    background: white;
-                    border: 1px solid #e2e8f0;
-                    transition: 0.2s;
-                  " onmouseover="this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'">
-                  <input type="checkbox" id="edit_role_manager" value="manager" style="width: 20px; height: 20px" />
-                  <div>
-                      <div style="
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        color: #1e293b;
-                      ">
-                          Manager
-                      </div>
-                      <div style="font-size: 0.7rem; color: #64748b">
-                          Approval Authority
-                      </div>
-                  </div>
-              </label>
-
-              <label id="senior_manager_wrapper" style="
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    padding: 12px;
-                    border-radius: 10px;
-                    background: #eff6ff;
-                    border: 1px solid #bfdbfe;
-                    transition: 0.2s;
-                  " onmouseover="this.style.background='#dbeafe'">
-                  <input type="checkbox" id="edit_is_senior" style="width: 20px; height: 20px" />
-                  <div>
-                      <div style="
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        color: #1e40af;
-                      ">
-                          <i class="fas fa-award"></i> L2 Power
-                      </div>
-                      <div style="font-size: 0.7rem; color: #1e40af; opacity: 0.8">
-                          Dept Head Level
-                      </div>
-                  </div>
-              </label>
-          </div>
-
-          <div style="
-                  margin-top: 25px;
-                  padding-top: 20px;
-                  border-top: 1px dashed #e2e8f0;
-                ">
-              <label style="
-                    font-weight: 800;
-                    display: block;
-                    margin-bottom: 15px;
-                    font-size: 0.75rem;
-                    color: #64748b;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                  ">
-                  <i class="fas fa-key" style="margin-right: 6px"></i> Account
-                  Security
-              </label>
+                        <i class="fas fa-key" style="margin-right: 6px"></i> Account
+                        Security
+                    </label>
 
               <div style="
                     display: grid;
@@ -13270,17 +13322,22 @@ function updateCarryForwardMath() {
     if (!userId) return;
 
     // 1. Capture Current Form State
-    const currentManager = document.getElementById("edit_role_manager").checked;
-    const currentHR = document.getElementById("edit_role_hr").checked;
-    const currentSenior = document.getElementById("edit_is_senior").checked;
+          const currentManager = document.getElementById("edit_role_manager").checked;
+          const currentHR = document.getElementById("edit_role_hr").checked;
+          const currentSenior = document.getElementById("edit_is_senior").checked;
+
+// L1 Team Lead permission
+          const l1Cb = document.getElementById("edit_role_l1");
+          const currentL1 = l1Cb ? l1Cb.checked : false;
     const userName = document.getElementById("userEditModalTitle").innerText.replace("Manage Permissions: ", "");
 
     // 2. Snapshot Comparison (The "Shake" logic)
-    const hasChanged = (
-        currentManager !== initialPermissionState.manager ||
-        currentHR !== initialPermissionState.hr ||
-        currentSenior !== initialPermissionState.senior
-    );
+          const hasChanged = (
+              currentManager !== initialPermissionState.manager ||
+              currentHR !== initialPermissionState.hr ||
+              currentSenior !== initialPermissionState.senior ||
+              currentL1 !== initialPermissionState.l1
+          );
 
     if (!hasChanged) {
         const btn = document.getElementById("btnUpdatePermissions");
@@ -26194,23 +26251,38 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
     if (updateBtn) updateBtn.classList.remove("shake-animation");
     if (msgEl) msgEl.style.display = "none";
 
-    // 4. Get the checkboxes
+    // 4. Get the permission checkboxes
     const managerCb = document.getElementById("edit_role_manager");
     const hrCb = document.getElementById("edit_role_hr");
     const seniorCb = document.getElementById("edit_is_senior");
+    const l1Cb = document.getElementById("edit_role_l1");
 
-    // 5. Set Checkbox States
-    if (managerCb) managerCb.checked = currentRoles.includes("manager");
-    if (hrCb) hrCb.checked = currentRoles.includes("hr_admin");
-    
+// 5. Set Checkbox States
+    if (managerCb) {
+        managerCb.checked = currentRoles.includes("manager");
+    }
+
+    if (hrCb) {
+        hrCb.checked = currentRoles.includes("hr_admin");
+    }
+
+// L1 Team Lead permission
+    if (l1Cb) {
+        l1Cb.checked = currentRoles.includes("l1");
+    }
+
     const seniorStatus = (isSenior === true || isSenior === 1);
-    if (seniorCb) seniorCb.checked = seniorStatus;
 
-    // 6. 📸 SNAPSHOT: Save the initial state
+    if (seniorCb) {
+        seniorCb.checked = seniorStatus;
+    }
+
+// 6. 📸 SNAPSHOT: Save the initial state
     initialPermissionState = {
         manager: managerCb ? managerCb.checked : false,
         hr: hrCb ? hrCb.checked : false,
-        senior: seniorCb ? seniorCb.checked : false
+        senior: seniorCb ? seniorCb.checked : false,
+        l1: l1Cb ? l1Cb.checked : false
     };
 
     // 🚀 THE MISSING PIECE: GUARD INTEGRATION
