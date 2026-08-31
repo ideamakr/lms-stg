@@ -6590,34 +6590,94 @@ html.dark #card_unpaid {
 
                                     <div id="tab-emp-lifecycle" class="sub-tab-content">
                                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px 30px;">
-                                            
+
+                                            <!-- LINE MANAGER -->
                                             <div class="saas-form-group">
-                                                <label class="reg-label">Line Manager(s) <span style="color: #ef4444;">*</span></label>
+                                                <label class="reg-label">
+                                                    Line Manager(s)
+                                                    <span style="color: #ef4444;">*</span>
+                                                </label>
+
                                                 <div id="reg_mgr_container" class="approver-selection-box">
                                                     <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">
                                                         <i class="fas fa-spinner fa-spin"></i> Loading...
                                                     </div>
                                                 </div>
-                                                <small id="manager_error" class="error-text" style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;"></small>
+
+                                                <small id="manager_error"
+                                                       class="error-text"
+                                                       style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;">
+                                                </small>
                                             </div>
+
+
+                                            <!-- HOD / DEPT HEAD -->
                                             <div class="saas-form-group">
-                                                <label class="reg-label">HOD / Dept Head(s) <span style="color: #ef4444;">*</span></label> 
+                                                <label class="reg-label">
+                                                    HOD / Dept Head(s)
+                                                    <span style="color: #ef4444;">*</span>
+                                                </label>
+
                                                 <div id="reg_hod_container" class="approver-selection-box">
                                                     <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">
                                                         <i class="fas fa-spinner fa-spin"></i> Loading...
                                                     </div>
                                                 </div>
-                                                <small id="hod_error" class="error-text" style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;"></small>
+
+                                                <small id="hod_error"
+                                                       class="error-text"
+                                                       style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;">
+                                                </small>
                                             </div>
+
+
+                                            <!-- L1 TEAM LEAD -->
                                             <div class="saas-form-group">
-                                                <label class="reg-label">Contract Type</label>
-                                                <select id="reg_contract_type_new" class="saas-form-control">
-                                                    <option value="" disabled selected>Select Type...</option>
-                                                    <option value="Full-Time">Full-Time</option> 
-                                                    <option value="Regular">Regular</option>
-                                                    <option value="Contractor">Contractor</option>
-                                                    <option value="Probation">Probation</option>
-                                                    <option value="Internship">Internship</option>
+                                                <label class="reg-label">
+                                                    L1 Team Lead(s)
+                                                </label>
+
+                                                <div id="reg_l1_container" class="approver-selection-box">
+                                                    <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">
+                                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+                                            <!-- CONTRACT TYPE -->
+                                            <div class="saas-form-group">
+                                                <label class="reg-label">
+                                                    Contract Type
+                                                </label>
+
+                                                <select id="reg_contract_type_new"
+                                                        class="saas-form-control">
+
+                                                    <option value="" disabled selected>
+                                                        Select Type...
+                                                    </option>
+
+                                                    <option value="Full-Time">
+                                                        Full-Time
+                                                    </option>
+
+                                                    <option value="Regular">
+                                                        Regular
+                                                    </option>
+
+                                                    <option value="Contractor">
+                                                        Contractor
+                                                    </option>
+
+                                                    <option value="Probation">
+                                                        Probation
+                                                    </option>
+
+                                                    <option value="Internship">
+                                                        Internship
+                                                    </option>
+
                                                 </select>
                                             </div>
                             
@@ -22660,14 +22720,23 @@ async function submitNewUser(event) {
 
     const getJsonListFromCheckboxes = (containerId) => {
         const container = document.getElementById(containerId);
-        if (!container) return null; 
-        
+        if (!container) return null;
+
         const checked = container.querySelectorAll('input[type="checkbox"]:checked');
-        if (checked.length === 0) return null; 
+        if (checked.length === 0) return null;
 
         const values = Array.from(checked).map(cb => cb.value);
         return JSON.stringify(values);
     };
+
+    // =========================================================
+    // L1 TEAM LEAD SELECTION
+    // =========================================================
+    // L1 Team Lead is OPTIONAL during onboarding.
+    // If none is selected, null is submitted.
+    // This does NOT affect existing Manager/HOD behaviour.
+    // =========================================================
+    const selectedL1TeamLeads = getJsonListFromCheckboxes("reg_l1_container");
 
     const safeGet = (id) => document.getElementById(id) ? document.getElementById(id).value.trim() : "";
 
@@ -22678,8 +22747,8 @@ async function submitNewUser(event) {
     const fullName = `${first} ${middle} ${last}`.replace(/\s+/g, ' ').trim();
     const username = safeGet("reg_username_new");
     const joinedDate = safeGet("reg_joined_new");
-    const email = safeGet("reg_office_email_new").toLowerCase(); 
-    const mobile = safeGet("reg_mobile_new"); 
+    const email = safeGet("reg_office_email_new").toLowerCase();
+    const mobile = safeGet("reg_mobile_new");
 
     // 🛡️ INLINE VALIDATION GUARD
     // Line Manager and HOD are optional during onboarding.
@@ -30378,99 +30447,262 @@ async function resumeDraft() {
 }
 
 
-/**
- * 👥 MANAGER & HOD LOADER (Checkbox Edition - Ultra Fast)
- * Fetches the directory and populates the scrollable checkbox boxes.
- */
- async function populateOnboardingManagers() {
-    const mgrContainer = document.getElementById("reg_mgr_container");
-    const hodContainer = document.getElementById("reg_hod_container");
-    
-    if (!mgrContainer || !hodContainer) return;
+        /**
+         * 👥 MANAGER, HOD & L1 TEAM LEAD LOADER
+         * Fetches the directory and populates the approver checkbox boxes.
+         *
+         * Existing behaviour preserved:
+         *   - Manager/HOD eligibility remains unchanged.
+         *   - L1 Team Lead is now available separately.
+         *   - Away-status display remains unchanged.
+         */
+        async function populateOnboardingManagers() {
+            const mgrContainer = document.getElementById("reg_mgr_container");
+            const hodContainer = document.getElementById("reg_hod_container");
+            const l1Container = document.getElementById("reg_l1_container");
 
-    // 🚀 THE FIX STEP 1: Show loading feedback
-    const loadingHtml = '<div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;"><i class="fas fa-spinner fa-spin"></i> Loading list...</div>';
-    mgrContainer.innerHTML = loadingHtml;
-    hodContainer.innerHTML = loadingHtml;
-    
-    mgrContainer.style.cursor = "wait";
-    hodContainer.style.cursor = "wait";
+            // Manager + HOD are existing mandatory containers.
+            // L1 container is optional so older UI does not break.
+            if (!mgrContainer || !hodContainer) return;
 
-    try {
-        let users = [];
+            // 🚀 THE FIX STEP 1: Show loading feedback
+            const loadingHtml =
+                '<div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">' +
+                '<i class="fas fa-spinner fa-spin"></i> Loading list...</div>';
 
-        // ⚡ THE SPEED UPGRADE: Instant RAM Cache Lookup
-        if (window.allUsersList && window.allUsersList.length > 0) {
-            users = window.allUsersList;
-        } else {
-            // Fallback to Network only if the cache is empty
-            const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
-            if (!res || !res.ok) throw new Error("Failed to reach server");
+            mgrContainer.innerHTML = loadingHtml;
+            hodContainer.innerHTML = loadingHtml;
 
-            const responseData = await res.json();
-            users = responseData.users || [];
-            window.allUsersList = users; // Cache it for next time
-        }
+            if (l1Container) {
+                l1Container.innerHTML = loadingHtml;
+            }
 
-        // 🛡️ THE IRONCLAD FILTER LOGIC
-        const eligible = users.filter(u => {
-            // 1. Must be an active employee
-            const isActive = u.is_active !== false; 
-            
-            // 2. Safely gather all role data (Checks both 'roles_list' array AND 'role' string)
-            const roles = (u.roles_list || []).map(r => String(r).toLowerCase());
-            if (u.role) roles.push(String(u.role).toLowerCase());
+            mgrContainer.style.cursor = "wait";
+            hodContainer.style.cursor = "wait";
 
-            // 3. STRICT CHECK: Do they possess actual managerial power?
-            const isManager = roles.includes("manager");
-            const isSenior = u.is_senior_manager === true;
+            if (l1Container) {
+                l1Container.style.cursor = "wait";
+            }
 
-            // ⛔ If they are only an HR Admin (and not a Manager/Senior), this evaluates to FALSE
-            return isActive && (isManager || isSenior);
-        });
+            try {
+                let users = [];
 
-        // 🛠️ Updated "buildRows": Now includes the Phase 3 Away Status Logic
-        const buildRows = (list, nameAttr, errorTarget = false) => {
-            if (list.length === 0) return '<div style="padding:10px; color:#94a3b8; font-size:0.8rem;">No eligible staff found.</div>';
-            
-            return list.map(m => {
-                // 🚀 PHASE 3: Check for Away Status from Backend
-                const awayUntil = m.current_leave_end;
-                const statusHtml = awayUntil 
-                    ? `<span style="color: #94a3b8; font-size: 0.75rem; font-style: italic; margin-left: 5px;">(Away until ${awayUntil})</span>` 
-                    : '';
+                // ⚡ THE SPEED UPGRADE: Instant RAM Cache Lookup
+                if (window.allUsersList && window.allUsersList.length > 0) {
+                    users = window.allUsersList;
+                } else {
+                    // Fallback to Network only if the cache is empty
+                    const res = await fetchWithAuth(
+                        `${API_URL}/users/all?page_size=1000`
+                    );
 
-                return `
+                    if (!res || !res.ok) {
+                        throw new Error("Failed to reach server");
+                    }
+
+                    const responseData = await res.json();
+                    users = responseData.users || [];
+
+                    // Cache it for next time
+                    window.allUsersList = users;
+                }
+
+                // ============================================================
+                // 🛡️ ROLE ANALYSIS
+                // ============================================================
+                //
+                // We intentionally keep the existing Manager/HOD eligibility
+                // logic intact and add L1 Team Lead as a separate role.
+                //
+                const eligible = users.filter(u => {
+                    // 1. Must be an active employee
+                    const isActive = u.is_active !== false;
+
+                    // 2. Safely gather all role data
+                    const roles = (u.roles_list || [])
+                        .map(r => String(r).toLowerCase());
+
+                    if (u.role) {
+                        roles.push(String(u.role).toLowerCase());
+                    }
+
+                    // 3. Existing Manager/HOD power
+                    const isManager = roles.includes("manager");
+                    const isSenior = u.is_senior_manager === true;
+
+                    // 4. NEW: L1 Team Lead
+                    const isTeamLead =
+                        roles.includes("team_lead") ||
+                        roles.includes("l1");
+
+                    // Keep any user who can serve as:
+                    // Manager/HOD OR L1 Team Lead
+                    return isActive && (
+                        isManager ||
+                        isSenior ||
+                        isTeamLead
+                    );
+                });
+
+                // ============================================================
+                // 🛠️ BUILD APPROVER ROWS
+                // ============================================================
+                //
+                // Existing checkbox rendering is preserved.
+                //
+                const buildRows = (
+                    list,
+                    nameAttr,
+                    errorTarget = false
+                ) => {
+                    if (list.length === 0) {
+                        return `
+                    <div style="
+                        padding:10px;
+                        color:#94a3b8;
+                        font-size:0.8rem;
+                    ">
+                        No eligible staff found.
+                    </div>
+                `;
+                    }
+
+                    return list.map(m => {
+
+                        // 🚀 PHASE 3: Check for Away Status from Backend
+                        const awayUntil = m.current_leave_end;
+
+                        const statusHtml = awayUntil
+                            ? `
+                        <span style="
+                            color: #94a3b8;
+                            font-size: 0.75rem;
+                            font-style: italic;
+                            margin-left: 5px;
+                        ">
+                            (Away until ${awayUntil})
+                        </span>
+                    `
+                            : "";
+
+                        return `
                     <label class="approver-item">
                         <div class="approver-info">
-                            <span class="approver-name">${m.full_name}</span>
-                            ${statusHtml} 
+                            <span class="approver-name">
+                                ${m.full_name}
+                            </span>
+                            ${statusHtml}
                         </div>
-                        <input type="checkbox" name="${nameAttr}" value="${m.full_name}" 
-                               ${errorTarget ? "onchange=\"clearError('manager_error')\"" : ""}>
+
+                        <input
+                            type="checkbox"
+                            name="${nameAttr}"
+                            value="${m.full_name}"
+                            ${
+                            errorTarget
+                                ? "onchange=\"clearError('manager_error')\""
+                                : ""
+                        }
+                        >
                     </label>
                 `;
-            }).join("");
-        };
+                    }).join("");
+                };
 
-        // 🚀 Render the lists
-        mgrContainer.innerHTML = buildRows(eligible, "mgr_checkbox", true);
-        hodContainer.innerHTML = buildRows(eligible, "hod_checkbox", false);
-        
-        mgrContainer.style.cursor = "default";
-        hodContainer.style.cursor = "default";
-        mgrContainer.style.borderColor = "#e2e8f0";
-        hodContainer.style.borderColor = "#e2e8f0";
+                // ============================================================
+                // 👔 EXISTING MANAGER / HOD LIST
+                // ============================================================
+                //
+                // IMPORTANT:
+                // Manager and HOD continue using the same eligibility criteria.
+                //
+                const managerEligible = eligible.filter(u => {
+                    const roles = (u.roles_list || [])
+                        .map(r => String(r).toLowerCase());
 
-    } catch (e) {
-        console.error("🚨 Onboarding Manager load error:", e);
-        const errorHtml = '<div style="color:#ef4444; padding:10px; font-size:0.8rem;">❌ Error loading list</div>';
-        mgrContainer.innerHTML = errorHtml;
-        hodContainer.innerHTML = errorHtml;
-    }
-}
+                    if (u.role) {
+                        roles.push(String(u.role).toLowerCase());
+                    }
 
-let isUsernameAutoGenerated = true; // Track if we should still auto-fill
+                    return (
+                        roles.includes("manager") ||
+                        u.is_senior_manager === true
+                    );
+                });
+
+                // ============================================================
+                // 🟢 NEW L1 TEAM LEAD LIST
+                // ============================================================
+                const l1Eligible = eligible.filter(u => {
+                    const roles = (u.roles_list || [])
+                        .map(r => String(r).toLowerCase());
+
+                    if (u.role) {
+                        roles.push(String(u.role).toLowerCase());
+                    }
+
+                    return (
+                        roles.includes("team_lead") ||
+                        roles.includes("l1")
+                    );
+                });
+
+                // 🚀 Render existing Manager/HOD lists
+                mgrContainer.innerHTML = buildRows(
+                    managerEligible,
+                    "mgr_checkbox",
+                    true
+                );
+
+                hodContainer.innerHTML = buildRows(
+                    managerEligible,
+                    "hod_checkbox",
+                    false
+                );
+
+                // 🚀 Render NEW L1 list only if the container exists
+                if (l1Container) {
+                    l1Container.innerHTML = buildRows(
+                        l1Eligible,
+                        "l1_checkbox",
+                        false
+                    );
+                }
+
+                // ============================================================
+                // 🎨 RESTORE CONTAINER STATE
+                // ============================================================
+                mgrContainer.style.cursor = "default";
+                hodContainer.style.cursor = "default";
+
+                mgrContainer.style.borderColor = "#e2e8f0";
+                hodContainer.style.borderColor = "#e2e8f0";
+
+                if (l1Container) {
+                    l1Container.style.cursor = "default";
+                    l1Container.style.borderColor = "#e2e8f0";
+                }
+
+            } catch (e) {
+                console.error(
+                    "🚨 Onboarding Manager / L1 load error:",
+                    e
+                );
+
+                const errorHtml =
+                    '<div style="color:#ef4444; padding:10px; font-size:0.8rem;">' +
+                    '❌ Error loading list</div>';
+
+                mgrContainer.innerHTML = errorHtml;
+                hodContainer.innerHTML = errorHtml;
+
+                if (l1Container) {
+                    l1Container.innerHTML = errorHtml;
+                }
+            }
+        }
+
+        let isUsernameAutoGenerated = true; // Track if we should still auto-fill
 
 /**
  * 1. Triggered by First Name and Surname inputs
