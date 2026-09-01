@@ -6591,10 +6591,23 @@ html.dark #card_unpaid {
                                     <div id="tab-emp-lifecycle" class="sub-tab-content">
                                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px 30px;">
 
-                                            <!-- LINE MANAGER -->
+                                            <!-- 1. L1 TEAM LEAD -->
                                             <div class="saas-form-group">
                                                 <label class="reg-label">
-                                                    Line Manager(s)
+                                                    L1 Team Lead(s)
+                                                </label>
+
+                                                <div id="reg_l1_container" class="approver-selection-box">
+                                                    <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">
+                                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- 2. L2 LINE MANAGER -->
+                                            <div class="saas-form-group">
+                                                <label class="reg-label">
+                                                    L2 Line Manager(s)
                                                     <span style="color: #ef4444;">*</span>
                                                 </label>
 
@@ -6610,8 +6623,7 @@ html.dark #card_unpaid {
                                                 </small>
                                             </div>
 
-
-                                            <!-- HOD / DEPT HEAD -->
+                                            <!-- 3. HOD / DEPT HEAD -->
                                             <div class="saas-form-group">
                                                 <label class="reg-label">
                                                     HOD / Dept Head(s)
@@ -6628,20 +6640,6 @@ html.dark #card_unpaid {
                                                        class="error-text"
                                                        style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;">
                                                 </small>
-                                            </div>
-
-
-                                            <!-- L1 TEAM LEAD -->
-                                            <div class="saas-form-group">
-                                                <label class="reg-label">
-                                                    L1 Team Lead(s)
-                                                </label>
-
-                                                <div id="reg_l1_container" class="approver-selection-box">
-                                                    <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">
-                                                        <i class="fas fa-spinner fa-spin"></i> Loading...
-                                                    </div>
-                                                </div>
                                             </div>
 
 
@@ -6680,7 +6678,7 @@ html.dark #card_unpaid {
 
                                                 </select>
                                             </div>
-                            
+
                                             <div class="saas-form-group">
                                                 <label class="reg-label">Joined Date <span style="color: #ef4444;">*</span></label>
                                                 <input type="date" id="reg_joined_new" class="saas-form-control" required oninput="clearError('date_error_new')">
@@ -6694,7 +6692,7 @@ html.dark #card_unpaid {
                                                 <label class="reg-label">Highest Qualification</label>
                                                 <input type="text" id="reg_highest_qualification" class="saas-form-control" placeholder="e.g. Master of Science">
                                             </div>
-                            
+
                                             <div class="saas-form-group">
                                                 <label class="reg-label">Shift Employee</label>
                                                 <select id="reg_shift_employee" class="saas-form-control">
@@ -6716,7 +6714,7 @@ html.dark #card_unpaid {
                                                     <option value="Yes">Yes</option>
                                                 </select>
                                             </div>
-                            
+
                                             <div class="saas-form-group">
                                                 <label class="reg-label">Scholar Track</label>
                                                 <select id="reg_scholar" class="saas-form-control">
@@ -6729,13 +6727,13 @@ html.dark #card_unpaid {
                                                 <input type="text" id="reg_document_status" class="saas-form-control" placeholder="e.g. Verified">
                                             </div>
                                             <div>&nbsp;</div>
-                            
+
                                             <div style="grid-column: span 3; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin: 15px 0 5px 0;">
                                                 <h4 style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #ef4444; text-transform: uppercase;">
                                                     <i class="fas fa-door-open" style="margin-right: 8px;"></i>Offboarding / Termination
                                                 </h4>
                                             </div>
-                            
+
                                             <div class="saas-form-group">
                                                 <label class="reg-label">Date Resigned</label>
                                                 <input type="date" id="reg_date_resigned" class="saas-form-control">
@@ -7402,8 +7400,18 @@ html.dark #card_unpaid {
                                 <div><label class="data-label">Organization (O)</label><div id="prof_organization_o" class="data-value">---</div></div>
                                 <div><label class="data-label">Organization 1 (OU1)</label><div id="prof_organization_ou1" class="data-value">---</div></div>
                                 <div><label class="data-label">Organization 2 (OU2)</label><div id="prof_organization_ou2" class="data-value">---</div></div>
-                                <div><label class="data-label">Line Manager</label><div id="prof_line_mgr" class="data-value" style="color: #2563eb;">---</div></div>
-                                <div><label class="data-label">HOD (Head of Dept)</label><div id="prof_hod" class="data-value">---</div></div>
+                                <div>
+                                    <label class="data-label">L1 Team Lead(s)</label>
+                                    <div id="prof_team_lead" class="data-value" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">---</div>
+                                </div>
+                                <div>
+                                    <label class="data-label">L2 Line Manager(s)</label>
+                                    <div id="prof_line_mgr" class="data-value" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">---</div>
+                                </div>
+                                <div>
+                                    <label class="data-label">Head of Department (HOD)</label>
+                                    <div id="prof_hod" class="data-value" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">---</div>
+                                </div>
                             </div>
                         </div>
 
@@ -10254,18 +10262,26 @@ html.dark #card_unpaid {
                 </div>
 
                 <h4 style="margin: 0 0 15px 0; font-size: 0.8rem; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.6px;">Enterprise Hierarchy & Assigned Management</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+
+                <!-- 🚀 UPDATED: Changed from 1fr 1fr to 3 equal columns -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+
                     <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Assigned Line Manager(s)</span>
+                        <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">L1 Team Lead(s)</span>
+                        <div id="mv_team_lead_view" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center;"></div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">L2 Line Manager(s)</span>
                         <div id="mv_line_manager_view" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center;"></div>
                     </div>
+
                     <div style="display: flex; flex-direction: column; gap: 6px;">
                         <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Head of Department (HOD)</span>
                         <div id="mv_hod_name_view" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center;"></div>
                     </div>
-                </div>
 
-            </div>
+                </div>
 
             <div id="v_pane_2" style="display: none;">
                 <h4 style="margin: 0 0 15px 0; font-size: 0.8rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.6px;">Personal Identity Specifications</h4>
@@ -18731,133 +18747,167 @@ let summaryHtml = `
     }
 }
 
-async function loadApproverList() {
-    // 🎯 Target dropdowns
-    const ids = ["dash_approver", "dash_approver_ot", "dash_approver_cf"];
-    const selects = ids.map((id) => document.getElementById(id)).filter((el) => el);
+        async function loadApproverList() {
+            // 🎯 Target dropdowns and their corresponding alert containers
+            const configs = [
+                { selectId: "dash_approver", alertId: "dash_approver_alert" },
+                { selectId: "dash_approver_ot", alertId: "dash_approver_ot_alert" },
+                { selectId: "dash_approver_cf", alertId: "dash_approver_cf_alert" }
+            ];
 
-    if (selects.length === 0) return;
+            const selects = configs.map(c => document.getElementById(c.selectId)).filter(el => el);
+            if (selects.length === 0) return;
 
-    // 🎯 Identify who is applying (Handles Admin Proxy Mode & Julian)
-    const targetName = window.proxyUser ? window.proxyUser : currentUser;
+            // 🎯 Identify who is applying (Handles Admin Proxy Mode & Employee)
+            const targetName = window.proxyUser ? window.proxyUser : currentUser;
 
-    // 🚀 STEP 1: CACHE CHECK (Ultra-Fast Path)
-    if (teamEntitlementCache && teamEntitlementCache.length > 0) {
-        const applicantRecord = teamEntitlementCache.find(u => u.name === targetName);
-        const assignedManagers = applicantRecord ? (applicantRecord.line_manager || []) : [];
+            // 🛡️ Helper to globally block or unblock leave/overtime submission buttons
+            const toggleSubmitButtons = (disable) => {
+                const submitBtns = document.querySelectorAll("button[type='submit'], .submit-leave-btn, #submit_leave_btn");
+                submitBtns.forEach(btn => {
+                    btn.disabled = disable;
+                    btn.style.opacity = disable ? "0.5" : "1";
+                    btn.style.cursor = disable ? "not-allowed" : "pointer";
+                    btn.title = disable ? "Action blocked: Missing required approval hierarchy. Please contact HR Admin." : "";
+                });
+            };
 
-        selects.forEach((sel) => {
-            if (sel.value && sel.value !== "") return;
+            // 🛡️ Core Evaluation Engine: Enforces strict L1 -> L2 -> HOD dependency
+            const evaluateHierarchy = (applicantRecord) => {
+                configs.forEach(cfg => {
+                    const sel = document.getElementById(cfg.selectId);
+                    const alertBox = document.getElementById(cfg.alertId);
+                    if (!sel) return;
 
-            // ✅ FIXED: Wipes out the loading placeholder and establishes standard selection layout
-            sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
-            
-            if (assignedManagers.length === 0) {
-                sel.add(new Option("No Managers Assigned (Contact HR)", ""));
+                    // 1. Check if record exists
+                    if (!applicantRecord) {
+                        sel.innerHTML = '<option value="" disabled selected hidden>-- Record Not Found --</option>';
+                        sel.disabled = true;
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> Employee profile record not found. Please contact HR Admin.</div>`;
+                        }
+                        toggleSubmitButtons(true);
+                        return;
+                    }
+
+                    const teamLeads = applicantRecord.team_lead || applicantRecord.team_leads || [];
+                    const lineManagers = applicantRecord.line_manager || applicantRecord.line_managers || [];
+                    const hodNames = applicantRecord.hod_name || applicantRecord.hod_names || [];
+
+                    // 🛑 2. STRICT L1 CHECK (Mandatory First Tier)
+                    if (teamLeads.length === 0) {
+                        sel.innerHTML = '<option value="" disabled selected hidden>-- Missing L1 Team Lead --</option>';
+                        sel.disabled = true;
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> <b>Missing L1 Team Lead</b> assignment. Please contact HR Admin.</div>`;
+                        }
+                        toggleSubmitButtons(true);
+                        return;
+                    }
+
+                    // 🛑 3. STRICT L2 CHECK (Mandatory Second Tier)
+                    if (lineManagers.length === 0) {
+                        sel.innerHTML = '<option value="" disabled selected hidden>-- Missing L2 Line Manager --</option>';
+                        sel.disabled = true;
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> <b>Missing L2 Line Manager</b> assignment. Please contact HR Admin.</div>`;
+                        }
+                        toggleSubmitButtons(true);
+                        return;
+                    }
+
+                    // 🛑 4. STRICT HOD CHECK (Mandatory Third Tier)
+                    if (hodNames.length === 0) {
+                        sel.innerHTML = '<option value="" disabled selected hidden>-- Missing HOD --</option>';
+                        sel.disabled = true;
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> <b>Missing HOD / Dept Head</b> assignment. Please contact HR Admin.</div>`;
+                        }
+                        toggleSubmitButtons(true);
+                        return;
+                    }
+
+                    // ✅ ALL TIERS VALIDATED: Enable dropdown, clear error alerts, unblock submission
+                    sel.disabled = false;
+                    if (alertBox) {
+                        alertBox.style.display = "none";
+                        alertBox.innerHTML = "";
+                    }
+                    toggleSubmitButtons(false);
+
+                    if (sel.value && sel.value !== "") return;
+
+                    sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
+
+                    teamLeads.forEach((mgrName) => {
+                        const opt = new Option(mgrName, mgrName);
+
+                        const awayRecord = (window.currentAwayToday || []).find(p => p.employee_name === mgrName);
+                        const mgrObj = (window.teamEntitlementCache || []).find(u => u.name === mgrName) ||
+                            (window.allUsersList || []).find(u => u.full_name === mgrName);
+
+                        const returnDate = awayRecord ? (awayRecord.current_leave_end || awayRecord.end_date) :
+                            (mgrObj ? mgrObj.current_leave_end : null);
+
+                        if (returnDate) {
+                            opt.dataset.awayUntil = returnDate;
+                        }
+
+                        sel.add(opt);
+                    });
+
+                    if (teamLeads.length === 1) {
+                        sel.value = teamLeads[0];
+                        setTimeout(() => {
+                            sel.dispatchEvent(new Event('change'));
+                        }, 300);
+                    }
+                });
+            };
+
+            // 🚀 STEP 1: CACHE CHECK (Ultra-Fast Path)
+            if (window.teamEntitlementCache && window.teamEntitlementCache.length > 0) {
+                const applicantRecord = window.teamEntitlementCache.find(u => u.name === targetName);
+                evaluateHierarchy(applicantRecord);
+                document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
                 return;
             }
 
-            assignedManagers.forEach((mgrName) => {
-                const opt = new Option(mgrName, mgrName);
-                
-                // 🕵️‍♂️ Phase 3: Check all available data pools for "Away" status
-                // We check the Working Away List (from the modal) AND the general cache
-                const awayRecord = (window.currentAwayToday || []).find(p => p.employee_name === mgrName);
-                const mgrObj = teamEntitlementCache.find(u => u.name === mgrName) || 
-                               (window.allUsersList || []).find(u => u.full_name === mgrName);
-
-                // Bind the date to the option metadata
-                const returnDate = awayRecord ? (awayRecord.current_leave_end || awayRecord.end_date) : 
-                                   (mgrObj ? mgrObj.current_leave_end : null);
-
-                if (returnDate) {
-                    opt.dataset.awayUntil = returnDate;
+            // 🚀 STEP 2: NETWORK FALLBACK
+            try {
+                const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
+                if (!res || !res.ok) {
+                    selects.forEach(sel => {
+                        if (!sel.value || sel.value === "") {
+                            sel.innerHTML = '<option value="" disabled selected hidden>❌ Failed to load managers</option>';
+                        }
+                    });
+                    document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
+                    return;
                 }
 
-                sel.add(opt);
-            });
+                const responseData = await res.json();
+                window.allUsersList = responseData.users || [];
 
-            // 🚀 THE POKE: Trigger alert if only 1 manager exists
-            if (assignedManagers.length === 1) {
-                sel.value = assignedManagers[0];
-                setTimeout(() => {
-                    sel.dispatchEvent(new Event('change'));
-                }, 300); // 300ms ensures the UI has finished painting
+                const applicantObj = window.allUsersList.find(u => u.full_name === targetName);
+                evaluateHierarchy(applicantObj);
+
+                document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
+
+            } catch (e) {
+                console.error("Smart Approver Load Error:", e);
+                selects.forEach(sel => {
+                    if (!sel.value || sel.value === "") {
+                        sel.innerHTML = '<option value="" disabled selected hidden>❌ Network error. Re-try...</option>';
+                    }
+                });
+                document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
             }
-        });
-
-        // ✅ PROGRESSIVE LOADING RESOLVED: Instantly hide out all visual spinner components
-        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
-        return; 
-    }
-
-    // 🚀 STEP 2: NETWORK FALLBACK
-    try {
-        const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
-        if (!res || !res.ok) {
-            // Safety: Revert selection string if API responds with a failure code
-            selects.forEach(sel => {
-                if (!sel.value || sel.value === "") {
-                    sel.innerHTML = '<option value="" disabled selected hidden>❌ Failed to load managers</option>';
-                }
-            });
-            // Clear out spinners on failure too so they don't spin forever
-            document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
-            return;
         }
-
-        const responseData = await res.json();
-        const allUsers = responseData.users || [];
-
-        const applicantObj = allUsers.find(u => u.full_name === targetName);
-        const assignedManagers = applicantObj ? (applicantObj.line_manager || []) : [];
-
-        selects.forEach((sel) => {
-            if (sel.value && sel.value !== "") return;
-
-            // ✅ FIXED: Wipes out the loading placeholder and establishes standard selection layout
-            sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
-            
-            if (assignedManagers.length === 0) {
-                sel.add(new Option("No Managers Assigned (Contact HR)", ""));
-                return;
-            }
-
-            assignedManagers.forEach((mgrName) => {
-                const opt = new Option(mgrName, mgrName);
-
-                // 🕵️‍♂️ Phase 3: Bind metadata from network result
-                const mgrObj = allUsers.find(u => u.full_name === mgrName);
-                if (mgrObj && mgrObj.current_leave_end) {
-                    opt.dataset.awayUntil = mgrObj.current_leave_end;
-                }
-
-                sel.add(opt);
-            });
-
-            if (assignedManagers.length === 1) {
-                sel.value = assignedManagers[0];
-                setTimeout(() => {
-                    sel.dispatchEvent(new Event('change'));
-                }, 300);
-            }
-        });
-
-        // ✅ NETWORK API STREAM RESOLVED: Hide all visual spinner components cleanly
-        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
-
-    } catch (e) {
-        console.error("Smart Approver Load Error:", e);
-        // Safety: Prevent permanent loading loop state if user is completely offline
-        selects.forEach(sel => {
-            if (!sel.value || sel.value === "") {
-                sel.innerHTML = '<option value="" disabled selected hidden>❌ Network error. Re-try...</option>';
-            }
-        });
-        // Clear spinners on error state too
-        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
-    }
-}
 
 
 /** 🚀 NEW LOCATION FOR STEP 3.3 🚀
@@ -22813,17 +22863,20 @@ async function submitNewUser(event) {
     };
 
     // 1. Get raw lists as arrays using your existing helper
+    let l1List = JSON.parse(getJsonListFromCheckboxes("reg_l1_container") || "[]");
     let mgrList = JSON.parse(getJsonListFromCheckboxes("reg_mgr_container") || "[]");
     let hodList = JSON.parse(getJsonListFromCheckboxes("reg_hod_container") || "[]");
 
     // 2. 🚀 SANITIZER: Data-Level Swap (Fixes the "Ghost Name" issue reliably)
     if (window.isEditingUser && window.originalFullName && fullName !== window.originalFullName) {
         const oldName = window.originalFullName.trim();
+
+        l1List = l1List.map(name => name.trim() === oldName ? fullName : name);
         mgrList = mgrList.map(name => name.trim() === oldName ? fullName : name);
         hodList = hodList.map(name => name.trim() === oldName ? fullName : name);
     }
-
     // 3. Convert to display strings for the template
+    const sanitizedSummaryL1 = l1List.length > 0 ? l1List.join(", ") : '<span style="color: #94a3b8; font-style: italic;">Not Assigned</span>';
     const sanitizedSummaryManagers = mgrList.length > 0 ? mgrList.join(", ") : '<span style="color: #94a3b8; font-style: italic;">Not Assigned</span>';
     const sanitizedSummaryHODs = hodList.length > 0 ? hodList.join(", ") : '<span style="color: #94a3b8; font-style: italic;">Not Assigned</span>';
 
@@ -22861,10 +22914,9 @@ async function submitNewUser(event) {
                         <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">COMPANY / DEPT</b>${getDisplayVal("reg_company")} <br> <span style="color:#64748b;">${getDisplayVal("reg_dept_new")}</span></div>
                         <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">BIZ UNIT / LOCATION</b>${getDisplayVal("reg_biz_unit_new")} <br> <span style="color:#64748b;">${getDisplayVal("reg_location_new")}</span></div>
                         
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">LINE MANAGER(S)</b>${sanitizedSummaryManagers}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">L1 TEAM LEAD(S)</b>${sanitizedSummaryL1}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">L2 LINE MANAGER(S)</b>${sanitizedSummaryManagers}</div>
                         <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HOD / DEPT HEAD(S)</b>${sanitizedSummaryHODs}</div>
-                        
-                        <div style="grid-column: span 2;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HIERARCHY (L0 / L1 / L2)</b>${getDisplayVal("reg_level_0")} / ${getDisplayVal("reg_level_1")} / ${getDisplayVal("reg_level_2")}</div>
                     </div>
                 </div>
                 <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -22979,10 +23031,14 @@ async function submitNewUser(event) {
         formData.append("organization_ou1", safeGet("reg_organization_ou1"));
         formData.append("organization_ou2", safeGet("reg_organization_ou2"));
         
+        const l1TeamLeadData = getJsonListFromCheckboxes("reg_l1_container");
         const lineMgrData = getJsonListFromCheckboxes("reg_mgr_container");
         const hodData = getJsonListFromCheckboxes("reg_hod_container");
-        if (lineMgrData) formData.append("line_manager", lineMgrData);
-        if (hodData) formData.append("hod_name", hodData);
+
+        // 🚀 FIX: Always append the fields, falling back to an empty JSON array string so the backend clears them when unchecked
+        formData.append("team_lead", l1TeamLeadData || "[]");
+        formData.append("line_manager", lineMgrData || "[]");
+        formData.append("hod_name", hodData || "[]");
 
         // Enterprise Operational Flags & Milestones
         formData.append("shift_employee", safeGet("reg_shift_employee") || "No");
@@ -24936,7 +24992,7 @@ async function loadUserProfile() {
             // 📑 TAB 2: CORE EMPLOYMENT MAPPING
             setHtml("prof_emp_id", me.employee_id);
             setHtml("prof_employee_no_old", me.employee_no_old);
-            setHtml("prof_username", me.username); 
+            setHtml("prof_username", me.username);
             setHtml("prof_employee_status", me.employee_status);
             setHtml("prof_company", me.company);
             setHtml("prof_location", me.work_location || me.location);
@@ -24952,8 +25008,23 @@ async function loadUserProfile() {
             setHtml("prof_organization_o", me.organization_o);
             setHtml("prof_organization_ou1", me.organization_ou1);
             setHtml("prof_organization_ou2", me.organization_ou2);
-            setHtml("prof_line_mgr", formatArray(me.line_manager)); 
-            setHtml("prof_hod", formatArray(me.hod_name));
+
+            // 🚀 Helper function to render stylized pill badges with icons
+            const renderManagerPills = (list, bgCol, textCol, iconClass) => {
+                if (!Array.isArray(list) || list.length === 0) {
+                    return '<span style="color:#94a3b8; font-style:italic; font-size:0.85rem;">---</span>';
+                }
+                return list.map(name => `
+                    <span style="display:inline-flex; align-items:center; background:${bgCol}; color:${textCol}; padding:3px 10px; border-radius:6px; font-weight:700; font-size:0.75rem; gap:4px; margin: 2px 4px 2px 0;">
+                        <i class="${iconClass}"></i>${name}
+                    </span>
+                `).join('');
+            };
+
+            // 🚀 Render the 3 hierarchy levels using stylized pill badges
+            document.getElementById("prof_team_lead").innerHTML = renderManagerPills(me.team_lead, "#ede9fe", "#6d28d9", "fas fa-user-check");
+            document.getElementById("prof_line_mgr").innerHTML = renderManagerPills(me.line_manager, "#e0f2fe", "#0369a1", "fas fa-user-tie");
+            document.getElementById("prof_hod").innerHTML = renderManagerPills(me.hod_name, "#fef3c7", "#92400e", "fas fa-shield-alt");
 
             // 📑 TAB 3: CONTACT & LOGISTICS MAPPING
             setHtml("prof_office_email", me.email); 
@@ -25977,16 +26048,21 @@ async function openFullProfileEditModal(userJsonRaw, targetStep = 1) {
     safeSetDropdown("reg_commissioning_engineer", user.commissioning_engineer, "No");
     safeSetDropdown("reg_scholar", user.scholar, "No");
 
-    await populateOnboardingManagers(); 
+    await populateOnboardingManagers();
 
     const assignedMgrs = user.line_manager || [];
     const assignedHODs = user.hod_name || [];
+    const assignedL1s = user.team_lead || []; // Add this line
 
     document.querySelectorAll('#reg_mgr_container input[type="checkbox"]').forEach(cb => {
         if (assignedMgrs.includes(cb.value)) cb.checked = true;
     });
     document.querySelectorAll('#reg_hod_container input[type="checkbox"]').forEach(cb => {
         if (assignedHODs.includes(cb.value)) cb.checked = true;
+    });
+    // Add this new block
+    document.querySelectorAll('#reg_l1_container input[type="checkbox"]').forEach(cb => {
+        if (assignedL1s.includes(cb.value)) cb.checked = true;
     });
 
     const passContainer = document.getElementById("reg_password_container");
@@ -26304,10 +26380,12 @@ async function openFullProfileEditModal(userJsonRaw, targetStep = 1) {
     // 🚀 2. CHECKBOX COMPARISON LOGIC
     const currentMgrs = getCheckboxes("reg_mgr_container");
     const currentHODs = getCheckboxes("reg_hod_container");
-    
+    const currentL1s = getCheckboxes("reg_l1_container");
+
     // 🚀 Using the new normalizer to prevent false positives!
     const originalMgrs = normalizeArray(original.line_manager);
     const originalHODs = normalizeArray(original.hod_name);
+    const originalL1s = normalizeArray(original.team_lead);
 
     if (currentMgrs !== originalMgrs) {
         console.log(`🚩 Change detected in [line_manager]: From ${originalMgrs} to ${currentMgrs}`);
@@ -26315,6 +26393,11 @@ async function openFullProfileEditModal(userJsonRaw, targetStep = 1) {
     }
     if (currentHODs !== originalHODs) {
         console.log(`🚩 Change detected in [hod_name]: From ${originalHODs} to ${currentHODs}`);
+        return true;
+    }
+
+    if (currentL1s !== originalL1s) {
+        console.log(`🚩 Change detected in [team_lead]: From ${originalL1s} to ${currentL1s}`);
         return true;
     }
 
@@ -26734,8 +26817,15 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
           setBadgeStyle('mv_badge_scholar', user.scholar);
 
           // Render Managers & HOD pills
-          const mgrDiv = document.getElementById('mv_line_manager_view');
-          const hodDiv = document.getElementById('mv_hod_name_view');
+            const l1Div = document.getElementById('mv_team_lead_view');
+            const mgrDiv = document.getElementById('mv_line_manager_view');
+            const hodDiv = document.getElementById('mv_hod_name_view');
+
+            if (l1Div) {
+                l1Div.innerHTML = Array.isArray(user.team_lead) && user.team_lead.length > 0
+                    ? user.team_lead.map(t => `<span style="display:inline-block; background:#ede9fe; color:#6d28d9; padding:3px 10px; border-radius:6px; font-weight:700; font-size:0.75rem;"><i class="fas fa-user-check" style="margin-right:4px;"></i>${t}</span>`).join('')
+                    : '<span style="color:#94a3b8; font-style:italic; font-size:0.85rem;">No Team Leads Assigned</span>';
+            }
           
           if (mgrDiv) {
               mgrDiv.innerHTML = Array.isArray(user.line_manager) && user.line_manager.length > 0 
@@ -30343,15 +30433,21 @@ async function resumeDraft() {
         safeSet('reg_location_new', data.work_location);
 
         // 🚀 THE CHECKBOX FIX: Re-tick the saved managers
-        await populateOnboardingManagers(); 
+        // 🚀 THE CHECKBOX FIX: Re-tick the saved managers
+        await populateOnboardingManagers();
         const savedMgrs = data.line_managers || [];
         const savedHODs = data.hod_names || [];
+        const savedL1s = data.team_lead || data.team_leads || []; // Add this line
 
         document.querySelectorAll('#reg_mgr_container input[type="checkbox"]').forEach(cb => {
             if (savedMgrs.includes(cb.value)) cb.checked = true;
         });
         document.querySelectorAll('#reg_hod_container input[type="checkbox"]').forEach(cb => {
             if (savedHODs.includes(cb.value)) cb.checked = true;
+        });
+        // Add this new block
+        document.querySelectorAll('#reg_l1_container input[type="checkbox"]').forEach(cb => {
+            if (savedL1s.includes(cb.value)) cb.checked = true;
         });
 
         // 📋 2. RESTORE STEP 2 (Personal Details)

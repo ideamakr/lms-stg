@@ -194,6 +194,7 @@ def get_all_users(
             # ============================================================
             
             # PHASE 2 UPDATE: Preserved
+            "team_lead": u.team_lead if isinstance(u.team_lead, list) else [],
             "line_manager": u.line_manager if isinstance(u.line_manager, list) else [],
             "hod_name": u.hod_name if isinstance(u.hod_name, list) else [],
             
@@ -656,6 +657,7 @@ async def register_user(
     middle_name: Optional[str] = Form(None),
     job_title: Optional[str] = Form(None),
     department: Optional[str] = Form(None),
+    team_lead: Optional[str] = Form(None),
     line_manager: Optional[str] = Form(None),
     hod_name: Optional[str] = Form(None),
     contract_type: Optional[str] = Form(None),
@@ -702,6 +704,7 @@ async def register_user(
             return [str(data)] if data else []
 
     final_line_managers = parse_manager_list(line_manager)
+    final_team_leads = parse_manager_list(team_lead)
     final_hod_names = parse_manager_list(hod_name)
 
     # --- 2. DUPLICATION GUARD ---
@@ -752,6 +755,7 @@ async def register_user(
 
                 # 🚀 PHASE 2 FIX: Using the parsed lists instead of clean_line_manager
                 line_manager=final_line_managers,
+                team_lead=final_team_leads,
                 hod_name=final_hod_names,
 
                 joined_date=joined_date,
@@ -925,6 +929,7 @@ async def update_user_profile(
     job_title: Optional[str] = Form(None),
     department: Optional[str] = Form(None),
     line_manager: Optional[str] = Form(None),
+    team_lead: Optional[str] = Form(None),
     hod_name: Optional[str] = Form(None),
     contract_type: Optional[str] = Form(None),
     business_unit: Optional[str] = Form(None),
@@ -1008,6 +1013,7 @@ async def update_user_profile(
             return [str(data)] if data else []
 
     final_line_managers = parse_manager_list(line_manager)
+    final_team_leads = parse_manager_list(team_lead)
     final_hod_names = parse_manager_list(hod_name)
 
 # 2. 🚀 CASCADING NAME SYNC (Identity Protection)
@@ -1019,12 +1025,17 @@ async def update_user_profile(
         # This ensures that even if the UI sends the "old" name in the form, 
         # we correct it to the "new" name in memory before assigning it to the database.
         if isinstance(final_line_managers, list):
-            final_line_managers = [new_name if n == old_name else n for n in final_line_managers]
+             final_line_managers = [new_name if n == old_name else n for n in final_line_managers]
+
+        if isinstance(final_team_leads, list):
+            final_team_leads = [new_name if n == old_name else n for n in final_team_leads]
+
         if isinstance(final_hod_names, list):
             final_hod_names = [new_name if n == old_name else n for n in final_hod_names]
         
         # Now assign the cleaned/patched variables to the user object
         user.line_manager = final_line_managers
+        user.team_lead = final_team_leads
         user.hod_name = final_hod_names
 
         # 🚀 TABLE UPDATES: Update every table that uses employee_name or approver_name
@@ -1194,6 +1205,8 @@ async def update_user_profile(
             user.line_manager = final_line_managers
         if hod_name is not None:
             user.hod_name = final_hod_names
+        if team_lead is not None:
+            user.team_lead = final_team_leads
     else:
         print(f"🔒 [SECURITY] Ignored employment fields for {user.username}. Requester is not an admin.")
 
