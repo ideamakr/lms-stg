@@ -1,4 +1,4 @@
-import os
+﻿import os
 import math
 import pandas as pd
 import re
@@ -6,14 +6,14 @@ import tempfile
 from typing import Union, Optional, List
 from datetime import date, datetime, timedelta, timezone 
 
-# 🚀 FastAPI, Security & Background Tasks
+# ðŸš€ FastAPI, Security & Background Tasks
 from fastapi import APIRouter, Depends, HTTPException, Form, Query, Body, UploadFile, File, BackgroundTasks, Header
 from fastapi.responses import JSONResponse  # <--- ADDED
 from sqlalchemy import func, or_, and_, desc, text, extract, cast, String
 from sqlalchemy.orm import Session
 from pydantic import BaseModel 
 
-# 📦 Local App Modules
+# ðŸ“¦ Local App Modules
 from app import models
 from app.database import SessionLocal
 from app.dependencies import validate_session
@@ -21,7 +21,7 @@ from sqlalchemy import extract
 
 
 # ============================================================
-# 🕒 TIMEZONE UTILITIES (FIXED: Save UTC, Convert for Display)
+# ðŸ•’ TIMEZONE UTILITIES (FIXED: Save UTC, Convert for Display)
 # ============================================================
 KL_TZ = timezone(timedelta(hours=8))
 
@@ -71,7 +71,7 @@ def _find_user_by_name_or_username(db: Session, identifier: str):
         
     return user
 
-# 📧 Email Utilities
+# ðŸ“§ Email Utilities
 # Robust import strategy to handle different environment paths
 try:
     from app.utils.email_service import (
@@ -118,14 +118,14 @@ except ImportError:
     )
 
 # ============================================================
-# 🏗️ ROUTER & SCHEMAS
+# ðŸ—ï¸ ROUTER & SCHEMAS
 # ============================================================
 class CancelRequestSchema(BaseModel):
     reason: Optional[str] = None
 
 router = APIRouter(prefix="/leaves", tags=["Leaves"])
 
-# 🛠️ Database Dependency (Ensures a fresh session for every request)
+# ðŸ› ï¸ Database Dependency (Ensures a fresh session for every request)
 def get_db():
     db = SessionLocal()
     try:
@@ -144,7 +144,7 @@ def _normalize_attachment_url(attachment_path: Optional[str]) -> Optional[str]:
 
     path = str(attachment_path).strip()
     
-    # 🛡️ THE DIRECTORY GUARD: 
+    # ðŸ›¡ï¸ THE DIRECTORY GUARD: 
     # Returns None for empty paths, directory folders, or legacy cleanup misses
     # This prevents your browser from trying to load '/uploads/mcs/' as an image.
     if path in ["", "mcs", "mcs/", "/mcs/", "/uploads/mcs/", "None"]:
@@ -162,7 +162,7 @@ def _normalize_attachment_url(attachment_path: Optional[str]) -> Optional[str]:
     return f"/uploads/mcs/{clean_filename}"
 
 
-# 🚀 V1.5.2: THE ULTIMATE SPLIT-WALLET ENGINE (UNIFIED SYNC)
+# ðŸš€ V1.5.2: THE ULTIMATE SPLIT-WALLET ENGINE (UNIFIED SYNC)
 def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_type: str, include_pending: bool = False):
     import re
     from sqlalchemy import extract
@@ -196,7 +196,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         extract('year', models.Leave.start_date) == year
     ).all()
 
-    # 📊 INDEPENDENT WALLET COUNTERS
+    # ðŸ“Š INDEPENDENT WALLET COUNTERS
     spent_annual = 0.0
     spent_cf = 0.0
     approved_taken_total = 0.0
@@ -209,7 +209,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
 
         # --- 1. TRACK SUB-WALLET (Carry Forward Claim Only) ---
         if l_type == "Claim Carry Forward":
-            # 🚀 FIXED: Claiming carry forward uses last year's banked days.
+            # ðŸš€ FIXED: Claiming carry forward uses last year's banked days.
             # It must ONLY increase spent_cf and NOT touch spent_annual!
             spent_cf += days
 
@@ -232,12 +232,12 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         elif status_str in ["Approved", "Pending Cancel"]:
             approved_taken_total += days
 
-    # --- 4. 🛡️ EXPIRY SYNC (Unified with Cleanup Script) ---
+    # --- 4. ðŸ›¡ï¸ EXPIRY SYNC (Unified with Cleanup Script) ---
     base_entitlement = float(balance_entry.entitlement or 0.0)
     cf_banked = float(balance_entry.carry_forward_total or 0.0)
     today = datetime.now().date()
 
-    # 🚀 THE FIX: Target the exact row key from the database
+    # ðŸš€ THE FIX: Target the exact row key from the database
     setting = db.query(models.SystemSetting).filter(
         models.SystemSetting.key == "cf_expiry_date"
     ).first()
@@ -256,7 +256,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     else:
         expiry_date = date(year, 3, 23)
 
-    # 🛑 If today is past the deadline, unrequested days "vanish" from the display
+    # ðŸ›‘ If today is past the deadline, unrequested days "vanish" from the display
     if today > expiry_date:
         cf_banked = spent_cf
 
@@ -270,12 +270,12 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
     annual_remaining = base_entitlement - spent_annual
     cf_remaining = cf_banked - spent_cf
 
-    # 🚀 Format variations for absolute JavaScript binding safety
+    # ðŸš€ Format variations for absolute JavaScript binding safety
     expiry_iso = expiry_date.strftime("%Y-%m-%d") if expiry_date else None
     expiry_slash = expiry_date.strftime("%d/%m/%Y") if expiry_date else None
     expiry_human = expiry_date.strftime("%d %b %Y") if expiry_date else None
 
-    # 🚀 NEW: Fetch overtime bank from User table
+    # ðŸš€ NEW: Fetch overtime bank from User table
     user = db.query(models.User).filter(
         or_(
             models.User.full_name == employee_name,
@@ -293,13 +293,13 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         "taken": approved_taken_total,
         "pending_total": pending_total,
 
-        # 🚀 NEW: Include OT Bank for dashboard
+        # ðŸš€ NEW: Include OT Bank for dashboard
         "overtime_bank": float(user.overtime_bank or 0.0) if user else 0.0,
 
-        "expiry_date": expiry_iso,          # 🚀 Powers Application Center Form
-        "cf_expiry_date": expiry_iso,       # 🚀 Standard fallback
-        "cf_expiry_label": expiry_slash,    # 🚀 Matches HTML element ID directly
-        "expiry_human": expiry_human,       # 🚀 Human readable option (e.g., 30 Jun 2026)
+        "expiry_date": expiry_iso,          # ðŸš€ Powers Application Center Form
+        "cf_expiry_date": expiry_iso,       # ðŸš€ Standard fallback
+        "cf_expiry_label": expiry_slash,    # ðŸš€ Matches HTML element ID directly
+        "expiry_human": expiry_human,       # ðŸš€ Human readable option (e.g., 30 Jun 2026)
         "cf_max_days": cf_max_days
     }
 
@@ -332,7 +332,7 @@ def get_leave_balance(
     db: Session = Depends(get_db),
     user: models.User = Depends(validate_session) 
 ):
-    # 🚀 AUTOMATIC TRIGGER: Run cleanup check every time a balance is requested.
+    # ðŸš€ AUTOMATIC TRIGGER: Run cleanup check every time a balance is requested.
     # This ensures that as soon as the clock strikes midnight on the expiry day,
     # the very next person to view a dashboard triggers the cleanup for everyone.
     check_and_wipe_expired_cf(db)
@@ -351,25 +351,25 @@ def get_leave_balance(
 # --- 2. UPDATED CREATE LEAVE: STRICT VALIDATION + L1 TEAM LEAD ---
 @router.post("/")
 async def create_leave(
-    background_tasks: BackgroundTasks,
-    employee_name: str = Form(...),
-    team_lead_name: Optional[str] = Form(None),  # NEW - L1 Team Lead
-    approver_name: str = Form(...),              # Existing L2 Line Manager
-    leave_type: str = Form(...),
-    start_date: str = Form(...),
-    end_date: str = Form(...),
-    reason: str = Form(...),
-    cf_days: float = Form(0.0),
-    is_half_day: Union[bool, str] = Form(False),
-    applied_by: Optional[str] = Form(None),
-    holiday_info: Optional[str] = Form(None),
-    file: UploadFile = File(None),
-    db: Session = Depends(get_db)
+        background_tasks: BackgroundTasks,
+        employee_name: str = Form(...),
+        team_lead_name: Optional[str] = Form(None),
+        approver_name: Optional[str] = Form(None),
+        leave_type: str = Form(...),
+        start_date: str = Form(...),
+        end_date: str = Form(...),
+        reason: str = Form(...),
+        cf_days: float = Form(0.0),
+        is_half_day: Union[bool, str] = Form(False),
+        applied_by: Optional[str] = Form(None),
+        holiday_info: Optional[str] = Form(None),
+        file: UploadFile = File(None),
+        db: Session = Depends(get_db)
 ):
     # 1. PARSE & SANITIZE
     employee_name = employee_name.strip()
     team_lead_name = (team_lead_name or "").strip()
-    approver_name = approver_name.strip()
+    approver_name = (approver_name or "").strip()
     leave_type = leave_type.strip()
 
     start_obj = date.fromisoformat(start_date)
@@ -380,7 +380,7 @@ async def create_leave(
     is_cf_request = "[CARRY FORWARD:" in (reason or "").upper()
     is_cf_claim = "carry forward" in leave_type.lower()
 
-    # 🚀 FETCH DYNAMIC EXPIRY DATE
+    # ðŸš€ FETCH DYNAMIC EXPIRY DATE
     expiry_setting = db.query(models.SystemSetting).filter(
         models.SystemSetting.key == "cf_expiry_date"
     ).first()
@@ -473,7 +473,7 @@ async def create_leave(
         #   Employees should submit an Overtime Request instead.
         # ============================================================
 
-    # 🚀 Validation: Prevent zero-day leave applications
+    # ðŸš€ Validation: Prevent zero-day leave applications
     if days_requested <= 0:
         return JSONResponse(
             status_code=400,
@@ -501,7 +501,7 @@ async def create_leave(
             content={"detail": "Balance record not found."}
         )
 
-    # 5. 🛡️ DETERMINE WALLET (HARDENED LOGIC - PRODUCTION)
+    # 5. ðŸ›¡ï¸ DETERMINE WALLET (HARDENED LOGIC - PRODUCTION)
     cf_max_setting = db.query(models.SystemSetting).filter(
         models.SystemSetting.key == "cf_max_days"
     ).first()
@@ -590,6 +590,15 @@ async def create_leave(
                     )
                 }
             )
+    # ============================================================
+    # 6A. APPROVAL WORKFLOW POLICY
+    # ============================================================
+    policy = db.query(models.GlobalPolicy).filter(
+        models.GlobalPolicy.id == 1
+    ).first()
+
+    l1_enabled = policy.l1_approval_enabled if policy else False
+    l2_enabled = policy.l2_approval_enabled if policy else False
 
     # ============================================================
     # 7. APPROVAL ID RESOLUTION
@@ -618,84 +627,227 @@ async def create_leave(
         )
 
     # ------------------------------------------------------------
-    # L1 - TEAM LEAD
+    # APPROVAL HIERARCHY RESOLUTION
     # ------------------------------------------------------------
-    assigned_team_leads = employee_user.team_lead or []
+    #
+    # Workflow rules:
+    #
+    # L1 OFF + L2 OFF -> HOD
+    # L1 OFF + L2 ON  -> L2 -> HOD
+    # L1 ON  + L2 OFF -> L1 -> HOD
+    # L1 ON  + L2 ON  -> L1 -> L2 -> HOD
+    #
+    # Disabled approval levels are NOT required.
+    # HOD is always required as the final approval level.
+    # ------------------------------------------------------------
 
-    if not isinstance(assigned_team_leads, list):
-        assigned_team_leads = [str(assigned_team_leads)]
+    def _normalize_approver_list(value):
+        if not value:
+            return []
 
-    assigned_team_leads = [
-        str(x).strip()
-        for x in assigned_team_leads
-        if x and str(x).strip()
-    ]
+        if not isinstance(value, list):
+            value = [value]
 
-    # No Team Lead assigned -> BLOCK SUBMISSION
-    if not assigned_team_leads:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "detail": (
-                    "Please contact HR Admin to assign a "
-                    "Team Lead approver before submitting "
-                    "this leave request."
-                )
-            }
+        return [
+            str(x).strip()
+            for x in value
+            if x and str(x).strip()
+        ]
+
+
+    assigned_team_leads = _normalize_approver_list(
+        employee_user.team_lead
+    )
+
+    assigned_line_managers = _normalize_approver_list(
+        employee_user.line_manager
+    )
+
+    assigned_hods = _normalize_approver_list(
+        employee_user.hod_name
+    )
+
+
+    # ------------------------------------------------------------
+    # L1 - TEAM LEAD
+    # Required only when L1 workflow is enabled.
+    # ------------------------------------------------------------
+
+    team_lead = None
+    approver_l1_id = None
+
+    if l1_enabled:
+
+        if not assigned_team_leads:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": (
+                        "Missing Team Lead approver configuration. "
+                        "Please contact HR Admin."
+                    )
+                }
+            )
+
+        if not team_lead_name:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": (
+                        "Please select a Team Lead approver "
+                        "before submitting this leave request."
+                    )
+                }
+            )
+
+        if team_lead_name not in assigned_team_leads:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": (
+                        "Invalid Team Lead approver selected. "
+                        "Please contact HR Admin."
+                    )
+                }
+            )
+
+        team_lead = _find_user_by_name_or_username(
+            db,
+            team_lead_name
         )
 
-    # Team Lead must be selected
-    if not team_lead_name:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "detail": (
-                    "Please select a Team Lead approver "
-                    "before submitting this leave request."
-                )
-            }
-        )
+        if not team_lead or not team_lead.is_active:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": (
+                        "The selected Team Lead approver is not "
+                        "available. Please contact HR Admin."
+                    )
+                }
+            )
 
-    # Validate selected Team Lead belongs to employee's
-    # assigned Team Lead list
-    if team_lead_name not in assigned_team_leads:
+        approver_l1_id = team_lead.id
+
+
+    # ------------------------------------------------------------
+    # L2 - LINE MANAGER
+    # Derived from employee hierarchy.
+    #
+    # IMPORTANT:
+    # The browser-supplied approver_name is NOT used to
+    # determine the employee's L2 approver.
+    # ------------------------------------------------------------
+
+    manager = None
+    approver_id = None
+    resolved_approver_name = None
+
+    if assigned_line_managers:
+
+        # Find an active configured Line Manager.
+        #
+        # Multiple Line Managers are supported. The existing
+        # database hierarchy remains intact; we only resolve
+        # an active manager for the approval record.
+        for manager_name in assigned_line_managers:
+            candidate = _find_user_by_name_or_username(
+                db,
+                manager_name
+            )
+
+            if candidate and candidate.is_active:
+                manager = candidate
+                break
+
+    if l2_enabled:
+
+        if not assigned_line_managers:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": (
+                        "Missing Line Manager approver "
+                        "configuration. Please contact HR Admin."
+                    )
+                }
+            )
+
+        if not manager:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": (
+                        "The assigned Line Manager approver is "
+                        "not available. Please contact HR Admin."
+                    )
+                }
+            )
+
+        approver_id = manager.id
+        resolved_approver_name = manager.full_name
+
+    # L2 disabled:
+    # No L2 approver is required or assigned to this workflow.
+
+
+    # ------------------------------------------------------------
+    # L3 - HOD
+    # HOD is ALWAYS required as the final approval level.
+    # ------------------------------------------------------------
+
+    hod = None
+    approver_l2_id = None
+    approver_l2_name = None
+
+    if not assigned_hods:
         return JSONResponse(
             status_code=400,
             content={
                 "detail": (
-                    "Invalid Team Lead approver selected. "
+                    "Missing HOD approver configuration. "
                     "Please contact HR Admin."
                 )
             }
         )
 
-    team_lead = _find_user_by_name_or_username(
-        db,
-        team_lead_name
-    )
+    for hod_name in assigned_hods:
+        candidate = _find_user_by_name_or_username(
+            db,
+            hod_name
+        )
 
-    if not team_lead or not team_lead.is_active:
+        if candidate and candidate.is_active:
+            hod = candidate
+            break
+
+    if not hod:
         return JSONResponse(
             status_code=400,
             content={
                 "detail": (
-                    "The selected Team Lead approver is not "
-                    "available. Please contact HR Admin."
+                    "The assigned HOD approver is not available. "
+                    "Please contact HR Admin."
                 )
             }
         )
 
-    approver_l1_id = team_lead.id
+    approver_l2_id = hod.id
+    approver_l2_name = hod.full_name
+
 
     # ------------------------------------------------------------
-    # EXISTING L2 - LINE MANAGER
+    # INITIAL APPROVAL STATUS
     # ------------------------------------------------------------
-    manager = _find_user_by_name_or_username(
-        db,
-        approver_name
-    )
 
-    approver_id = manager.id if manager else None
+    if l1_enabled:
+        initial_status = "Pending"
+
+    elif l2_enabled:
+        initial_status = "Pending L2 Approval"
+
+    else:
+        initial_status = "Pending L3 Approval"
 
     # IMPORTANT:
     # Existing HOD / approver_l2_id logic remains untouched.
@@ -706,7 +858,7 @@ async def create_leave(
     # ============================================================
     timestamp = get_utc_timestamp()
 
-    # 🚀 Format holiday note securely for database records
+    # ðŸš€ Format holiday note securely for database records
     # & approver visibility
     holiday_note = (
         f" [Note: Applied on Public Holiday - {holiday_info}]"
@@ -726,9 +878,13 @@ async def create_leave(
         # L1 - Team Lead
         approver_l1_id=approver_l1_id,
 
-        # Existing L2 - Line Manager
-        approver_name=approver_name,
+        # L2 - Line Manager
+        approver_name=resolved_approver_name,
         approver_id=approver_id,
+
+        # L3 - HOD
+        approver_l2=approver_l2_name,
+        approver_l2_id=approver_l2_id,
 
         leave_type=leave_type,
         start_date=start_obj,
@@ -736,7 +892,7 @@ async def create_leave(
         reason=final_reason,
         days_taken=days_requested,
         attachment_path=attachment_url,
-        status="Pending",
+        status=initial_status,
         status_history=f"Submitted ({timestamp}){holiday_note}"
     )
 
@@ -765,10 +921,17 @@ async def create_leave(
                 reference_id=new_leave.id
             )
 
-        # 🚀 CR:
+         # Determine the initial approval recipient based on workflow.
+        if l1_enabled:
+            notification_approver = team_lead
+        elif l2_enabled:
+            notification_approver = manager
+        else:
+            notification_approver = hod
+
         # Initial leave submission notification goes to
-        # the selected Team Lead, NOT Line Manager.
-        if team_lead and team_lead.email:
+        # the first required approver.
+        if notification_approver and notification_approver.email:
 
             admin_name = (
                 applied_by
@@ -784,7 +947,7 @@ async def create_leave(
                 )
 
                 body = template_medical_request(
-                    team_lead.full_name,
+                    notification_approver.full_name,
                     employee_name,
                     str(start_obj),
                     str(end_obj),
@@ -804,7 +967,7 @@ async def create_leave(
                 )
 
                 body = template_cf_request(
-                    team_lead.full_name,
+                    notification_approver.full_name,
                     employee_name,
                     days_requested,
                     clean_reason
@@ -817,7 +980,7 @@ async def create_leave(
                 )
 
                 body = template_new_request(
-                    team_lead.full_name,
+                    notification_approver.full_name,
                     employee_name,
                     leave_type,
                     str(start_obj),
@@ -828,13 +991,13 @@ async def create_leave(
 
             background_tasks.add_task(
                 send_email,
-                team_lead.email,
+                notification_approver.email,
                 subject,
                 body
             )
 
     except Exception as e:
-        print(f"⚠️ Post-Submission Error: {e}")
+        print(f"âš ï¸ Post-Submission Error: {e}")
 
     return {
         "message": "Leave request submitted successfully",
@@ -858,7 +1021,7 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
                      "days": b.entitlement} for b in balances]
 
     # 2. Fetch Leave History
-    # 🚀 FIX: Changed to 'desc()' so latest leaves appear at the top
+    # ðŸš€ FIX: Changed to 'desc()' so latest leaves appear at the top
     leaves = db.query(models.Leave).filter(
         models.Leave.employee_name == name,
         models.Leave.start_date.cast(models.String).contains(str(current_year))
@@ -886,7 +1049,7 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
         is_cf = False
         display_days = l.days_taken or 0.0 
 
-        # 🅰️ Check if this is a Carry Forward Request
+        # ðŸ…°ï¸ Check if this is a Carry Forward Request
         if "[CARRY FORWARD" in reason_str:
             action_type = "Carry Forward Request"
             is_cf = True
@@ -900,7 +1063,7 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
                 if raw_status == "Approved":
                     cf_total += real_cf_val
 
-        # 🅱️ Check for Cancellations
+        # ðŸ…±ï¸ Check for Cancellations
         if "Cancellation Approved" in history_str or "Cancellation Rejected" in history_str:
             action_type = "Cancellation Request"
         elif "Pending Cancel" in history_str:
@@ -924,7 +1087,7 @@ def get_balance_history(db: Session = Depends(get_db), name: str = ""):
             "status": display_status,
             "reason": l.reason,
             "is_cf": is_cf,
-            "status_history": convert_utc_string_to_kl(l.status_history) # 👈 FIXED: Localized timestamp
+            "status_history": convert_utc_string_to_kl(l.status_history) # ðŸ‘ˆ FIXED: Localized timestamp
         })
 
     return {
@@ -996,34 +1159,61 @@ def get_leave_history(
         l_type = l.leave_type.value if hasattr(l.leave_type, 'value') else str(l.leave_type)
         l_status = l.status.value if hasattr(l.status, 'value') else str(l.status)
         
-        # 🚀 REFACTORED: Unpacking 3 values from the helper
+        # ðŸš€ REFACTORED: Unpacking 3 values from the helper
         raw_start, raw_end, display_range = get_formatted_dates(l)
 
-        # 🚀 FIXED: Using the defensive helper to prevent 404s
+        # ðŸš€ FIXED: Using the defensive helper to prevent 404s
         full_attachment_url = _normalize_attachment_url(l.attachment_path)
 
         formatted.append({
-            "id": l.id, 
+            "id": l.id,
             "employee_name": l.employee_name,
+
+            # L1 - Team Lead
+            "approver_l1": (
+                l.approver_l1_ref.full_name
+                if l.approver_l1_ref
+                else None
+            ),
+            "approver_l1_id": l.approver_l1_id,
+
+            # L2 - Line Manager
             "approver_name": l.approver_name,
-            "approver_l2": l.approver_l2, 
-            "days_taken": l.days_taken, 
+
+            # L3 - HOD
+            "approver_l2": l.approver_l2,
+            "approver_l2_id": l.approver_l2_id,
+
+            "days_taken": l.days_taken,
             "reason": l.reason or "No reason provided",
             "leave_type": l_type,
             "status": l_status,
-            # 🚀 SENDING RAW DATA + DISPLAY STRING
-            "start_date": raw_start,    # Used by system logic
-            "end_date": raw_end,        # Used by system logic
-            "display_range": display_range, # 👈 USE THIS IN YOUR FRONTEND UI
-            "attachment_path": full_attachment_url, 
+
+            # ðŸš€ SENDING RAW DATA + DISPLAY STRING
+            "start_date": raw_start,          # Used by system logic
+            "end_date": raw_end,              # Used by system logic
+            "display_range": display_range,   # ðŸ‘ˆ USE THIS IN YOUR FRONTEND UI
+
+            "attachment_path": full_attachment_url,
             "status_history": convert_utc_string_to_kl(l.status_history),
-            "approved_at": l.approved_at.strftime("%Y-%m-%d %H:%M") if l.approved_at else None,
-            "rejected_at": l.rejected_at.strftime("%Y-%m-%d %H:%M") if l.rejected_at else None,
-            "cancelled_at": l.cancelled_at.strftime("%Y-%m-%d %H:%M") if l.cancelled_at else None
+
+            "approved_at": (
+                l.approved_at.strftime("%Y-%m-%d %H:%M")
+                if l.approved_at else None
+            ),
+            "rejected_at": (
+                l.rejected_at.strftime("%Y-%m-%d %H:%M")
+                if l.rejected_at else None
+            ),
+            "cancelled_at": (
+                l.cancelled_at.strftime("%Y-%m-%d %H:%M")
+                if l.cancelled_at else None
+            )
         })
+
     return {
-        "total_records": total, 
-        "total_pages": total_pages, 
+        "total_records": total,
+        "total_pages": total_pages,
         "leaves": formatted
     }
 
@@ -1034,7 +1224,7 @@ async def cancel_leave_request(
     background_tasks: BackgroundTasks, 
     payload: CancelRequestSchema = Body(None),
     db: Session = Depends(get_db),
-    x_username: str = Header(None) # 🔒 SECURITY BADGE
+    x_username: str = Header(None) # ðŸ”’ SECURITY BADGE
 ):
     # 1. Security Check
     if not x_username:
@@ -1071,7 +1261,7 @@ async def cancel_leave_request(
         leave.status_history = (leave.status_history or "") + f"\n > Cancellation Requested by Employee{reason_text} ({timestamp})"
         msg = "Cancellation request sent to manager for review."
 
-        # 🚀 EMAIL NOTIFICATION
+        # ðŸš€ EMAIL NOTIFICATION
         # Ensure we look up by approver name or fallback safely
         manager = None
         if leave.approver_name:
@@ -1119,7 +1309,7 @@ async def cancel_leave_request(
         print(f"Error cancelling leave: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-# 🚀 Ensure these are imported at the top
+# ðŸš€ Ensure these are imported at the top
 @router.get("/manager/pending")
 def get_manager_pending(
     approver_name: str, 
@@ -1131,13 +1321,13 @@ def get_manager_pending(
     end_date: str = "",     
     leave_type: str = "",   
     status: str = "",
-    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
+    x_username: Optional[str] = Header(None)  # ðŸ‘‘ Intercept requester identity header
 ):
     # Check if the requester has authoritative Superuser privileges
     user = db.query(models.User).filter(models.User.username == x_username).first()
     
     if user and user.role == "superuser":
-        # 👑 God Mode Base Query: Expose all active workflow lines company-wide
+        # ðŸ‘‘ God Mode Base Query: Expose all active workflow lines company-wide
         query = db.query(models.Leave).filter(
             models.Leave.status.in_([
                 "Pending",
@@ -1179,7 +1369,7 @@ def get_manager_pending(
                 )
             )
         )
-        # --- 🚀 NEW ID-BASED LOOKUP END ---
+        # --- ðŸš€ NEW ID-BASED LOOKUP END ---
 
     # 2. Filters
     if name: query = query.filter(models.Leave.employee_name.ilike(f"%{name}%"))
@@ -1193,27 +1383,64 @@ def get_manager_pending(
 
     formatted_results = []
     for r in results:
-        # 🚀 FIXED: Using the centralized helper to prevent 404s
+        # ðŸš€ FIXED: Using the centralized helper to prevent 404s
         full_attachment_url = _normalize_attachment_url(r.attachment_path)
         
-        # 🚀 INTEGRATED: Unified Date Helper
+        # ðŸš€ INTEGRATED: Unified Date Helper
+        # Unpack all 3 values returned by the helper
+        raw_start, raw_end, display_range = get_formatted_dates(r)
+
+    formatted_results = []
+    for r in results:
+        # ðŸš€ FIXED: Using the centralized helper to prevent 404s
+        full_attachment_url = _normalize_attachment_url(r.attachment_path)
+        
+        # ðŸš€ INTEGRATED: Unified Date Helper
         # Unpack all 3 values returned by the helper
         raw_start, raw_end, display_range = get_formatted_dates(r)
 
         formatted_results.append({
             "id": r.id,
             "employee_name": r.employee_name,
-            "approver_name": r.approver_name, 
-            "approver_l2": r.approver_l2,       
-            "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
-            "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
+
+            # ---------------------------------------------------------
+            # APPROVAL HIERARCHY
+            # L1 = Team Lead
+            # L2 = Line Manager
+            # L3 = HOD
+            # ---------------------------------------------------------
+            "approver_l1": (
+                r.approver_l1_ref.full_name
+                if r.approver_l1_ref
+                else None
+            ),
+            "approver_l1_id": r.approver_l1_id,
+
+            "approver_name": r.approver_name,
+            "approver_id": r.approver_id,
+
+            "approver_l2": r.approver_l2,
+            "approver_l2_id": r.approver_l2_id,
+
+            "leave_type": (
+                str(r.leave_type.value)
+                if hasattr(r.leave_type, "value")
+                else str(r.leave_type)
+            ),
+            "status": (
+                str(r.status.value)
+                if hasattr(r.status, "value")
+                else str(r.status)
+            ),
             "days_taken": r.days_taken,
-            # 🚀 PASSING RAW DATES + DISPLAY RANGE
-            "start_date": raw_start,      # Kept as raw for system/backend logic
-            "end_date": raw_end,          # Kept as raw for system/backend logic
-            "display_range": display_range, # NEW: Use this in your frontend for display
+
+            # ðŸš€ PASSING RAW DATES + DISPLAY RANGE
+            "start_date": raw_start,
+            "end_date": raw_end,
+            "display_range": display_range,
+
             "reason": r.reason,
-            "attachment_path": full_attachment_url, 
+            "attachment_path": full_attachment_url,
             "status_history": convert_utc_string_to_kl(r.status_history)
         })
     
@@ -1229,16 +1456,16 @@ def fix_db_schema(db: Session = Depends(get_db)):
     # 1. Fix Leaves Table
     try:
         db.execute(text("ALTER TABLE leaves ADD COLUMN approver_l2 VARCHAR"))
-        messages.append("✅ Leaves table updated.")
+        messages.append("âœ… Leaves table updated.")
     except Exception:
-        messages.append("ℹ️ Leaves table already updated.")
+        messages.append("â„¹ï¸ Leaves table already updated.")
 
     # 2. Fix Overtime Table
     try:
         db.execute(text("ALTER TABLE overtime_claims ADD COLUMN approver_l2 VARCHAR"))
-        messages.append("✅ Overtime table updated.")
+        messages.append("âœ… Overtime table updated.")
     except Exception:
-        messages.append("ℹ️ Overtime table already updated.")
+        messages.append("â„¹ï¸ Overtime table already updated.")
 
     try:
         db.commit()
@@ -1334,7 +1561,7 @@ async def approve_leave(
             approver_name
             and leave.approver
             and approver_name.strip().lower()
-            == leave.approver.strip().lower()
+            == leave.approver.full_name.strip().lower()
         )
 
         # ---------------------------------------------------------------------
@@ -1395,7 +1622,7 @@ async def approve_leave(
         approver_name
         and leave.approver
         and approver_name.strip().lower()
-        == leave.approver.strip().lower()
+        == leave.approver.full_name.strip().lower()
     )
 
     is_l3 = (
@@ -1586,38 +1813,82 @@ async def approve_leave(
                 leave.status == "Pending"
                 and is_l1
                 and l2_active
-                and not is_senior
                 and not is_superuser_override
             ):
 
                 # IMPORTANT:
-                # Use the configured L2 from the leave record.
-                # Do not depend on browser-supplied l2_name.
-                if not leave.approver_id:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=(
-                            "L2 Line Manager is not configured "
-                            "for this request."
-                        )
+                # If L1 selected a specific L2 Line Manager, validate and
+                # route to that selected user. Otherwise retain the existing
+                # preassigned L2 from the leave record.
+                if l2_name:
+                    employee_user = (
+                        db.query(models.User)
+                        .filter(models.User.id == leave.user_id)
+                        .first()
                     )
 
-                l2_user = (
-                    db.query(models.User)
-                    .filter(
-                        models.User.id == leave.approver_id
-                    )
-                    .first()
-                )
-
-                if not l2_user or not l2_user.is_active:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=(
-                            "L2 Line Manager could not be found "
-                            "or is inactive."
+                    if not employee_user:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Employee could not be found for L2 routing."
                         )
+
+                    assigned_line_managers = _normalize_approver_list(
+                        employee_user.line_manager
                     )
+
+                    if l2_name not in assigned_line_managers:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Selected L2 Line Manager is not configured "
+                                "for this employee."
+                            )
+                        )
+
+                    selected_l2_user = _find_user_by_name_or_username(
+                        db,
+                        l2_name
+                    )
+
+                    if not selected_l2_user or not selected_l2_user.is_active:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Selected L2 Line Manager could not be found "
+                                "or is inactive."
+                            )
+                        )
+
+                    leave.approver_id = selected_l2_user.id
+                    l2_user = selected_l2_user
+
+                else:
+                    if not leave.approver_id:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "L2 Line Manager is not configured "
+                                "for this request."
+                            )
+                        )
+
+                    l2_user = (
+                        db.query(models.User)
+                        .filter(
+                            models.User.id == leave.approver_id
+                        )
+                        .first()
+                    )
+
+                    if not l2_user or not l2_user.is_active:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "L2 Line Manager could not be found "
+                                "or is inactive."
+                            )
+                        )
 
                 leave.status = "Pending L2 Approval"
 
@@ -1644,7 +1915,91 @@ async def approve_leave(
                 and is_l2
             ):
 
-                # approver_l2_id = L3 / HOD
+                # ------------------------------------------------------------
+                # L3 / HOD selection
+                #
+                # The employee's hod_name contains the eligible L3/HOD
+                # candidates. If the L2 approver selected one in the UI,
+                # l2_name becomes the selected HOD for this Leave request.
+                #
+                # If l2_name is not supplied, preserve the existing
+                # approver_l2_id for backward compatibility.
+                # ------------------------------------------------------------
+
+                if l2_name:
+                    employee_user = (
+                        db.query(models.User)
+                        .filter(
+                            models.User.full_name == leave.employee_name
+                        )
+                        .first()
+                    )
+
+                    if not employee_user:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Employee profile could not be found "
+                                "for L3 HOD validation."
+                            )
+                        )
+
+                    configured_hods = employee_user.hod_name or []
+
+                    if not isinstance(configured_hods, list):
+                        configured_hods = [configured_hods]
+
+                    configured_hods = [
+                        str(hod).strip()
+                        for hod in configured_hods
+                        if hod and str(hod).strip()
+                    ]
+
+                    # The selected HOD must belong to the employee's
+                    # configured L3/HOD candidate list.
+                    if not any(
+                        hod.lower() == l2_name.lower()
+                        for hod in configured_hods
+                    ):
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Selected L3 HOD approver is not configured "
+                                "for this employee."
+                            )
+                        )
+
+                    selected_l3_user = (
+                        db.query(models.User)
+                        .filter(
+                            models.User.full_name == l2_name
+                        )
+                        .first()
+                    )
+
+                    if not selected_l3_user or not selected_l3_user.is_active:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Selected L3 HOD approver could not be found "
+                                "or is inactive."
+                            )
+                        )
+
+                    # --------------------------------------------------------
+                    # Store BOTH the selected HOD ID and name on this Leave.
+                    #
+                    # approver_l2_id = authoritative user relationship
+                    # approver_l2    = legacy/display name used by existing UI
+                    #
+                    # Keeping both synchronized prevents stale HOD names from
+                    # appearing in Leave Details, Team Leave History, etc.
+                    # --------------------------------------------------------
+                    leave.approver_l2_id = selected_l3_user.id
+                    leave.approver_l2 = selected_l3_user.full_name
+
+                # Existing Leave-level L3 assignment is still required
+                # when no new selection was supplied.
                 if not leave.approver_l2_id:
                     raise HTTPException(
                         status_code=400,
@@ -1930,7 +2285,7 @@ async def approve_leave(
 
                     subject = (
                         f"ACTION REQUIRED: "
-                        f"Final Approval Needed - "
+                        f"Level 2 Approval Needed - "
                         f"{leave.employee_name}"
                     )
 
@@ -1992,7 +2347,7 @@ async def approve_leave(
                         )
 
                         subject = (
-                            "✅ Carry Forward "
+                            "âœ… Carry Forward "
                             "Cancellation Approved"
                         )
 
@@ -2007,7 +2362,7 @@ async def approve_leave(
                         )
 
                         subject = (
-                            "✅ Leave Cancellation Approved"
+                            "âœ… Leave Cancellation Approved"
                         )
 
                 elif is_cf:
@@ -2019,7 +2374,7 @@ async def approve_leave(
                     )
 
                     subject = (
-                        "✅ Carry Forward "
+                        "âœ… Carry Forward "
                         "Request Approved"
                     )
 
@@ -2034,7 +2389,7 @@ async def approve_leave(
                     )
 
                     subject = (
-                        f"✅ Leave Request Approved - "
+                        f"âœ… Leave Request Approved - "
                         f"{l_type_str}"
                     )
 
@@ -2066,7 +2421,7 @@ async def approve_leave(
                     )
 
                     subject = (
-                        "⚠️ Carry Forward "
+                        "âš ï¸ Carry Forward "
                         "Cancellation Rejected"
                     )
 
@@ -2083,7 +2438,7 @@ async def approve_leave(
                     )
 
                     subject = (
-                        "⚠️ Leave Cancellation Rejected"
+                        "âš ï¸ Leave Cancellation Rejected"
                     )
 
             elif is_cf:
@@ -2096,7 +2451,7 @@ async def approve_leave(
                 )
 
                 subject = (
-                    "❌ Carry Forward "
+                    "âŒ Carry Forward "
                     "Request Rejected"
                 )
 
@@ -2113,7 +2468,7 @@ async def approve_leave(
                 )
 
                 subject = (
-                    f"❌ Leave Request Rejected - "
+                    f"âŒ Leave Request Rejected - "
                     f"{l_type_str}"
                 )
 
@@ -2126,7 +2481,7 @@ async def approve_leave(
 
     except Exception as e:
         print(
-            f"⚠️ Activity/Email Error: {e}"
+            f"âš ï¸ Activity/Email Error: {e}"
         )
 
     return {
@@ -2141,7 +2496,7 @@ def get_all_manager_leaves(
     status: str = Query("", alias="status"), 
     date_str: str = Query(None), 
     db: Session = Depends(get_db),
-    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
+    x_username: Optional[str] = Header(None)  # ðŸ‘‘ Intercept requester identity header
 ):
     query = db.query(models.Leave)
     
@@ -2152,18 +2507,28 @@ def get_all_manager_leaves(
     # 1. RBAC: Managers only see what they touched. Admins and Superusers see all.
     if not is_admin_or_super:
         if approver_name:
-            # --- 🚀 NEW ID-BASED LOOKUP START ---
+            # --- ðŸš€ NEW ID-BASED LOOKUP START ---
             manager = db.query(models.User).filter(models.User.full_name == approver_name.strip()).first()
             manager_id = manager.id if manager else -1
             
             query = query.filter(
                 or_(
+                    # L1 - Team Lead
+                    models.Leave.approver_l1_id == manager_id,
+
+                    # L2 - Line Manager
                     models.Leave.approver_id == manager_id,
+
+                    # L3 - HOD
                     models.Leave.approver_l2_id == manager_id,
-                    models.Leave.status_history.ilike(f"%{approver_name.strip()}%") 
+
+                    # Legacy fallback for older records
+                    models.Leave.status_history.ilike(
+                        f"%{approver_name.strip()}%"
+                    )
                 )
             )
-            # --- 🚀 NEW ID-BASED LOOKUP END ---
+            # --- ðŸš€ NEW ID-BASED LOOKUP END ---
         else:
             return {"requests": []}
     
@@ -2177,25 +2542,40 @@ def get_all_manager_leaves(
     results = query.order_by(models.Leave.id.desc()).all()
     formatted = []
     for r in results:
-        # 🚀 CLEANED UP: Using centralized helper for path consistency
+        # ðŸš€ CLEANED UP: Using centralized helper for path consistency
         full_attachment_url = _normalize_attachment_url(r.attachment_path)
         
-        # 🚀 INTEGRATED: Unified Date Helper (FIXED UNPACKING)
+        # ðŸš€ INTEGRATED: Unified Date Helper (FIXED UNPACKING)
         raw_start, raw_end, display_range = get_formatted_dates(r)
 
         formatted.append({
             "id": r.id,
             "employee_name": r.employee_name,
+
+            # L1 Team Lead
+            "approver_l1": (
+                r.approver_l1_ref.full_name
+                if r.approver_l1_ref
+                else None
+            ),
+            "approver_l1_id": r.approver_l1_id,
+
+            # L2 Line Manager
             "approver_name": r.approver_name, # Legacy string retained for UI stability
-            "approver_l2": r.approver_l2,       
+            "approver_id": r.approver_id,
+
+            # L3 HOD
+            "approver_l2": r.approver_l2,
+            "approver_l2_id": r.approver_l2_id,
+
             "leave_type": str(r.leave_type.value) if hasattr(r.leave_type, 'value') else str(r.leave_type),
             "days_taken": r.days_taken,
-            "start_date": raw_start,        # 🚀 Unified format
-            "end_date": raw_end,            # 🚀 Unified format
-            "display_range": display_range, # 🚀 Added to match other endpoints
+            "start_date": raw_start,        # ðŸš€ Unified format
+            "end_date": raw_end,            # ðŸš€ Unified format
+            "display_range": display_range, # ðŸš€ Added to match other endpoints
             "status": str(r.status.value) if hasattr(r.status, 'value') else str(r.status),
-            "attachment_path": full_attachment_url, 
-            "status_history": convert_utc_string_to_kl(r.status_history) # 👈 FIXED: Localized timestamp
+            "attachment_path": full_attachment_url,
+            "status_history": convert_utc_string_to_kl(r.status_history) # ðŸ‘ˆ FIXED: Localized timestamp
         })
 
     return {"requests": formatted}
@@ -2264,16 +2644,16 @@ def get_team_entitlements(
     approver_name: str,       
     db: Session = Depends(get_db), 
     name: str = "",
-    x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
+    x_username: Optional[str] = Header(None)  # ðŸ‘‘ Intercept requester identity header
 ):
     current_year = datetime.now().year
-    today = datetime.now().date() # 🚀 Capture today's date for expiry check
+    today = datetime.now().date() # ðŸš€ Capture today's date for expiry check
     
     # 1. Standardize Inputs
     role_clean = user_role.lower().strip()
     approver_clean = approver_name.strip()
 
-    # 2. 🔍 DATABASE OVERRIDE: Check if user is an Admin or Superuser
+    # 2. ðŸ” DATABASE OVERRIDE: Check if user is an Admin or Superuser
     requester = None
     if x_username:
         requester = db.query(models.User).filter(models.User.username == x_username).first()
@@ -2290,7 +2670,7 @@ def get_team_entitlements(
     if role_clean not in allowed_roles:
         return []
 
-    # 🚀 Target the exact row key 'cf_expiry_date'
+    # ðŸš€ Target the exact row key 'cf_expiry_date'
     setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
     expiry_date = None
     if setting and setting.value:
@@ -2305,22 +2685,34 @@ def get_team_entitlements(
     else:
         expiry_date = date(current_year, 3, 23)
 
-    # 🚀 Fetch max days target for payload pipeline
+    # ðŸš€ Fetch max days target for payload pipeline
     max_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_max_days").first()
     cf_max_days = float(max_setting.value) if max_setting and max_setting.value else 0.0
 
     # ============================================================
-    # 📊 SECTION 4: SMART ROUTING QUERY
+    # ðŸ“Š SECTION 4: SMART ROUTING QUERY
     # ============================================================
     users_query = db.query(models.User).filter(models.User.role != "superuser")
 
     if role_clean != "hr_admin":
         users_query = users_query.filter(
-            or_(
-                cast(models.User.line_manager, String).ilike(f"%{approver_clean}%"),
-                cast(models.User.hod_name, String).ilike(f"%{approver_clean}%")
+        or_(
+            # L1 - Team Lead
+            cast(models.User.team_lead, String).ilike(
+                f"%{approver_clean}%"
+            ),
+
+            # L2 - Line Manager
+            cast(models.User.line_manager, String).ilike(
+                f"%{approver_clean}%"
+            ),
+
+            # L3 - HOD
+            cast(models.User.hod_name, String).ilike(
+                f"%{approver_clean}%"
             )
         )
+    )
         
     if name:
         users_query = users_query.filter(models.User.full_name.ilike(f"%{name.strip()}%"))
@@ -2332,7 +2724,7 @@ def get_team_entitlements(
             
         user_names = [u.full_name for u in users]
 
-        # 🚀 Bulk Fetch Approved OT Balances
+        # ðŸš€ Bulk Fetch Approved OT Balances
         approved_ot = (
             db.query(
                 models.Overtime.employee_name,
@@ -2351,7 +2743,7 @@ def get_team_entitlements(
             for row in approved_ot
         }
 
-        # 🚀 Bulk Fetch Balances and Leaves for Performance
+        # ðŸš€ Bulk Fetch Balances and Leaves for Performance
         all_balances = db.query(models.LeaveBalance).filter(
             models.LeaveBalance.employee_name.in_(user_names),
             models.LeaveBalance.year == current_year
@@ -2382,14 +2774,14 @@ def get_team_entitlements(
 
         results = []
 
-        # 🚀 START CALCULATION LOOP (PROPERLY INDENTED)
+        # ðŸš€ START CALCULATION LOOP (PROPERLY INDENTED)
         for u in users:
             emp_name = u.full_name
             ot_balance = ot_map.get(emp_name, 0.0)
             u_bals = bal_map.get(emp_name, [])
             u_leaves = leave_map.get(emp_name, [])
 
-            # 🛠️ INTERNAL BUCKET CALCULATOR (Correctly scoped inside the user loop)
+            # ðŸ› ï¸ INTERNAL BUCKET CALCULATOR (Correctly scoped inside the user loop)
             def get_bucket(l_type):
                 b = next((x for x in u_bals if str(getattr(x.leave_type, 'value', x.leave_type)) == l_type), None)
                 ent = float(b.entitlement or 0.0) if b else defaults.get(l_type, 0.0)
@@ -2411,7 +2803,7 @@ def get_team_entitlements(
                             spent_annual += days
                         elif l_type_str in ["Annual Leave", "Emergency Leave"]:
                             if "[CARRY FORWARD" in (l.reason or ""):
-                                # 🛡️ THE FIX: Carry Forward Requests bank current year annual leave.
+                                # ðŸ›¡ï¸ THE FIX: Carry Forward Requests bank current year annual leave.
                                 # They must ONLY deduct from spent_annual, leaving spent_cf (last year's balance) untouched!
                                 match = re.search(r"\[CARRY FORWARD:\s*([\d\.]+)\s*DAYS\]", l.reason)
                                 cf_p = float(match.group(1)) if match else days
@@ -2421,7 +2813,7 @@ def get_team_entitlements(
                         else:
                             spent_annual += days
                 
-                # 🚀 Enforce expiry deadline
+                # ðŸš€ Enforce expiry deadline
                 if l_type == "Annual Leave" and today > expiry_date:
                     cf_banked = spent_cf
 
@@ -2472,7 +2864,7 @@ def get_team_entitlements(
         return results
 
     except Exception as e:
-        print(f"❌ Database Query Error: {e}")
+        print(f"âŒ Database Query Error: {e}")
         import traceback
         traceback.print_exc() 
         raise HTTPException(status_code=500, detail="Failed to fetch balances")
@@ -2484,7 +2876,7 @@ def get_approvers(db: Session = Depends(get_db)):
     Fetches all active users with 'manager' or 'hr_admin' roles.
     This populates the 'Select Approver' dropdown on the frontend.
     """
-    # 🚀 HIGH-FIDELITY FILTER: Using ILIKE ensures 'Manager' and 'manager' both work.
+    # ðŸš€ HIGH-FIDELITY FILTER: Using ILIKE ensures 'Manager' and 'manager' both work.
     approvers = db.query(models.User).filter(
         or_(
             models.User.role.ilike("manager"),
@@ -2501,21 +2893,21 @@ def get_approvers(db: Session = Depends(get_db)):
 
 
 # =========================================================================
-# ⚙️ PUBLIC HOLIDAYS (Fixed 405 Method Not Allowed)
+# âš™ï¸ PUBLIC HOLIDAYS (Fixed 405 Method Not Allowed)
 # =========================================================================
 
-# 1. 🚀 ADDED GET: Fetch the list (This resolves the 405 error)
+# 1. ðŸš€ ADDED GET: Fetch the list (This resolves the 405 error)
 @router.get("/public-holidays")
 def get_public_holidays(db: Session = Depends(get_db)):
     return db.query(models.PublicHoliday).order_by(models.PublicHoliday.holiday_date).all()
 
-# 1. 🚀 BUG-FREE ADD ROUTE
+# 1. ðŸš€ BUG-FREE ADD ROUTE
 @router.post("/public-holidays")
 def add_public_holiday(
     holiday_date: str = Form(...), 
     name: str = Form(...), 
-    states: str = Form("All States"), # 🟢 Catches the state!
-    db: Session = Depends(get_db)     # 🟢 CORRECT DEPENDENCY: Connects to database!
+    states: str = Form("All States"), # ðŸŸ¢ Catches the state!
+    db: Session = Depends(get_db)     # ðŸŸ¢ CORRECT DEPENDENCY: Connects to database!
 ):
     if len(name) > 50:
         raise HTTPException(status_code=400, detail="Holiday name cannot exceed 50 characters.")
@@ -2544,7 +2936,7 @@ def delete_public_holiday(holiday_id: int, db: Session = Depends(get_db)):
 
 @router.get("/public-calendar")
 def get_public_calendar(db: Session = Depends(get_db)):
-    # 🚀 THE FIX: We join the Leave table with the User table
+    # ðŸš€ THE FIX: We join the Leave table with the User table
     # This allows us to grab the 'profile_pic_url' for each person away
     results = db.query(
         models.Leave, 
@@ -2562,7 +2954,7 @@ def get_public_calendar(db: Session = Depends(get_db)):
             "start_date": str(leave.start_date),
             "end_date": str(leave.end_date),
             "leave_type": leave.leave_type.value if hasattr(leave.leave_type, 'value') else str(leave.leave_type),
-            "profile_pic_url": profile_pic_url  # 📸 Now the frontend can see the face!
+            "profile_pic_url": profile_pic_url  # ðŸ“¸ Now the frontend can see the face!
         })
         
     return public_data
@@ -2574,7 +2966,7 @@ def get_global_audit_logs(db: Session = Depends(get_db)):
     
     formatted = []
     for l in results:
-        # 🚀 FIXED: Using the centralized helper to prevent 404s
+        # ðŸš€ FIXED: Using the centralized helper to prevent 404s
         full_attachment_url = _normalize_attachment_url(l.attachment_path)
 
         formatted.append({
@@ -2587,19 +2979,19 @@ def get_global_audit_logs(db: Session = Depends(get_db)):
             "end_date": l.end_date.strftime("%Y-%m-%d"),
             "status": l.status.value if hasattr(l.status, 'value') else str(l.status),
             "attachment_path": full_attachment_url,
-            "status_history": convert_utc_string_to_kl(l.status_history) # 👈 Fixed
+            "status_history": convert_utc_string_to_kl(l.status_history) # ðŸ‘ˆ Fixed
         })
     
     return formatted
 
-# 2. 🚀 BUG-FREE EDIT ROUTE
+# 2. ðŸš€ BUG-FREE EDIT ROUTE
 @router.put("/public-holidays/{holiday_id}")
 def update_public_holiday(
     holiday_id: int,
     name: str = Form(...),
     holiday_date: str = Form(...),
-    states: Optional[str] = Form(None), # 🟢 Catches edits safely!
-    db: Session = Depends(get_db)       # 🟢 CORRECT DEPENDENCY!
+    states: Optional[str] = Form(None), # ðŸŸ¢ Catches edits safely!
+    db: Session = Depends(get_db)       # ðŸŸ¢ CORRECT DEPENDENCY!
 ):
     holiday = db.query(models.PublicHoliday).filter(models.PublicHoliday.id == holiday_id).first()
     
@@ -2619,53 +3011,140 @@ def update_public_holiday(
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Update failed: {str(e)}")
     
-    # --- NEW: GLOBAL POLICY ENDPOINTS ---
+# --- GLOBAL POLICY ENDPOINTS ---
 
 @router.get("/admin/policy")
 def get_policy(db: Session = Depends(get_db)):
-    policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
+    """
+    Return the current global leave policy configuration.
+
+    Approval workflow switches:
+        - l1_enabled: Team Lead (L1)
+        - l2_enabled: Line Manager (L2)
+
+    Both switches default to False when no policy record exists.
+    """
+
+    policy = (
+        db.query(models.GlobalPolicy)
+        .filter(models.GlobalPolicy.id == 1)
+        .first()
+    )
+
     if not policy:
-        return {"annual": 14, "medical": 14, "emergency": 2, "compassionate": 3, "l2_enabled": False}
+        return {
+            "annual": 14,
+            "medical": 14,
+            "emergency": 2,
+            "compassionate": 3,
+            "l1_enabled": False,
+            "l2_enabled": False
+        }
+
     return {
         "annual": policy.annual_days,
         "medical": policy.medical_days,
         "emergency": policy.emergency_days,
         "compassionate": policy.compassionate_days,
-        "l2_enabled": policy.l2_approval_enabled
+        "l1_enabled": bool(policy.l1_approval_enabled),
+        "l2_enabled": bool(policy.l2_approval_enabled)
     }
 
+
 @router.post("/admin/policy")
-def update_policy(settings: dict = Body(...), db: Session = Depends(get_db)):
+def update_policy(
+    settings: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Update the global leave policy.
+
+    Existing entitlement configuration is preserved.
+
+    Approval workflow switches:
+        - l1_enabled -> Team Lead (L1)
+        - l2_enabled -> Line Manager (L2)
+
+    Both approval switches default to False when a policy record
+    needs to be created.
+    """
+
     # 1. Fetch or create the master policy record
-    policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
+    policy = (
+        db.query(models.GlobalPolicy)
+        .filter(models.GlobalPolicy.id == 1)
+        .first()
+    )
+
     if not policy:
-        # Initialize with hardcoded defaults if DB is empty
+        # Initialize with safe defaults if DB is empty.
+        # Both approval workflow levels are OFF by default
+        # to preserve the existing behavior.
         policy = models.GlobalPolicy(
-            id=1, 
-            annual_days=14.0, 
-            medical_days=14.0, 
-            emergency_days=2.0, 
+            id=1,
+            annual_days=14.0,
+            medical_days=14.0,
+            emergency_days=2.0,
             compassionate_days=3.0,
+            l1_approval_enabled=False,
             l2_approval_enabled=False
         )
         db.add(policy)
-    
-    # 2. Update Standard Days (Safely handle settings vs current DB values)
-    policy.annual_days = settings.get("annual", policy.annual_days)
-    policy.medical_days = settings.get("medical", policy.medical_days)
-    policy.emergency_days = settings.get("emergency", policy.emergency_days)
-    policy.compassionate_days = settings.get("compassionate", policy.compassionate_days)
 
-    # 3. Save L2 Switch State
+    # 2. Update Standard Leave Entitlements
+    #
+    # Preserve the existing None-safe behavior by using the
+    # current database value when a setting is not supplied.
+    policy.annual_days = settings.get(
+        "annual",
+        policy.annual_days
+    )
+
+    policy.medical_days = settings.get(
+        "medical",
+        policy.medical_days
+    )
+
+    policy.emergency_days = settings.get(
+        "emergency",
+        policy.emergency_days
+    )
+
+    policy.compassionate_days = settings.get(
+        "compassionate",
+        policy.compassionate_days
+    )
+
+    # 3. Update L1 Team Lead Workflow Switch
+    #
+    # Only change the value when the caller explicitly provides
+    # the setting. Otherwise preserve the existing database value.
+    if "l1_enabled" in settings:
+        policy.l1_approval_enabled = bool(
+            settings["l1_enabled"]
+        )
+
+    # 4. Update L2 Line Manager Workflow Switch
+    #
+    # Existing L2 behavior is intentionally preserved.
     if "l2_enabled" in settings:
-        policy.l2_approval_enabled = settings["l2_enabled"]
-    
-    # Commit policy changes first to ensure values are saved
+        policy.l2_approval_enabled = bool(
+            settings["l2_enabled"]
+        )
+
+    # Commit policy configuration first.
+    #
+    # This preserves the existing behavior where the policy itself
+    # is saved before employee leave balances are synchronized.
     db.commit()
     db.refresh(policy)
 
-    # 4. 🚀 SYNC LOGIC with None-Safety
+    # 5. Synchronize current-year LeaveBalance entitlements
+    #
+    # This is the existing synchronization behavior and is kept
+    # independent from the approval workflow switches.
     current_year = datetime.now().year
+
     sync_map = [
         ("Annual Leave", policy.annual_days),
         ("Medical Leave", policy.medical_days),
@@ -2674,18 +3153,33 @@ def update_policy(settings: dict = Body(...), db: Session = Depends(get_db)):
     ]
 
     for l_type_str, new_val in sync_map:
-        # 🛡️ THE FIX: Only attempt float conversion if new_val is not None
+
+        # Only attempt float conversion when a value exists.
         if new_val is not None:
             try:
                 db.query(models.LeaveBalance).filter(
                     models.LeaveBalance.year == current_year,
                     models.LeaveBalance.leave_type == l_type_str
-                ).update({"entitlement": float(new_val)}, synchronize_session=False)
+                ).update(
+                    {
+                        "entitlement": float(new_val)
+                    },
+                    synchronize_session=False
+                )
+
             except (ValueError, TypeError) as e:
-                print(f"⚠️ Sync skipped for {l_type_str}: Invalid value {new_val}")
-    
+                print(
+                    f"âš ï¸ Sync skipped for {l_type_str}: "
+                    f"Invalid value {new_val}"
+                )
+
+    # 6. Commit synchronized LeaveBalance changes
     db.commit()
-    return {"message": "Global policy updated and synced for all employees."}
+
+    return {
+        "message": "Global policy updated and synced for all employees."
+    }
+
 
 @router.post("/admin/adjust-individual")
 def adjust_individual_balance(
@@ -2790,7 +3284,7 @@ def adjust_individual_balance(
             new_values["compassionate_leave"] = new_val
 
          # ==========================================================
-    # 🔍 DEBUG: Verify why LeaveBalance lookup is failing
+    # ðŸ” DEBUG: Verify why LeaveBalance lookup is failing
     # ==========================================================
         print("\n========== LEAVEBALANCE DEBUG ==========")
         print(f"Searching for:")
@@ -2850,7 +3344,7 @@ def adjust_individual_balance(
             ))
 
     # =========================================================================
-    # 🛡️ CHANGE DETECTION GUARD: Prevent Duplicate / Redundant Entries
+    # ðŸ›¡ï¸ CHANGE DETECTION GUARD: Prevent Duplicate / Redundant Entries
     # =========================================================================
     if old_values == new_values:
         return JSONResponse(
@@ -2863,7 +3357,7 @@ def adjust_individual_balance(
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"❌ DB Adjustment Error: {e}")
+        print(f"âŒ DB Adjustment Error: {e}")
         raise HTTPException(status_code=500, detail="Database transaction failed during balance update.")
 
     # 8. Queue Background Email Dispatch
@@ -2886,7 +3380,7 @@ def adjust_individual_balance(
     }
 
 # ============================================================
-# 📊 HR ADMIN: REPORTING & AUDIT
+# ðŸ“Š HR ADMIN: REPORTING & AUDIT
 # ============================================================
 
 def ensure_leave_balance(db: Session, employee_name: str, year: int):
@@ -2915,13 +3409,13 @@ def ensure_leave_balance(db: Session, employee_name: str, year: int):
         ).first()
 
         if not type_exists:
-            # 🚀 Refinement: Explicitly set remaining = days so user starts with a full wallet
+            # ðŸš€ Refinement: Explicitly set remaining = days so user starts with a full wallet
             db.add(models.LeaveBalance(
                 employee_name=employee_name,
                 leave_type=l_type, 
                 year=year,
                 entitlement=float(days),
-                remaining=float(days), # 👈 Ensure this matches entitlement
+                remaining=float(days), # ðŸ‘ˆ Ensure this matches entitlement
                 carry_forward_total=0.0
             ))
     
@@ -2962,7 +3456,7 @@ def check_pending_l2(db: Session = Depends(get_db)):
     Finds all requests currently at the L2 stage. 
     Used by Admin to prevent 'orphaning' requests when turning L2 OFF.
     """
-    # 🚀 FIX: Query using the explicit string to match saved data
+    # ðŸš€ FIX: Query using the explicit string to match saved data
     pending = db.query(models.Leave).filter(
         models.Leave.status == "Pending L2 Approval"
     ).all()
@@ -2979,7 +3473,7 @@ def check_pending_l2(db: Session = Depends(get_db)):
 
 
 # =========================================================================
-# 🚀 HR ADMIN: CARRY FORWARD (CF) PROCESSING ENGINE
+# ðŸš€ HR ADMIN: CARRY FORWARD (CF) PROCESSING ENGINE
 # =========================================================================
 
 @router.get("/cf-processing-list")
@@ -3056,7 +3550,7 @@ def merge_cf_bulk(payload: dict = Body(...), db: Session = Depends(get_db)):
             origin_year = int(req.start_date.strftime("%Y") if req.start_date else datetime.now().year)
             target_year = origin_year + 1
             
-            # 🚀 FIX: Corrected attribute name 'year'
+            # ðŸš€ FIX: Corrected attribute name 'year'
             target_balance = db.query(models.LeaveBalance).filter(
                 models.LeaveBalance.employee_name == req.employee_name,
                 models.LeaveBalance.year == target_year,
@@ -3084,11 +3578,11 @@ def merge_cf_bulk(payload: dict = Body(...), db: Session = Depends(get_db)):
     return {"message": f"Successfully merged {merged_count} requests to next year's balance."}
 
 
-# 🧹 V1.5.0: The Carry-Forward "Grim Reaper" with Audit Trail
+# ðŸ§¹ V1.5.0: The Carry-Forward "Grim Reaper" with Audit Trail
 def check_and_wipe_expired_cf(db: Session):
     today = date.today()
 
-    # 🚀 THE FIX: Target the exact row key
+    # ðŸš€ THE FIX: Target the exact row key
     setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "cf_expiry_date").first()
 
     if not setting or not setting.value:
@@ -3104,10 +3598,10 @@ def check_and_wipe_expired_cf(db: Session):
     except:
         return
 
-    # 2. 🛑 THE KILL SWITCH: If today is AFTER the deadline
+    # 2. ðŸ›‘ THE KILL SWITCH: If today is AFTER the deadline
     if today > expiry_date:
         # Find all balances for the current year that still have CF days > 0
-        # 🔒 Lock the balance rows while processing to prevent duplicate cleanup
+        # ðŸ”’ Lock the balance rows while processing to prevent duplicate cleanup
         # when multiple dashboard/balance requests arrive at the same time.
         expired_records = (
             db.query(models.LeaveBalance)
@@ -3120,7 +3614,7 @@ def check_and_wipe_expired_cf(db: Session):
         )
 
         if expired_records:
-            # 🚀 FIXED: Call the local timestamp helper to enforce KL (UTC+8) time
+            # ðŸš€ FIXED: Call the local timestamp helper to enforce KL (UTC+8) time
             timestamp = get_utc_timestamp()
 
             for record in expired_records:
@@ -3153,10 +3647,10 @@ def check_and_wipe_expired_cf(db: Session):
 
             # Don't forget to commit outside the loop to keep the transaction efficient!
             db.commit()
-            print(f"🕒 {today}: Cleanup complete. {len(expired_records)} wallets emptied.")
+            print(f"ðŸ•’ {today}: Cleanup complete. {len(expired_records)} wallets emptied.")
 
 # ============================================================
-# 🛠️ ACTIVITY LOG HELPER (STEP 2)
+# ðŸ› ï¸ ACTIVITY LOG HELPER (STEP 2)
 # ============================================================
 def log_activity(db: Session, user_id: int, action_type: str, category: str, message: str, reference_id: int = None, actor_id: int = None):
     """
@@ -3177,10 +3671,10 @@ def log_activity(db: Session, user_id: int, action_type: str, category: str, mes
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"⚠️ Activity Log Error: {e}")
+        print(f"âš ï¸ Activity Log Error: {e}")
 
 # ============================================================
-# 📊 DASHBOARD FEED (FIXED: SHOW LATEST ACTIONS FIRST)
+# ðŸ“Š DASHBOARD FEED (FIXED: SHOW LATEST ACTIONS FIRST)
 # ============================================================
 @router.get("/activity-feed")
 def get_activity_feed(employee_name: str, db: Session = Depends(get_db)):
@@ -3200,7 +3694,7 @@ def get_activity_feed(employee_name: str, db: Session = Depends(get_db)):
     if not user:
         return []
 
-    # 🛡️ 2. THE FIX: Sort by DESC (Descending) 
+    # ðŸ›¡ï¸ 2. THE FIX: Sort by DESC (Descending) 
     # This ensures the newest actions appear at the top and aren't buried.
     logs = db.query(models.ActivityLog).filter(
         models.ActivityLog.user_id == user.id,
@@ -3245,7 +3739,7 @@ def send_balance_adjustment_email(
 ):
     """Sends a formatted HTML notification email for balance adjustments in the background."""
     if not employee_email:
-        print("⚠️ Employee email not found. Skipping adjustment notification.")
+        print("âš ï¸ Employee email not found. Skipping adjustment notification.")
         return
 
     try:
@@ -3293,7 +3787,7 @@ def send_balance_adjustment_email(
         
         # Dispatch using your existing send_email utility via background tasks
         background_tasks.add_task(send_email, employee_email, subject, html_content)
-        print(f"📧 Adjustment email queued for background dispatch to: {employee_email}")
+        print(f"ðŸ“§ Adjustment email queued for background dispatch to: {employee_email}")
 
     except Exception as e:
-        print(f"❌ Failed to queue adjustment email: {e}")
+        print(f"âŒ Failed to queue adjustment email: {e}")

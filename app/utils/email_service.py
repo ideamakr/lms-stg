@@ -1,4 +1,4 @@
-import smtplib
+﻿import smtplib
 import re
 import os
 import json
@@ -7,15 +7,15 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # ---------------------------------------------------------
-# ⚙️ CONFIGURATION (Synchronized with .env)
+# âš™ï¸ CONFIGURATION (Synchronized with .env)
 # ---------------------------------------------------------
 USE_MOCK_EMAIL = False 
 
-# 🔑 BREVO API V3 KEY 
+# ðŸ”‘ BREVO API V3 KEY 
 # Updated to match the "BREVO_API_KEY" name found in your .env file
 API_KEY = os.getenv("BREVO_API_KEY")
 
-# 🚀 THE VERIFIED SENDER 
+# ðŸš€ THE VERIFIED SENDER 
 # Pulls from .env if available, otherwise defaults to your verified gmail
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
 
@@ -25,28 +25,28 @@ def send_email(to_email: str, subject: str, body: str):
     Sends a professional HTML email using Brevo HTTP API.
     Bypasses cloud provider SMTP port restrictions (Port 587/465) for Staging/Production.
     """
-    # 🛡️ Safety Guard
+    # ðŸ›¡ï¸ Safety Guard
     if not to_email or to_email == "---" or "@" not in str(to_email):
-        print(f"⚠️ Skipping email: Invalid recipient address '{to_email}'")
+        print(f"âš ï¸ Skipping email: Invalid recipient address '{to_email}'")
         return False
 
-    # 🔑 CONFIGURATION SYNC WITH SMART FALLBACK
-    # 🎯 FIX: Looks for BREVO_API_KEY first; if empty, automatically grabs BREVO_SMTP_PASS!
+    # ðŸ”‘ CONFIGURATION SYNC WITH SMART FALLBACK
+    # ðŸŽ¯ FIX: Looks for BREVO_API_KEY first; if empty, automatically grabs BREVO_SMTP_PASS!
     current_api_key = os.getenv("BREVO_API_KEY") or os.getenv("BREVO_SMTP_PASS")
     current_sender = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
 
-    # 🌐 System URL - Environment controlled
+    # ðŸŒ System URL - Environment controlled
     # Production / Staging URL is supplied through .env
     SYSTEM_URL = os.getenv("CLIENT_DOMAIN", "http://127.0.0.1:8000").rstrip("/") + "/"
 
-    # 🛑 Crash Prevention Guard
+    # ðŸ›‘ Crash Prevention Guard
     if not current_api_key:
-        print("❌ API ERROR: Could not find any Brevo Key in your .env file (Checked BREVO_API_KEY and BREVO_SMTP_PASS)")
+        print("âŒ API ERROR: Could not find any Brevo Key in your .env file (Checked BREVO_API_KEY and BREVO_SMTP_PASS)")
         return False
 
     if USE_MOCK_EMAIL:
         print("\n" + "="*60)
-        print(f"📧 [MOCK EMAIL SERVICE] 📧")
+        print(f"ðŸ“§ [MOCK EMAIL SERVICE] ðŸ“§")
         print(f"To:      {to_email}")
         print(f"Subject: {subject}")
         print("-" * 60)
@@ -55,7 +55,7 @@ def send_email(to_email: str, subject: str, body: str):
         return True
 
     try:
-        # 🎨 THE MAGIC WRAPPER (HTML & BUTTON)
+        # ðŸŽ¨ THE MAGIC WRAPPER (HTML & BUTTON)
         formatted_body = body.replace('\n', '<br>').replace('--------------------------------', '<hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0;">')
         
         html_content = f"""
@@ -99,20 +99,20 @@ def send_email(to_email: str, subject: str, body: str):
 
         with urllib.request.urlopen(req) as response:
             if response.getcode() in [200, 201, 202]:
-                print(f"✅ Real Email sent successfully to {to_email} via HTTP API Web Request")
+                print(f"âœ… Real Email sent successfully to {to_email} via HTTP API Web Request")
                 return True
             
     except Exception as e:
         try:
             error_detail = e.read().decode('utf-8')
-            print(f"❌ Brevo API Error: {error_detail}")
+            print(f"âŒ Brevo API Error: {error_detail}")
         except:
-            print(f"❌ Failed to send real email via HTTP API: {e}")
+            print(f"âŒ Failed to send real email via HTTP API: {e}")
         return False
     
 
 # ---------------------------------------------------------
-# 📝 TEMPLATE HELPERS (Keep your existing templates below)
+# ðŸ“ TEMPLATE HELPERS (Keep your existing templates below)
 # ---------------------------------------------------------
 
 def template_new_user(name, username, password):
@@ -135,7 +135,7 @@ HR Team
 
 def template_new_request(manager_name, employee_name, type, start, end, days, admin_name=None):
     """
-    🚀 FIXED: Added 'admin_name' as the 7th argument to prevent the error.
+    ðŸš€ FIXED: Added 'admin_name' as the 7th argument to prevent the error.
     """
     # Create a note only if Natasha/Admin applied on behalf of someone
     admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
@@ -167,7 +167,7 @@ Good news! Your leave request has been APPROVED.
 Approver:   {manager_name}
 Type:       {type}
 Dates:      {start} to {end}
-Status:     ✅ APPROVED
+Status:     âœ… APPROVED
 --------------------------------
 
 Your leave balance has been deducted accordingly.
@@ -178,7 +178,7 @@ Leave System
 
 def template_request_rejected(employee_name, manager_name, type, start, end, remarks):
     """
-    🚀 UPDATED: Named 'remarks' to match leave.py and added a fallback for empty notes.
+    ðŸš€ UPDATED: Named 'remarks' to match leave.py and added a fallback for empty notes.
     """
     return f"""
 Hi {employee_name},
@@ -189,7 +189,7 @@ Your leave request has been REJECTED.
 Approver:   {manager_name}
 Type:       {type}
 Dates:      {start} to {end}
-Status:     ❌ REJECTED
+Status:     âŒ REJECTED
 Remarks:    {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
@@ -260,19 +260,19 @@ def template_l2_request(l2_manager_name, l1_manager_name, employee_name, type, s
     return f"""
 Hi {l2_manager_name},
 
-Action Required: Final Approval Needed (L2)
+Action Required: Level 2 Approval Needed (L2)
 
 {l1_manager_name} has completed the first level approval for {employee_name}.
-This request now requires your final sign-off as Department Head.
+This request now requires your Level 2 approval.
 
 --------------------------------
 Employee:   {employee_name}
 Leave Type: {type}
 Dates:      {start} to {end}
-L1 Status:  ✅ Approved by {l1_manager_name}
+L1 Status:  âœ… Approved by {l1_manager_name}
 --------------------------------
 
-Please log in to the Manager Dashboard to finalize this request.
+Please log in to the Manager Dashboard to review and approve this request.
 
 Best regards,
 Leave System
@@ -298,7 +298,7 @@ This request now requires your approval as the HOD.
 Employee:   {employee_name}
 Leave Type: {type}
 Dates:      {start} to {end}
-L2 Status:  ✅ Approved by {l2_manager_name}
+L2 Status:  âœ… Approved by {l2_manager_name}
 --------------------------------
 
 Please log in to the Manager Dashboard to review and approve this request.
@@ -310,7 +310,7 @@ Leave System
 
 def template_new_ot_request(manager_name, employee_name, ot_type, ot_date, duration, admin_name=None):
     """
-    🚀 FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
+    ðŸš€ FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
     """
     # Create a note only if Natasha/Admin applied on behalf of someone
     admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
@@ -333,8 +333,8 @@ Leave System
 """
 
 def template_ot_decision(employee_name, manager_name, status, ot_type, ot_date, remarks):
-    # 🚀 Use .upper() to ensure the icon works even if 'status' is lowercase
-    icon = "✅" if status.upper() == "APPROVED" else "❌"
+    # ðŸš€ Use .upper() to ensure the icon works even if 'status' is lowercase
+    icon = "âœ…" if status.upper() == "APPROVED" else "âŒ"
     
     return f"""
 Hi {employee_name},
@@ -368,7 +368,7 @@ Employee:   {employee_name}
 OT Type:    {ot_type}
 Date:       {ot_date}
 Duration:   {duration}
-L1 Status:  ✅ Approved by {l1_manager_name}
+L1 Status:  âœ… Approved by {l1_manager_name}
 --------------------------------
 
 Please log in to the Manager Dashboard to finalize this request.
@@ -378,7 +378,7 @@ Leave System
 """
 
 # ---------------------------------------------------------
-# 🚀 CANCELLATION WORKFLOW TEMPLATES
+# ðŸš€ CANCELLATION WORKFLOW TEMPLATES
 # ---------------------------------------------------------
 
 def template_cancellation_request(manager_name, employee_name, type, start, end, reason):
@@ -434,7 +434,7 @@ Your request to CANCEL your leave has been APPROVED.
 Approved By: {manager_name}
 Type:        {type}
 Dates:       {start} to {end}
-Status:      ✅ CANCELLED (Balance Restored)
+Status:      âœ… CANCELLED (Balance Restored)
 --------------------------------
 
 Best regards,
@@ -451,7 +451,7 @@ Your request to CANCEL your leave was DENIED. The leave remains valid and active
 Denied By:   {manager_name}
 Type:        {type}
 Dates:       {start} to {end}
-Status:      ⚠️ CANCELLATION REJECTED
+Status:      âš ï¸ CANCELLATION REJECTED
 Remarks:     {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
@@ -460,13 +460,13 @@ Leave System
 """
 
 # ---------------------------------------------------------
-# 🏥 MEDICAL & SECURITY TEMPLATES
+# ðŸ¥ MEDICAL & SECURITY TEMPLATES
 # ---------------------------------------------------------
 
 def template_medical_request(manager_name, employee_name, start, end, days, admin_name=None):
     """
     Specific template for Medical Leaves.
-    🚀 FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
+    ðŸš€ FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
     """
     # Create a note only if Natasha/Admin applied on behalf of someone
     admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
@@ -477,7 +477,7 @@ Hi {manager_name},
 Action Required: Medical Leave Reported{admin_note}
 --------------------------------
 Employee:   {employee_name}
-Type:       Medical Leave 🚑
+Type:       Medical Leave ðŸš‘
 Duration:   {days} Day(s)
 Dates:      {start} to {end}
 --------------------------------
@@ -496,8 +496,8 @@ We received a request to recover your account credentials.
 
 --------------------------------
 Account Recovery Details:
-• Username:      {username}
-• Temp Password: {temp_password}
+â€¢ Username:      {username}
+â€¢ Temp Password: {temp_password}
 --------------------------------
 
 Please log in using the credentials above. We highly recommend that you immediately navigate to your profile and change this to a secure password of your choice.
@@ -562,7 +562,7 @@ Good news! Your Carry Forward request has been APPROVED.
 --------------------------------
 Approver:   {manager_name}
 Days Approved: {days} Days
-Status:     ✅ APPROVED
+Status:     âœ… APPROVED
 --------------------------------
 
 The requested days will be moved to your balance for the upcoming year.
@@ -579,7 +579,7 @@ Your Carry Forward request has been REJECTED.
 
 --------------------------------
 Approver:   {manager_name}
-Status:     ❌ REJECTED
+Status:     âŒ REJECTED
 Remarks:    {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
@@ -596,7 +596,7 @@ Your request to CANCEL your Carry Forward request has been APPROVED.
 --------------------------------
 Approved By: {manager_name}
 Days:        {days} Days
-Status:      ✅ CF CANCELLATION APPROVED
+Status:      âœ… CF CANCELLATION APPROVED
 --------------------------------
 
 Best regards,
@@ -611,7 +611,7 @@ Your request to CANCEL your Carry Forward request was DENIED.
 
 --------------------------------
 Denied By:   {manager_name}
-Status:      ⚠️ CF CANCELLATION REJECTED
+Status:      âš ï¸ CF CANCELLATION REJECTED
 Remarks:     {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 

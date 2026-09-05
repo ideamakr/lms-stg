@@ -216,10 +216,11 @@ class GlobalPolicy(Base):
     medical_days = Column(Integer, default=14)
     emergency_days = Column(Integer, default=2)
     compassionate_days = Column(Integer, default=3)
-    
-    # 🚀 Master Switch for L2 Workflow
+
+    # Approval Workflow Configuration
+    l1_approval_enabled = Column(Boolean, default=False)
     l2_approval_enabled = Column(Boolean, default=False)
-    
+
     # 🔒 SYSTEM CAPACITY CONSTRAINTS
     max_seats = Column(Integer, default=0)
     registration_lock = Column(Boolean, default=False)
