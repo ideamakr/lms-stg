@@ -167,7 +167,7 @@ Good news! Your leave request has been APPROVED.
 Approver:   {manager_name}
 Type:       {type}
 Dates:      {start} to {end}
-Status:     âœ… APPROVED
+Status:     APPROVED
 --------------------------------
 
 Your leave balance has been deducted accordingly.
@@ -269,7 +269,7 @@ This request now requires your Level 2 approval.
 Employee:   {employee_name}
 Leave Type: {type}
 Dates:      {start} to {end}
-L1 Status:  âœ… Approved by {l1_manager_name}
+L1 Status:  Approved by {l1_manager_name}
 --------------------------------
 
 Please log in to the Manager Dashboard to review and approve this request.
@@ -298,7 +298,7 @@ This request now requires your approval as the HOD.
 Employee:   {employee_name}
 Leave Type: {type}
 Dates:      {start} to {end}
-L2 Status:  âœ… Approved by {l2_manager_name}
+L2 Status:  Approved by {l2_manager_name}
 --------------------------------
 
 Please log in to the Manager Dashboard to review and approve this request.
@@ -368,7 +368,7 @@ Employee:   {employee_name}
 OT Type:    {ot_type}
 Date:       {ot_date}
 Duration:   {duration}
-L1 Status:  âœ… Approved by {l1_manager_name}
+L1 Status:  Approved by {l1_manager_name}
 --------------------------------
 
 Please log in to the Manager Dashboard to finalize this request.
@@ -434,7 +434,7 @@ Your request to CANCEL your leave has been APPROVED.
 Approved By: {manager_name}
 Type:        {type}
 Dates:       {start} to {end}
-Status:      âœ… CANCELLED (Balance Restored)
+Status:      CANCELLED (Balance Restored)
 --------------------------------
 
 Best regards,
@@ -562,7 +562,7 @@ Good news! Your Carry Forward request has been APPROVED.
 --------------------------------
 Approver:   {manager_name}
 Days Approved: {days} Days
-Status:     âœ… APPROVED
+Status:     APPROVED
 --------------------------------
 
 The requested days will be moved to your balance for the upcoming year.
@@ -596,7 +596,7 @@ Your request to CANCEL your Carry Forward request has been APPROVED.
 --------------------------------
 Approved By: {manager_name}
 Days:        {days} Days
-Status:      âœ… CF CANCELLATION APPROVED
+Status:      CF CANCELLATION APPROVED
 --------------------------------
 
 Best regards,

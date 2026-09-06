@@ -1261,12 +1261,26 @@ async def cancel_leave_request(
         leave.status_history = (leave.status_history or "") + f"\n > Cancellation Requested by Employee{reason_text} ({timestamp})"
         msg = "Cancellation request sent to manager for review."
 
-        # ðŸš€ EMAIL NOTIFICATION
-        # Ensure we look up by approver name or fallback safely
+        # 🚀 EMAIL NOTIFICATION
+        # Cancellation starts with the ORIGINAL L1 Team Lead.
+        # Use the captured approver_l1_id as the source of truth.
+        # Fall back to approver_l1 name only for older records without the ID.
         manager = None
-        if leave.approver_name:
-            manager = db.query(models.User).filter(models.User.full_name == leave.approver_name).first()
-        
+
+        if leave.approver_l1_id:
+            manager = (
+                db.query(models.User)
+                .filter(models.User.id == leave.approver_l1_id)
+                .first()
+            )
+
+        if not manager and leave.approver_l1:
+            manager = (
+                db.query(models.User)
+                .filter(models.User.full_name == leave.approver_l1)
+                .first()
+            )
+
         if manager and manager.email:
             # 1. Determine if this is a Carry Forward request
             is_cf = "[CARRY FORWARD:" in (leave.reason or "").upper()
@@ -1716,21 +1730,23 @@ async def approve_leave(
             )
 
             # -----------------------------------------------------------------
-            # L1 Cancellation Approval -> L2
+            # L1 Cancellation Approval -> original L2 Line Manager
             # -----------------------------------------------------------------
             if (
                 leave.status == "Pending Cancel"
                 and not is_hr_admin
                 and l2_active
                 and is_l1
-                and not is_senior
-                and leave.approver_l2
+                and leave.approver_id
                 and not is_superuser_override
             ):
 
-                l2_user = _find_user_by_name_or_username(
-                    db,
-                    leave.approver_l2
+                # Use the ORIGINAL captured L2 approver from approver_id.
+                # Do not recalculate or allow a new approver selection.
+                l2_user = (
+                    db.query(models.User)
+                    .filter(models.User.id == leave.approver_id)
+                    .first()
                 )
 
                 if l2_user and l2_user.is_active:
@@ -1740,7 +1756,7 @@ async def approve_leave(
                     leave.status_history += (
                         f" > L1 Approved Cancellation by "
                         f"{display_approver}. "
-                        f"Routed to {leave.approver_l2} "
+                        f"Routed to {l2_user.full_name} "
                         f"({timestamp}){note_str}"
                     )
 
@@ -1755,15 +1771,66 @@ async def approve_leave(
                     raise HTTPException(
                         status_code=400,
                         detail=(
-                            "L2 approver could not be found "
+                            "Original L2 approver could not be found "
                             "or is inactive."
                         )
                     )
 
             # -----------------------------------------------------------------
-            # Cancellation Final Approval
+            # L2 Cancellation Approval -> original HOD / L3
             # -----------------------------------------------------------------
-            else:
+            elif (
+                leave.status == "Pending L2 Approval"
+                and not is_hr_admin
+                and l2_active
+                and is_l2
+                and leave.approver_l2_id
+                and not is_superuser_override
+            ):
+
+                # Use the ORIGINAL captured HOD / L3 approver.
+                # No new HOD selection is permitted during cancellation.
+                l3_user = (
+                    db.query(models.User)
+                    .filter(models.User.id == leave.approver_l2_id)
+                    .first()
+                )
+
+                if l3_user and l3_user.is_active:
+
+                    leave.status = "Pending L3 Approval"
+
+                    leave.status_history += (
+                        f" > L2 Approved Cancellation by "
+                        f"{display_approver}. "
+                        f"Routed to {l3_user.full_name} "
+                        f"({timestamp}){note_str}"
+                    )
+
+                    final_response_message = (
+                        "Cancellation approved by L2. "
+                        "Routed to HOD."
+                    )
+
+                    route_to_l3 = True
+
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Original HOD approver could not be found "
+                            "or is inactive."
+                        )
+                    )
+
+            # -----------------------------------------------------------------
+            # HOD / L3 Cancellation Approval -> Cancelled
+            # -----------------------------------------------------------------
+            elif (
+                leave.status == "Pending L3 Approval"
+                and is_l3
+                and not is_superuser_override
+            ):
 
                 leave.status = "Cancelled"
 
@@ -1775,6 +1842,15 @@ async def approve_leave(
 
                 final_response_message = (
                     "Cancellation finalized"
+                )
+
+            # -----------------------------------------------------------------
+            # Cancellation stage not handled
+            # -----------------------------------------------------------------
+            else:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You are not authorized for this cancellation stage."
                 )
 
         else:
@@ -2347,7 +2423,7 @@ async def approve_leave(
                         )
 
                         subject = (
-                            "âœ… Carry Forward "
+                            "Carry Forward "
                             "Cancellation Approved"
                         )
 
@@ -2362,7 +2438,7 @@ async def approve_leave(
                         )
 
                         subject = (
-                            "âœ… Leave Cancellation Approved"
+                            "Leave Cancellation Approved"
                         )
 
                 elif is_cf:
@@ -2374,7 +2450,7 @@ async def approve_leave(
                     )
 
                     subject = (
-                        "âœ… Carry Forward "
+                        "Carry Forward "
                         "Request Approved"
                     )
 
@@ -2389,7 +2465,7 @@ async def approve_leave(
                     )
 
                     subject = (
-                        f"âœ… Leave Request Approved - "
+                        f"Leave Request Approved - "
                         f"{l_type_str}"
                     )
 
@@ -2421,7 +2497,7 @@ async def approve_leave(
                     )
 
                     subject = (
-                        "âš ï¸ Carry Forward "
+                        "Carry Forward "
                         "Cancellation Rejected"
                     )
 
@@ -2438,7 +2514,7 @@ async def approve_leave(
                     )
 
                     subject = (
-                        "âš ï¸ Leave Cancellation Rejected"
+                        "Leave Cancellation Rejected"
                     )
 
             elif is_cf:
@@ -2451,7 +2527,7 @@ async def approve_leave(
                 )
 
                 subject = (
-                    "âŒ Carry Forward "
+                    "Carry Forward "
                     "Request Rejected"
                 )
 
@@ -2468,7 +2544,7 @@ async def approve_leave(
                 )
 
                 subject = (
-                    f"âŒ Leave Request Rejected - "
+                    f"Leave Request Rejected - "
                     f"{l_type_str}"
                 )
 
@@ -2481,7 +2557,7 @@ async def approve_leave(
 
     except Exception as e:
         print(
-            f"âš ï¸ Activity/Email Error: {e}"
+            f"[WARNING] Activity/Email Error: {e}"
         )
 
     return {
