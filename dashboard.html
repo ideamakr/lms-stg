@@ -13164,7 +13164,7 @@ function sortAndRenderHistory() {
 
         // PRIORITY 2: Normal approval stages
         else if (cleanStatus.includes("l2")) {
-            statusLabel = "Final Approval";
+            statusLabel = "Pending L2 Approval";
             // ðŸŽ¨ Purple Style for Employee History View
             customStyle =
                 "background: #f5f3ff !important; color: #8b5cf6 !important; border: 1px solid #c4b5fd !important;";
@@ -13920,7 +13920,7 @@ function viewLeaveDetails(leave) {
         }
 
     } else if (rawStatus === "Pending L2 Approval") {
-        statusLabel = "Final Approval";
+        statusLabel = "Pending L2 Approval";
         statusColor = "#8b5cf6";
 
     } else if (rawStatus === "Pending L3 Approval") {
@@ -14087,7 +14087,7 @@ content.innerHTML = `
                 ? "Rejected By"
                 : leave.status === "Pending L2 Approval" &&
                   !String(leave.status_history || "").includes("Cancellation")
-                    ? "Final Approver"
+                    ? "Current Approver"
                     : "Current Approver"}
     </label><br>
 
@@ -17079,9 +17079,14 @@ function changeMgrHistoryPage(direction) {
         statusText = "PENDING HOD CANCELLATION";
         statusColor = "#c2410c";
     }
-    else if (statusText.includes("L2")) {
-        badgeClass = "status-pending-l2-approval";
-        statusText = "PENDING L2 APPROVAL";
+    else if (statusText.includes("L3")) {
+        badgeClass = "status-pending-l3-approval";
+        statusText = "PENDING L3 APPROVAL";
+        statusColor = "#2563eb";
+    }
+    else if (statusText.includes("REJECT")) {
+        badgeClass = "status-rejected";
+        statusColor = "#ef4444";
     }
     else if (statusText.includes("REJECT")) {
         badgeClass = "status-rejected";

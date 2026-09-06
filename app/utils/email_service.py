@@ -451,7 +451,7 @@ Your request to CANCEL your leave was DENIED. The leave remains valid and active
 Denied By:   {manager_name}
 Type:        {type}
 Dates:       {start} to {end}
-Status:      âš ï¸ CANCELLATION REJECTED
+Status:      CANCELLATION REJECTED
 Remarks:     {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
@@ -611,7 +611,7 @@ Your request to CANCEL your Carry Forward request was DENIED.
 
 --------------------------------
 Denied By:   {manager_name}
-Status:      âš ï¸ CF CANCELLATION REJECTED
+Status:      CF CANCELLATION REJECTED
 Remarks:     {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
