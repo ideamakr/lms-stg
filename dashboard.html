@@ -7794,7 +7794,7 @@ html.dark #card_unpaid {
                     <select id="mgr_ot_filter_status" onchange="loadManagerOTRequests()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: #1e293b;">
                         <option value="">Needs Attention (All)</option>
                         <option value="Pending">Pending L1 Only</option>
-                        <option id="opt_ot_l2_pending" value="Pending L2 Approval">Final Approval</option>
+                        <option id="opt_ot_l2_pending" value="Pending L2 Approval">Pending L2 Approval</option>
                         <option value="Pending Cancel">Pending Cancellations</option>
                         <hr>
                         <option value="Approved">Approved History</option>
@@ -9585,7 +9585,7 @@ html.dark #card_unpaid {
                 letter-spacing:.2px;
                 font-weight:500;
             ">
-                Leave Balance â€¢ Activity History
+                Leave Balance Activity History
             </div>
 
         </div>
@@ -11137,7 +11137,7 @@ const getApiUrl = () => {
 // Define once. Use "const" so it cannot be changed later.
 const API_URL = getApiUrl();
 
-console.log("ðŸŒ System Handshake confirmed with:", API_URL);
+console.log("🌐 System Handshake confirmed with:", API_URL);
 
 // ============================================================
 // ðŸ›¡ï¸ UNIVERSAL IDENTITY RESOLVER (0-BUG SECURITY)
@@ -13131,38 +13131,67 @@ function sortAndRenderHistory() {
         const isOT = item.record_type === "OT";
         const itemData = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
 
-        // ðŸš€ 2. THE HARDENED ALIAS ENGINE (The Merged Fix)
-        // We trim and lowercase to catch database strings with hidden spaces
-        const rawStatus = (item.status || "Pending").trim();
-        const cleanStatus = rawStatus.toLowerCase();
-        
-        let statusLabel = rawStatus;
-        let customStyle = "";
+    // 🚀 2. THE HARDENED ALIAS ENGINE (The Merged Fix)
+    // We trim and lowercase to catch database strings with hidden spaces
+    const rawStatus = (item.status || "Pending").trim();
+    const cleanStatus = rawStatus.toLowerCase();
 
-        // PRIORITY 1: Cancellation stages
-        if (!isOT && rawStatus === "Pending Cancel") {
-            statusLabel = "Pending L1 Cancellation";
-            customStyle =
-                "background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fed7aa !important;";
-        } else if (
-            !isOT &&
-            rawStatus === "Pending L2 Approval" &&
-            String(item.status_history || "").includes("Cancellation")
-        ) {
-            statusLabel = "Pending L2 Cancellation";
-            customStyle =
-                "background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fed7aa !important;";
-        } else if (
-            !isOT &&
-            rawStatus === "Pending L3 Approval" &&
-            String(item.status_history || "").includes("Cancellation")
-        ) {
-            statusLabel = "Pending HOD Cancellation";
-            customStyle =
-                "background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fed7aa !important;";
-        }
+    let statusLabel = rawStatus;
+    let customStyle = "";
 
-        // PRIORITY 2: Normal approval stages
+    if (rawStatus === "Pending") {
+        statusLabel = "Pending L1";
+    }
+
+    // PRIORITY 1: Cancellation stages
+
+    // OT cancellation
+    if (isOT && rawStatus === "Pending Cancel") {
+        statusLabel = "Pending L1 Cancellation";
+        customStyle =
+            "background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important;";
+    } else if (
+        isOT &&
+        rawStatus === "Pending L2 Approval" &&
+        String(item.status_history || "").includes("Cancellation")
+    ) {
+        statusLabel = "Pending L2 Cancellation";
+        customStyle =
+            "background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important;";
+    } else if (
+        isOT &&
+        rawStatus === "Pending L3 Approval" &&
+        String(item.status_history || "").includes("Cancellation")
+    ) {
+        statusLabel = "Pending HOD Cancellation";
+        customStyle =
+            "background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important;";
+    }
+
+    // Leave cancellation — EXISTING LOGIC, DO NOT CHANGE
+    else if (!isOT && rawStatus === "Pending Cancel") {
+        statusLabel = "Pending L1 Cancellation";
+        customStyle =
+            "background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fed7aa !important;";
+    } else if (
+        !isOT &&
+        rawStatus === "Pending L2 Approval" &&
+        String(item.status_history || "").includes("Cancellation")
+    ) {
+        statusLabel = "Pending L2 Cancellation";
+        customStyle =
+            "background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fed7aa !important;";
+    } else if (
+        !isOT &&
+        rawStatus === "Pending L3 Approval" &&
+        String(item.status_history || "").includes("Cancellation")
+    ) {
+        statusLabel = "Pending HOD Cancellation";
+        customStyle =
+            "background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fed7aa !important;";
+    }
+
+    // PRIORITY 2: Normal approval stages
         else if (cleanStatus.includes("l2")) {
             statusLabel = "Pending L2 Approval";
             // ðŸŽ¨ Purple Style for Employee History View
@@ -13894,7 +13923,7 @@ function viewLeaveDetails(leave) {
 
     modal.querySelector("h3").innerHTML = `<i class="fas fa-info-circle"></i> ${modalTitleText}`;
 
-    // ðŸš€ THE ALIAS LOGIC (Fixed for Render)
+    // 🚀 THE ALIAS LOGIC (Fixed for Render)
     const rawStatus = leave.status || "Pending";
     const isCancellationJourney =
         rawStatus === "Pending Cancel" ||
@@ -13916,20 +13945,26 @@ function viewLeaveDetails(leave) {
         } else if (rawStatus === "Pending L3 Approval") {
             statusLabel = "Pending HOD Cancellation";
             statusColor = "#c2410c";
-
         }
+
+    } else if (rawStatus === "Pending") {
+        statusLabel = "Pending L1";
+        statusColor = "#f59e0b";
 
     } else if (rawStatus === "Pending L2 Approval") {
         statusLabel = "Pending L2 Approval";
         statusColor = "#8b5cf6";
 
     } else if (rawStatus === "Pending L3 Approval") {
+        statusLabel = "Pending L3 Approval";
         statusColor = "#2563eb";
 
     } else if (rawStatus === "Approved") {
+        statusLabel = "Approved";
         statusColor = "#10b981";
 
     } else if (rawStatus === "Rejected") {
+        statusLabel = "Rejected";
         statusColor = "#ef4444";
     }
 
@@ -15663,7 +15698,7 @@ function renderManagerQueueTable() {
                 isL2 ||
                 isL3
             )
-                ? "#c2410c"
+                ? "#1e40af"
                 : isL2
                     ? "#8b5cf6"
                     : isL3
@@ -15676,7 +15711,7 @@ function renderManagerQueueTable() {
                 isL2 ||
                 isL3
             )
-                ? "#fff7ed"
+                ? "#dbeafe"
                 : isL2
                     ? "#f5f3ff"
                     : isL3
@@ -16684,103 +16719,234 @@ async function loadTeamHistory(page = 1) {
 
     const rawStatus = (r.status || "Pending").trim();
 
-                // --- CURRENT APPROVER DISPLAY ---
-            // Leave uses the approval stage to determine the current/final approver.
-            // OT remains on its existing approver_name behavior.
-            let displayApprover = r.approver_name || "—";
+let displayApprover = "—";
 
-            const isCancellationJourney =
-                !isOT &&
-                (
-                    rawStatus === "Pending Cancel" ||
-                    String(r.status_history || "").includes("Cancellation")
-                );
+const isCancellationJourney =
+    rawStatus === "Pending Cancel" ||
+    String(r.status_history || "").includes("Cancellation");
 
-            if (!isOT) {
+if (isOT) {
 
-                if (rawStatus === "Pending Cancel") {
-                    // Cancellation starts with the ORIGINAL L1 Team Lead.
-                    displayApprover =
-                        r.approver_l1 || "Awaiting Assignment";
+    // ------------------------------------------------------------
+    // OVERTIME APPROVAL HIERARCHY
+    // ------------------------------------------------------------
+    // L1 = Team Lead       -> approver_l1_id
+    // L2 = Line Manager    -> approver_id
+    // L3 = HOD             -> approver_l2_id
+    //
+    // Cancellation always uses the ORIGINAL captured hierarchy.
+    // ------------------------------------------------------------
 
-                } else if (
-                    rawStatus === "Pending L2 Approval" &&
-                    isCancellationJourney
-                ) {
-                    // Cancellation L2 uses the ORIGINAL captured L2 Line Manager.
-                    displayApprover =
-                        r.approver_name || "Awaiting Assignment";
+    if (rawStatus === "Pending Cancel") {
 
-                } else if (
-                    rawStatus === "Pending L3 Approval" &&
-                    isCancellationJourney
-                ) {
-                    // Cancellation HOD uses the ORIGINAL captured HOD / L3 approver.
-                    displayApprover =
-                        (window.allUsersList || []).find(
-                            u => Number(u.id) === Number(r.approver_l2_id)
-                        )?.full_name ||
-                        r.approver_l2 ||
-                        "Awaiting Assignment";
+        // Cancellation starts with the ORIGINAL L1 Team Lead.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l1_id)
+            )?.full_name ||
+            r.approver_l1 ||
+            "Awaiting Assignment";
 
-                } else if (rawStatus === "Pending") {
-                    displayApprover =
-                        r.approver_l1 || "Awaiting Assignment";
+    } else if (
+        rawStatus === "Pending L2 Approval" &&
+        isCancellationJourney
+    ) {
 
-                } else if (rawStatus === "Pending L2 Approval") {
-                    displayApprover =
-                        r.approver_name || "Awaiting Assignment";
+        // Cancellation L2 uses the ORIGINAL captured L2 Line Manager.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_id)
+            )?.full_name ||
+            r.approver_name ||
+            "Awaiting Assignment";
 
-                } else if (rawStatus === "Pending L3 Approval") {
-                    displayApprover =
-                        (window.allUsersList || []).find(
-                            u => Number(u.id) === Number(r.approver_l2_id)
-                        )?.full_name ||
-                        r.approver_l2 ||
-                        "Awaiting Assignment";
+    } else if (
+        rawStatus === "Pending L3 Approval" &&
+        isCancellationJourney
+    ) {
 
-                } else if (rawStatus === "Approved") {
+        // Cancellation HOD uses the ORIGINAL captured HOD / L3 approver.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l2_id)
+            )?.full_name ||
+            r.approver_l2 ||
+            "Awaiting Assignment";
 
-                    displayApprover =
-                        (window.allUsersList || []).find(
-                            u => Number(u.id) === Number(r.approver_l2_id)
-                        )?.full_name ||
-                        r.approver_l2 ||
-                        r.approver_name ||
-                        r.approver_l1 ||
-                        "—";
+    } else if (rawStatus === "Pending") {
 
-                } else if (rawStatus === "Rejected") {
+        // Normal L1 = Team Lead.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l1_id)
+            )?.full_name ||
+            r.approver_l1 ||
+            "Awaiting Assignment";
 
-                    const rejectionHistory =
-                        String(r.status_history || "")
-                            .split(" > ")
-                            .map(step => step.trim())
-                            .reverse();
+    } else if (rawStatus === "Pending L2 Approval") {
 
-                    const rejectionEntry =
-                        rejectionHistory.find(
-                            step => /^Rejected by /i.test(step)
-                        );
+        // Normal L2 = Line Manager.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_id)
+            )?.full_name ||
+            r.approver_name ||
+            "Awaiting Assignment";
 
-                    const rejectionMatch =
-                        rejectionEntry
-                            ? rejectionEntry.match(
-                                /^Rejected by\s+(.+?)(?:\s*\(|\s*\||$)/i
-                            )
-                            : null;
+    } else if (rawStatus === "Pending L3 Approval") {
 
-                    displayApprover =
-                        rejectionMatch?.[1]?.trim() ||
-                        r.approver_name ||
-                        r.approver_l1 ||
-                        "—";
-                }
-            }
+        // Normal L3 = HOD.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l2_id)
+            )?.full_name ||
+            r.approver_l2 ||
+            "Awaiting Assignment";
+
+    } else if (rawStatus === "Approved") {
+
+        // Final approver = L3 / HOD.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l2_id)
+            )?.full_name ||
+            r.approver_l2 ||
+            r.approver_name ||
+            "—";
+
+    } else if (rawStatus === "Cancelled") {
+
+        // Final cancellation approver = ORIGINAL L3 / HOD.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l2_id)
+            )?.full_name ||
+            r.approver_l2 ||
+            "Awaiting Assignment";
+
+    } else if (rawStatus === "Rejected") {
+
+        // Show the actual person who rejected the OT.
+        const rejectionHistory =
+            String(r.status_history || "")
+                .split(" > ")
+                .map(step => step.trim())
+                .reverse();
+
+        const rejectionEntry =
+            rejectionHistory.find(
+                step => /^Rejected by /i.test(step)
+            );
+
+        const rejectionMatch =
+            rejectionEntry
+                ? rejectionEntry.match(
+                    /^Rejected by\s+(.+?)(?:\s*\(|\s*\||$)/i
+                )
+                : null;
+
+        displayApprover =
+            rejectionMatch?.[1]?.trim() ||
+            r.approver_name ||
+            r.approver_l1 ||
+            "—";
+    }
+
+} else {
+
+    if (rawStatus === "Pending Cancel") {
+
+        // Cancellation starts with the ORIGINAL L1 Team Lead.
+        displayApprover =
+            r.approver_l1 || "Awaiting Assignment";
+
+    } else if (
+        rawStatus === "Pending L2 Approval" &&
+        isCancellationJourney
+    ) {
+
+        // Cancellation L2 uses the ORIGINAL captured L2 Line Manager.
+        displayApprover =
+            r.approver_name || "Awaiting Assignment";
+
+    } else if (
+        rawStatus === "Pending L3 Approval" &&
+        isCancellationJourney
+    ) {
+
+        // Cancellation HOD uses the ORIGINAL captured HOD / L3 approver.
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l2_id)
+            )?.full_name ||
+            r.approver_l2 ||
+            "Awaiting Assignment";
+
+    } else if (rawStatus === "Pending") {
+
+        displayApprover =
+            r.approver_l1 || "Awaiting Assignment";
+
+    } else if (rawStatus === "Pending L2 Approval") {
+
+        displayApprover =
+            r.approver_name || "Awaiting Assignment";
+
+    } else if (rawStatus === "Pending L3 Approval") {
+
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l2_id)
+            )?.full_name ||
+            r.approver_l2 ||
+            "Awaiting Assignment";
+
+    } else if (rawStatus === "Approved") {
+
+        displayApprover =
+            (window.allUsersList || []).find(
+                u => Number(u.id) === Number(r.approver_l2_id)
+            )?.full_name ||
+            r.approver_l2 ||
+            r.approver_name ||
+            r.approver_l1 ||
+            "—";
+
+    } else if (rawStatus === "Rejected") {
+
+        const rejectionHistory =
+            String(r.status_history || "")
+                .split(" > ")
+                .map(step => step.trim())
+                .reverse();
+
+        const rejectionEntry =
+            rejectionHistory.find(
+                step => /^Rejected by /i.test(step)
+            );
+
+        const rejectionMatch =
+            rejectionEntry
+                ? rejectionEntry.match(
+                    /^Rejected by\s+(.+?)(?:\s*\(|\s*\||$)/i
+                )
+                : null;
+
+        displayApprover =
+            rejectionMatch?.[1]?.trim() ||
+            r.approver_name ||
+            r.approver_l1 ||
+            "—";
+    }
+}
 
             const cleanStatus = rawStatus.toLowerCase();
             let statusLabel = rawStatus;
             let customStyle = "";
+
+            if (rawStatus === "Pending") {
+                statusLabel = "Pending L1";
+            }
 
             if (!isOT && isCancellationJourney) {
 
@@ -17065,19 +17231,22 @@ function changeMgrHistoryPage(direction) {
     let statusColor = "#f59e0b"; // Orange
 
     if (currentStatus === "Pending Cancel") {
-        badgeClass = "status-pending-cancel";
-        statusText = "PENDING L1 CANCELLATION";
-        statusColor = "#c2410c";
+    badgeClass = "status-pending-cancel";
+    statusText = "PENDING L1 CANCELLATION";
+    statusColor = "#1e40af";
     }
     else if (currentStatus === "Pending L2 Approval" && isCancellationFlow) {
         badgeClass = "status-pending-cancel";
         statusText = "PENDING L2 CANCELLATION";
-        statusColor = "#c2410c";
+        statusColor = "#1e40af";
     }
     else if (currentStatus === "Pending L3 Approval" && isCancellationFlow) {
         badgeClass = "status-pending-cancel";
         statusText = "PENDING HOD CANCELLATION";
-        statusColor = "#c2410c";
+        statusColor = "#1e40af";
+    }
+    else if (currentStatus === "Pending") {
+        statusText = "PENDING L1";
     }
     else if (statusText.includes("L3")) {
         badgeClass = "status-pending-l3-approval";
@@ -17815,55 +17984,89 @@ async function submitDecision(leaveId, status) {
         const isL3Approval =
             currentStatus === "Pending L3 Approval";
 
-        // ------------------------------------------------------------
-        // 2. Read the selected L3 / HOD only for L2 approval
-        // ------------------------------------------------------------
+        const l2Container =
+            document.getElementById("l2SelectorContainer");
+
+        const l2Select =
+            document.getElementById("l2_manager_select");
+
+
+    // ------------------------------------------------------------
+    // 2. Read the selected L2 / Line Manager or L3 / HOD
+    // ------------------------------------------------------------
+    //
+    // L1 approval:
+    //     selectedL2 = employee-selected L2 Line Manager
+    //
+    // L2 approval:
+    //     selectedL3HOD = employee-selected L3 / HOD
+    //
+    // l2_name will be sent later only when L1 approves.
+    // l3_name will be sent later only when L2 approves.
+    //
+    let selectedL3HOD = "";
+    let selectedL2 = "";
+
+    // ------------------------------------------------------------
+    // 2A. Read the selected L2 / Line Manager for L1 approval
+    // ------------------------------------------------------------
+    //
+    // This follows the same logic as the OT approval flow.
+    //
+    // When L1 approves a Leave request, the selected L2
+    // Line Manager must be captured and carried forward.
+    //
+
+
+    // ------------------------------------------------------------
+    // 2B. Read the selected L3 / HOD for L2 approval
+    // ------------------------------------------------------------
+    //
+    // l2_name is NOT a general approval parameter.
+    //
+    // It is only used later when an L1 Line Manager approves
+    // and selects the next L2 approver.
+    //
+    // For L2 approval, selectedL3HOD is the next HOD approver.
+    //
+    if (
+        status === "Approved" &&
+        isL2Approval &&
+        !(currentLeave && currentLeave.status_history &&
+        (
+            currentLeave.status_history.includes("Cancellation Request") ||
+            currentLeave.status_history.includes("Request Cancellation") ||
+            currentStatus.includes("Cancel")
+        ))
+    ) {
+        const l3Select =
+            document.getElementById("l3_hod_select");
+
+        selectedL3HOD =
+            l3Select && l3Select.value
+                ? String(l3Select.value).trim()
+                : "";
+
+        // --------------------------------------------------------
+        // 2C. Require explicit HOD selection for L2 → L3
+        // --------------------------------------------------------
         //
-        // l2_name is NOT a general approval parameter.
+        // This prevents an L2 approval from being submitted
+        // without a valid next-level approver.
         //
-        // It is only used when an L2 Line Manager approves and
-        // selects the next L3/HOD approver.
-        //
-        let selectedL3HOD = "";
+        if (!selectedL3HOD) {
+            Swal.fire({
+                title: "Action Required",
+                text:
+                    "Please select a Level 3 / HOD approver before approving this request.",
+                icon: "warning",
+                confirmButtonColor: "#2563eb",
+                confirmButtonText: "OK"
+            });
 
-        if (
-            status === "Approved" &&
-            isL2Approval &&
-            !(currentLeave && currentLeave.status_history &&
-              (
-                currentLeave.status_history.includes("Cancellation Request") ||
-                currentLeave.status_history.includes("Request Cancellation") ||
-                currentStatus.includes("Cancel")
-              ))
-        ) {
-            const l3Select =
-                document.getElementById("l3_hod_select");
-
-            selectedL3HOD =
-                l3Select && l3Select.value
-                    ? String(l3Select.value).trim()
-                    : "";
-
-            // --------------------------------------------------------
-            // 3. Require explicit HOD selection for L2 â†’ L3
-            // --------------------------------------------------------
-            //
-            // This prevents an L2 approval from being submitted
-            // without a valid next-level approver.
-            //
-            if (!selectedL3HOD) {
-                Swal.fire({
-                    title: "Action Required",
-                    text:
-                        "Please select a Level 3 / HOD approver before approving this request.",
-                    icon: "warning",
-                    confirmButtonColor: "#2563eb",
-                    confirmButtonText: "OK"
-                });
-
-                return;
-            }
+            return;
         }
+    }
 
         // ------------------------------------------------------------
         // 4. Build approval action URL
@@ -17888,8 +18091,19 @@ async function submitDecision(leaveId, status) {
             `&approver_name=${encodeURIComponent(approverName)}`;
 
         // ------------------------------------------------------------
-        // 5. Send selected L3/HOD for L2 â†’ L3 routing
+        // 5. Send selected approver for next-level routing
         // ------------------------------------------------------------
+        //
+        // L1 approval:
+        //     Send selected L2 Line Manager as l2_name
+        //
+        // L2 approval:
+        //     Send selected L3 / HOD as l2_name
+        //
+        // This matches the existing Leave backend parameters.
+        //
+
+
         if (
             status === "Approved" &&
             isL2Approval &&
@@ -18187,13 +18401,15 @@ async function submitDecision(leaveId, status) {
             return;
         }
 
-        if (res.ok) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Request Submitted',
-                text: 'Your cancellation request has been sent to your Manager.',
-                confirmButtonColor: '#2563eb'
-            }).then(() => {
+    if (res.ok) {
+        if (typeof processedActionIds !== 'undefined') processedActionIds.delete(id);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Request Submitted',
+            text: 'Your cancellation request has been sent to your Manager.',
+            confirmButtonColor: '#2563eb'
+        }).then(() => {
                 // ðŸ”„ THE REFRESH FIX
                 if (typeof loadHistory === "function") {
                     // Safety check: Use global variables if they exist, otherwise default to 1
@@ -18610,7 +18826,7 @@ async function showBalanceLogs(empName) {
         // Handle variations in OT API response safely
         const otData = Array.isArray(otDataRaw) ? otDataRaw : (otDataRaw.requests || []);
 
-        // ðŸš€ 3. NORMALIZE OT DATA to match the existing Leave log structure
+        // 3. NORMALIZE OT DATA to match the existing Leave log structure
         const normalizedOT = otData.map(ot => {
             // Only show Overtime records that are fully processed (Approved/Rejected)
             return {
@@ -18619,12 +18835,18 @@ async function showBalanceLogs(empName) {
                 leave_type: "OT Claim",
                 status: ot.status,
                 days: ot.total_value,
+
+                // Preserve OT approval hierarchy for employee-side details
+                approver_l1_id: ot.approver_l1_id,
+                approver_id: ot.approver_id,
+                approver_l2_id: ot.approver_l2_id,
+
                 is_ot: true, // Custom flag to identify it during rendering
                 id: ot.id // used for tie-breaking sorts
             };
         });
 
-        // ðŸš€ 4. MERGE AND SORT (Newest First)
+        // 4. MERGE AND SORT (Newest First)
         let allLogs = [...(leaveData.logs || []), ...normalizedOT];
         
         allLogs.sort((a, b) => {
@@ -25454,7 +25676,7 @@ if (personalUpcoming) {
                                 <span style="font-size: 0.75rem; font-weight: 800; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${firstName}</span>
                                 <span style="font-size: 0.5rem; background: #f0f9ff; color: #0ea5e9; padding: 1px 6px; border-radius: 20px; font-weight: 800; flex-shrink: 0;">OT</span>
                             </div>
-                            <div style="font-size: 0.65rem; color: #64748b; margin-top: -1px;">${o.total_value || 0}${o.ot_unit || 'h'} â€¢ ${formatDateNice(o.ot_date)}</div>
+                            <div style="font-size: 0.65rem; color: #64748b; margin-top: -1px;">${o.total_value || 0}${o.ot_unit || 'h'} ${formatDateNice(o.ot_date)}</div>
                         </div>
                     </div>`;
                 }).join("") + (hiddenOTCount > 0 ? `<div style="text-align:center; font-size:0.65rem; color:#ea580c; font-weight:700; padding-top:2px; cursor:pointer;" onclick="showSection('manager_ot_requests')">+ ${hiddenOTCount} more...</div>` : "")
@@ -28131,12 +28353,39 @@ function viewOTDetails(ot) {
 
     // Status Styling
     const rawStatus = ot.status || "Pending";
-    let statusLabel = rawStatus;
-    let statusColor = "#854d0e"; 
 
-    if (rawStatus === "Pending L2 Approval") {
-        statusLabel = "Final Approval";
-        statusColor = "#8b5cf6"; 
+    const isCancellationJourney =
+        rawStatus === "Pending Cancel" ||
+        String(ot.status_history || "").includes("Cancellation");
+
+    let statusLabel =
+    rawStatus === "Pending"
+        ? "Pending L1"
+        : rawStatus;
+
+    let statusColor = "#854d0e";
+
+    if (rawStatus === "Pending Cancel") {
+        statusLabel = "Pending L1 Cancellation";
+        statusColor = "#1e40af";
+    } else if (
+        rawStatus === "Pending L2 Approval" &&
+        isCancellationJourney
+    ) {
+        statusLabel = "Pending L2 Cancellation";
+        statusColor = "#1e40af";
+    } else if (
+        rawStatus === "Pending L3 Approval" &&
+        isCancellationJourney
+    ) {
+        statusLabel = "Pending HOD Cancellation";
+        statusColor = "#1e40af";
+    } else if (rawStatus === "Pending L2 Approval") {
+        statusLabel = "Pending L2 Approval";
+        statusColor = "#8b5cf6";
+    } else if (rawStatus === "Pending L3 Approval") {
+        statusLabel = "Pending L3 Approval";
+        statusColor = "#8b5cf6";
     } else if (rawStatus === "Approved") {
         statusColor = "#166534";
     } else if (rawStatus === "Rejected") {
@@ -28184,7 +28433,11 @@ function viewOTDetails(ot) {
         let stepStatus = step.replace(dateRegex, "").trim();
         let stepRemark = isFirst ? cleanReason : "";
 
-        if (stepStatus === "Pending L2 Approval") stepStatus = "Final Approval";
+        if (stepStatus === "Pending L2 Approval") {
+            stepStatus = "Pending L2 Approval";
+        } else if (stepStatus === "Pending L3 Approval") {
+            stepStatus = "Pending L3 Approval";
+        }
 
         if (!isFirst && stepStatus.includes("| Note:")) {
             const splitParts = stepStatus.split("| Note:");
@@ -28258,67 +28511,111 @@ function viewOTDetails(ot) {
             </div>
         </div>
 
-<div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-    <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">
-        ${leave.status === "Approved"
-            ? "Approved By"
-            : leave.status === "Rejected"
-                ? "Rejected By"
-                : leave.status === "Pending L2 Approval"
-                    ? "Final Approver"
-                    : "Approver"}
-    </label><br>
+        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: bold;">
+                ${
+                    rawStatus === "Approved"
+                        ? "Approved By"
+                        : rawStatus === "Rejected"
+                            ? "Rejected By"
+                            : rawStatus === "Cancelled"
+                                ? "Cancelled By"
+                                : rawStatus === "Pending"
+                                    ? "L1 Approver"
+                                    : rawStatus === "Pending L2 Approval"
+                                        ? "L2 Approver"
+                                        : rawStatus === "Pending L3 Approval"
+                                            ? "L3 Approver"
+                                            : "Approver"
+                }
+            </label><br>
 
-    <span style="color: #2563eb; font-weight: 600;">
-        <i class="fas fa-user-tie"></i>
-        ${leave.status === "Approved"
-            ? (
-                (window.allUsersList || []).find(
-                    u => Number(u.id) === Number(leave.approver_l2_id)
-                )?.full_name ||
-                leave.approver_l2 ||
-                leave.approver_name ||
-                leave.approver_l1 ||
-                "Manager"
-            )
-            : leave.status === "Rejected"
-                ? (
-                    (() => {
-                        const rejectionHistory = String(leave.status_history || "")
-                            .split(" > ")
-                            .map(step => step.trim())
-                            .reverse();
+            <span style="color: #2563eb; font-weight: 600;">
+                <i class="fas fa-user-tie"></i>
 
-                        const rejectionEntry = rejectionHistory.find(
-                            step => /^Rejected by /i.test(step)
-                        );
+                ${
+                    rawStatus === "Approved"
+                        ? (
+                            (window.allUsersList || []).find(
+                                u => Number(u.id) === Number(ot.approver_l2_id)
+                            )?.full_name ||
+                            ot.approver_l2 ||
+                            ot.approver_name ||
+                            "Manager"
+                        )
 
-                        const rejectionMatch = rejectionEntry
-                            ? rejectionEntry.match(
-                                /^Rejected by\s+(.+?)(?:\s*\(|\s*\||$)/i
-                            )
-                            : null;
-
-                        return rejectionMatch?.[1]?.trim()
-                            || leave.approver_l1
-                            || "Awaiting Assignment";
-                    })()
-                )
-                : leave.status === "Pending"
-                    ? (leave.approver_l1 || "Awaiting Assignment")
-                    : leave.status === "Pending L2 Approval"
-                        ? (leave.approver_name || "Awaiting Assignment")
-                        : leave.status === "Pending L3 Approval"
+                        : rawStatus === "Rejected"
                             ? (
-                                (window.allUsersList || []).find(
-                                    u => Number(u.id) === Number(leave.approver_l2_id)
-                                )?.full_name ||
-                                leave.approver_l2 ||
-                                "Awaiting Assignment"
+                                (() => {
+                                    const rejectionHistory =
+                                        String(ot.status_history || "")
+                                            .split(" > ")
+                                            .map(step => step.trim())
+                                            .reverse();
+
+                                    const rejectionEntry =
+                                        rejectionHistory.find(
+                                            step => /^Rejected by /i.test(step)
+                                        );
+
+                                    const rejectionMatch =
+                                        rejectionEntry
+                                            ? rejectionEntry.match(
+                                                /^Rejected by\s+(.+?)(?:\s*\(|\s*\||$)/i
+                                            )
+                                            : null;
+
+                                    return rejectionMatch?.[1]?.trim()
+                                        || ot.approver_name
+                                        || "Awaiting Assignment";
+                                })()
                             )
-                            : (leave.approver_name || leave.approver_l1 || "—")}
-    </span>
-</div>
+
+                            : rawStatus === "Pending"
+                                ? (
+                                    (window.allUsersList || []).find(
+                                        u => Number(u.id) === Number(ot.approver_l1_id)
+                                    )?.full_name ||
+                                    ot.approver_l1 ||
+                                    ot.approver_name ||
+                                    "Awaiting Assignment"
+                                )
+
+                                : rawStatus === "Pending L2 Approval"
+                                    ? (
+                                        (window.allUsersList || []).find(
+                                            u => Number(u.id) === Number(ot.approver_id)
+                                        )?.full_name ||
+                                        ot.approver_name ||
+                                        "Awaiting Assignment"
+                                    )
+
+                                    : rawStatus === "Pending L3 Approval"
+                                        ? (
+                                            (window.allUsersList || []).find(
+                                                u => Number(u.id) === Number(ot.approver_l2_id)
+                                            )?.full_name ||
+                                            ot.approver_l2 ||
+                                            "Awaiting Assignment"
+                                        )
+
+                                    : rawStatus === "Cancelled"
+                                        ? (
+                                            (window.allUsersList || []).find(
+                                                u => Number(u.id) === Number(ot.approver_l2_id)
+                                            )?.full_name ||
+                                            ot.approver_l2 ||
+                                            "Awaiting Assignment"
+                                        )
+
+                                        : (
+                                            ot.approver_name ||
+                                            ot.approver_l1 ||
+                                            "—"
+                                        )
+                }
+            </span>
+        </div>
 
         ${attachmentHtml}
 
@@ -28578,23 +28875,59 @@ function renderManagerOTTable() {
         }
         const photoUrl = getFullPath(rawPic);
 
-        // ðŸš€ SMART STATUS MAPPING & SAFETY LOCK
+        // SMART STATUS MAPPING & SAFETY LOCK
         const rawStatus = ot.status || "Pending";
         const isPendingAction = rawStatus.includes("Pending") && ot.is_my_turn === true;
 
         const isL2 = rawStatus === "Pending L2 Approval";
-        const statusText = isL2 ? "Final Approval" : (rawStatus === "Pending" ? "Pending L1" : rawStatus);
-        
-        let statusColor = "#f59e0b"; let statusBg = "#fffbeb"; let statusIcon = '<i class="fas fa-clock" style="margin-right:4px;"></i>';
-        
-        if (isL2) { 
-            statusColor = "#8b5cf6"; statusBg = "#f5f3ff"; statusIcon = '<i class="fas fa-flag-checkered" style="margin-right:4px;"></i>'; 
-        } else if (rawStatus === "Approved") { 
-            statusColor = "#10b981"; statusBg = "#dcfce7"; statusIcon = '<i class="fas fa-check-circle" style="margin-right:4px;"></i>'; 
-        } else if (rawStatus === "Rejected") { 
-            statusColor = "#ef4444"; statusBg = "#fee2e2"; statusIcon = '<i class="fas fa-times-circle" style="margin-right:4px;"></i>'; 
-        } else if (rawStatus === "Pending Cancel") { 
-            statusColor = "#ef4444"; statusBg = "#fef2f2"; statusIcon = '<i class="fas fa-ban" style="margin-right:4px;"></i>'; 
+        const isL3 = rawStatus === "Pending L3 Approval";
+
+        const isCancellationJourney =
+            rawStatus === "Pending Cancel" ||
+            String(ot.status_history || "").includes("Cancellation");
+
+        const statusText =
+            isCancellationJourney && rawStatus === "Pending Cancel"
+            ? "Pending L1 Cancellation"
+            : isCancellationJourney && isL2
+                ? "Pending L2 Cancellation"
+                : isCancellationJourney && isL3
+                    ? "Pending HOD Cancellation"
+                    : isL2
+                        ? "Pending L2 Approval"
+                        : isL3
+                            ? "Pending L3 Approval"
+                            : rawStatus === "Pending"
+                                ? "Pending L1"
+                                : rawStatus;
+
+        let statusColor = "#f59e0b";
+        let statusBg = "#fffbeb";
+        let statusIcon = '<i class="fas fa-clock" style="margin-right:4px;"></i>';
+
+        if (
+            isCancellationJourney &&
+            (rawStatus === "Pending Cancel" || isL2 || isL3)
+        ) {
+            statusColor = "#1e40af";
+            statusBg = "#dbeafe";
+            statusIcon = '<i class="fas fa-ban" style="margin-right:4px;"></i>';
+        } else if (isL2) {
+            statusColor = "#8b5cf6";
+            statusBg = "#f5f3ff";
+            statusIcon = '<i class="fas fa-flag-checkered" style="margin-right:4px;"></i>';
+        } else if (isL3) {
+            statusColor = "#8b5cf6";
+            statusBg = "#f5f3ff";
+            statusIcon = '<i class="fas fa-flag-checkered" style="margin-right:4px;"></i>';
+        } else if (rawStatus === "Approved") {
+            statusColor = "#10b981";
+            statusBg = "#dcfce7";
+            statusIcon = '<i class="fas fa-check-circle" style="margin-right:4px;"></i>';
+        } else if (rawStatus === "Rejected") {
+            statusColor = "#ef4444";
+            statusBg = "#fee2e2";
+            statusIcon = '<i class="fas fa-times-circle" style="margin-right:4px;"></i>';
         }
 
         let catColor = "#475569"; let catBg = "#f1f5f9";
@@ -28703,58 +29036,161 @@ function sortManagerOTQueue(key) {
 }
 
 /**
- * ðŸš€ OVERTIME REVIEW: Opens the modal for Manager Decision
- * ðŸŽ¨ REVAMPED: Full Pretty Timeline with parsed remarks & Keyword Color Triggers.
+ * 🚀 OVERTIME REVIEW: Opens the modal for Manager Decision
+ * 🎨 REVAMPED: Full Pretty Timeline with parsed remarks & Keyword Color Triggers.
  */
- async function submitOTDecision(otId, actionType, otDate, otType, currentStatus) {
+async function submitOTDecision(otId, actionType, otDate, otType, currentStatus) {
     const modal = document.getElementById("reviewModal");
+
     const l2Container = document.getElementById("l2SelectorContainer");
     const l2Select = document.getElementById("l2_manager_select");
+
+    // L3 / HOD selector
+    const l3Container = document.getElementById("l3SelectorContainer");
+    const l3Select = document.getElementById("l3_hod_select");
+
     const approveBtn = document.getElementById("modalApproveBtn");
     const rejectBtn = document.getElementById("modalRejectBtn");
-    const errorId = "l2_validation_error"; 
+    const errorId = "l2_validation_error";
 
     if (!modal) return;
 
     // --- 1. Reset UI Inputs ---
     document.getElementById("mgr_review_remarks").value = "";
-    const mgrCount = document.getElementById("mgr_char_count");
-    if (mgrCount) { mgrCount.innerText = "0/200"; mgrCount.style.color = "#94a3b8"; }
-    const existingErr = document.getElementById(errorId);
-    if (existingErr) existingErr.remove(); 
 
-    if (l2Container) l2Container.style.display = "none";
+    const mgrCount = document.getElementById("mgr_char_count");
+    if (mgrCount) {
+        mgrCount.innerText = "0/200";
+        mgrCount.style.color = "#94a3b8";
+    }
+
+    const existingErr = document.getElementById(errorId);
+    if (existingErr) existingErr.remove();
+
+    // ------------------------------------------------------------
+    // Reset L2 selector
+    // ------------------------------------------------------------
+    if (l2Container) {
+        l2Container.style.display = "none";
+    }
+
     if (l2Select) {
         l2Select.value = "";
         l2Select.style.borderColor = "#e2e8f0";
     }
 
+    // ------------------------------------------------------------
+    // Reset L3 / HOD selector
+    // ------------------------------------------------------------
+    if (l3Container) {
+        l3Container.style.display = "none";
+    }
+
+    if (l3Select) {
+        l3Select.value = "";
+        l3Select.style.borderColor = "#e2e8f0";
+    }
+
     // --- 3. FETCH DETAILS & IDENTITY FIRST (Crucial for Step 2) ---
-    const otRecord = (window.currentManagerOTRequests || []).find(r => r.id === otId);
-    const employeeName = otRecord ? otRecord.employee_name : "Staff Member";
-    let reasonText = otRecord ? (otRecord.reason || "No description provided.") : "N/A";
-    reasonText = reasonText.split("| Manager Note:")[0].trim(); 
+    const otRecord =
+        (window.currentManagerOTRequests || [])
+            .find(r => r.id === otId);
+
+    const isCancellationFlow =
+        currentStatus.includes("Cancel") ||
+        (otRecord && otRecord.status_history &&
+        (otRecord.status_history.includes("Cancellation Request") ||
+        otRecord.status_history.includes("Request Cancellation")));
+
+    const employeeName =
+        otRecord
+            ? otRecord.employee_name
+            : "Staff Member";
+
+    let reasonText =
+        otRecord
+            ? (otRecord.reason || "No description provided.")
+            : "N/A";
+
+    reasonText =
+        reasonText
+            .split("| Manager Note:")[0]
+            .trim();
 
     // --- 2. Smart L2 Logic ---
-    const isSenior = localStorage.getItem("is_senior_manager") === "true";
-    const isFirstStage = currentStatus === "Pending"; 
+    const isSenior =
+        localStorage.getItem("is_senior_manager") === "true";
 
-    if (actionType === "Approved" && isFirstStage && !isSenior) {
+    const isFirstStage =
+        currentStatus === "Pending";
+
+    if (
+        actionType === "Approved" &&
+        isFirstStage
+    ) {
         try {
-            const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
+            const res =
+                await fetchWithAuth(
+                    `${API_URL}/users/policy/current`
+                );
+
             if (res && res.ok) {
                 const policy = await res.json();
-                if (policy.l2_approval_enabled && l2Container) {
+
+                if (
+                    policy.l2_approval_enabled &&
+                    l2Container
+                ) {
                     l2Container.style.display = "block";
-                    l2Container.style.background = "#f8fafc"; 
+                    l2Container.style.background = "#f8fafc";
                     l2Container.style.padding = "15px";
                     l2Container.style.marginTop = "20px";
-                    // ðŸš€ FIX #3: Pass the applicant's name so we get THEIR HOD
-                    await populateL2ManagerDropdown(employeeName);
+
+                    // 🚀 FIX #3:
+                    // Pass the applicant's name so we get
+                    // THEIR configured L2 Line Manager.
+                    await populateL2ManagerDropdown(
+                        employeeName
+                    );
                 }
             }
-        } catch (e) { console.error("L2 Policy check failed:", e); }
+        } catch (e) {
+            console.error(
+                "L2 Policy check failed:",
+                e
+            );
+        }
     }
+
+
+    // ------------------------------------------------------------
+    // L2 → L3 / HOD ROUTING UI
+    // Show the HOD / Level 3 selector when the OT claim
+    // is currently waiting for L2 Line Manager approval.
+    // ------------------------------------------------------------
+    const isL2Approval =
+        currentStatus === "Pending L2 Approval";
+
+    if (
+        actionType === "Approved" &&
+        isL2Approval &&
+        !isCancellationFlow
+    ) {
+        if (l3Container) {
+            l3Container.style.display = "block";
+            l3Container.style.background = "#f8fafc";
+            l3Container.style.padding = "15px";
+            l3Container.style.marginTop = "20px";
+        }
+
+        if (typeof populateL3HODDropdown === "function") {
+            await populateL3HODDropdown(
+                employeeName,
+                otRecord ? otRecord.approver_l2 : ""
+            );
+        }
+    }
+
 
     let attachmentHtml = "";
     if (otRecord && otRecord.attachment_path) {
@@ -28843,8 +29279,51 @@ function sortManagerOTQueue(key) {
 
     // --- 5. RENDER SUMMARY ---
     const rawStatus = currentStatus || "Pending";
-    let displayStatus = (rawStatus === "Pending L2 Approval") ? "Final Approval" : rawStatus;
-    let statusBadgeColor = (rawStatus === "Pending L2 Approval") ? "#8b5cf6" : (rawStatus === "Approved" ? "#10b981" : (rawStatus === "Rejected" ? "#ef4444" : "#f59e0b"));
+
+    let displayStatus = rawStatus;
+
+    if (isCancellationFlow && rawStatus === "Pending Cancel") {
+        displayStatus = "Pending L1 Cancellation";
+    } else if (
+        isCancellationFlow &&
+        rawStatus === "Pending L2 Approval"
+    ) {
+        displayStatus = "Pending L2 Cancellation";
+    } else if (
+        isCancellationFlow &&
+        rawStatus === "Pending L3 Approval"
+    ) {
+        displayStatus = "Pending HOD Cancellation";
+    } else if (rawStatus === "Pending") {
+        displayStatus = "Pending L1";
+    } else if (rawStatus === "Pending L2 Approval") {
+        displayStatus = "Pending L2 Approval";
+    } else if (rawStatus === "Pending L3 Approval") {
+        displayStatus = "Pending L3 Approval";
+    }
+
+    let statusBadgeColor =
+        isCancellationFlow &&
+        (
+            rawStatus === "Pending Cancel" ||
+            rawStatus === "Pending L2 Approval" ||
+            rawStatus === "Pending L3 Approval"
+        )
+            ? "#1e40af"
+            : (
+                rawStatus === "Pending L2 Approval" ||
+                rawStatus === "Pending L3 Approval"
+                    ? "#8b5cf6"
+                    : (
+                        rawStatus === "Approved"
+                            ? "#10b981"
+                            : (
+                                rawStatus === "Rejected"
+                                    ? "#ef4444"
+                                    : "#f59e0b"
+                            )
+                    )
+            );
 
     // ðŸ“¸ OVERTIME REVIEW AVATAR ENGINE: Cross-reference identities with the user array cache
     const otInitials = employeeName.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
@@ -28885,8 +29364,89 @@ function sortManagerOTQueue(key) {
         </div>
         <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
             <label style="font-size: 0.7rem; color: #64748b; font-weight: bold;">ASSIGNED APPROVER</label><br>
-            <span style="color: #2563eb; font-weight: 600;"><i class="fas fa-user-tie"></i> ${otRecord ? (otRecord.approver_name || "Line Manager") : "Line Manager"}</span>
-        </div>
+            <span style="color: #2563eb; font-weight: 600;"><i class="fas fa-user-tie"></i>
+    ${
+        (() => {
+            if (!otRecord) return "Awaiting Assignment";
+
+            const status = String(otRecord.status || "").trim();
+
+            if (status === "Pending") {
+                return (
+                    (window.allUsersList || []).find(
+                        u => Number(u.id) === Number(otRecord.approver_l1_id)
+                    )?.full_name ||
+                    otRecord.approver_l1 ||
+                    "L1 Team Lead"
+                );
+            }
+
+            if (status === "Pending L2 Approval") {
+                return (
+                    (window.allUsersList || []).find(
+                        u => Number(u.id) === Number(otRecord.approver_id)
+                    )?.full_name ||
+                    otRecord.approver_name ||
+                    "L2 Line Manager"
+                );
+            }
+
+            if (status === "Pending L3 Approval") {
+                return (
+                    (window.allUsersList || []).find(
+                        u => Number(u.id) === Number(otRecord.approver_l2_id)
+                    )?.full_name ||
+                    otRecord.approver_l2 ||
+                    "L3 HOD"
+                );
+            }
+
+            if (status === "Approved") {
+                return (
+                    (window.allUsersList || []).find(
+                        u => Number(u.id) === Number(otRecord.approver_l2_id)
+                    )?.full_name ||
+                    otRecord.approver_l2 ||
+                    otRecord.approver_name ||
+                    "—"
+                );
+            }
+
+            if (status === "Rejected") {
+                const rejectionHistory =
+                    String(otRecord.status_history || "")
+                        .split(" > ")
+                        .map(step => step.trim())
+                        .reverse();
+
+                const rejectionEntry =
+                    rejectionHistory.find(
+                        step => /^Rejected by /i.test(step)
+                    );
+
+                const rejectionMatch =
+                    rejectionEntry
+                        ? rejectionEntry.match(
+                            /^Rejected by\s+(.+?)(?:\s*\(|\s*\||$)/i
+                        )
+                        : null;
+
+                return (
+                    rejectionMatch?.[1]?.trim() ||
+                    otRecord.approver_name ||
+                    "—"
+                );
+            }
+
+            return (
+                otRecord.approver_l2 ||
+                otRecord.approver_name ||
+                otRecord.approver_l1 ||
+                "—"
+            );
+        })()
+    }</span>
+            </div>
         ${attachmentHtml} ${timelineHtml}`;
 
     // --- 6. BUTTON LOGIC (Crucial: Don't miss this!) ---
@@ -28921,32 +29481,128 @@ function sortManagerOTQueue(key) {
 // âœ… 0-BUG VERSION: Overtime Execution with Phantom Data Guard & UX Auto-Switch
 async function executeOTFinalDecision(otId, status) {
     const remarks = document.getElementById("mgr_review_remarks").value;
+
     const l2Container = document.getElementById("l2SelectorContainer");
-    let l2Name = document.getElementById("l2_manager_select").value;
-    
-    // ðŸ›¡ï¸ SECURITY GUARD 1: Safely grab the name from various possible local storage keys
-    let approverName = localStorage.getItem("currentUser") 
-        || localStorage.getItem("employee_name") 
-        || localStorage.getItem("full_name") 
+    const l2Select = document.getElementById("l2_manager_select");
+
+    const l3Container = document.getElementById("l3SelectorContainer");
+    const l3Select = document.getElementById("l3_hod_select");
+
+    // ------------------------------------------------------------
+    // 1. Identify the actual OT workflow stage
+    // ------------------------------------------------------------
+    const otRecord =
+        (window.currentManagerOTRequests || []).find(
+            r => Number(r.id) === Number(otId)
+        );
+
+    const currentStatus = otRecord
+        ? String(otRecord.status || "").trim()
+        : "";
+
+    const isL1Approval =
+        currentStatus === "Pending";
+
+    const isL2Approval =
+        currentStatus === "Pending L2 Approval";
+
+    const isL3Approval =
+        currentStatus === "Pending L3 Approval";
+
+    // ------------------------------------------------------------
+    // 2. Read current-user identity
+    // ------------------------------------------------------------
+    let approverName =
+        localStorage.getItem("currentUser")
+        || localStorage.getItem("employee_name")
+        || localStorage.getItem("full_name")
         || "";
 
-    // ðŸ›¡ï¸ SECURITY GUARD 2: Explicitly strip if by any chance a "null" string was returned
     if (approverName === "null" || approverName === null) {
         approverName = "";
     }
 
-    // ðŸ›¡ï¸ SECURITY GUARD 3: If L2 container is hidden, strip the value so we never route by accident
-    if (l2Container && l2Container.style.display === "none") {
-        l2Name = "";
+    // ------------------------------------------------------------
+    // 3. Read the correct routing selector for the current stage
+    // ------------------------------------------------------------
+    let selectedL2 = "";
+    let selectedL3 = "";
+
+    if (status === "Approved" && isL1Approval) {
+        if (
+            l2Container &&
+            l2Container.style.display !== "none"
+        ) {
+            selectedL2 =
+                l2Select && l2Select.value
+                    ? String(l2Select.value).trim()
+                    : "";
+
+            if (!selectedL2) {
+                Swal.fire({
+                    title: "Action Required",
+                    text: "Please select a Level 2 / Line Manager approver before approving this OT claim.",
+                    icon: "warning",
+                    confirmButtonColor: "#2563eb",
+                    confirmButtonText: "OK"
+                });
+
+                return;
+            }
+        }
     }
 
-    // ðŸ›¡ï¸ Construct URL with encoded, sanitized values
-    let url = `${API_URL}/overtime/manager-action/${otId}?status=${status}&remarks=${encodeURIComponent(
-      remarks
-    )}&approver_name=${encodeURIComponent(approverName)}`;
+    if (status === "Approved" && isL2Approval) {
+        if (
+            l3Container &&
+            l3Container.style.display !== "none"
+        ) {
+            selectedL3 =
+                l3Select && l3Select.value
+                    ? String(l3Select.value).trim()
+                    : "";
 
-    if (status === "Approved" && l2Name) {
-      url += `&l2_name=${encodeURIComponent(l2Name)}`;
+            if (!selectedL3) {
+                Swal.fire({
+                    title: "Action Required",
+                    text: "Please select a Level 3 / HOD approver before approving this OT claim.",
+                    icon: "warning",
+                    confirmButtonColor: "#2563eb",
+                    confirmButtonText: "OK"
+                });
+
+                return;
+            }
+        }
+    }
+
+    // ------------------------------------------------------------
+    // 4. Construct URL
+    // ------------------------------------------------------------
+    let url =
+        `${API_URL}/overtime/manager-action/${otId}` +
+        `?status=${encodeURIComponent(status)}` +
+        `&remarks=${encodeURIComponent(remarks)}` +
+        `&approver_name=${encodeURIComponent(approverName)}`;
+
+    // L1 → L2
+    if (
+        status === "Approved" &&
+        isL1Approval &&
+        selectedL2
+    ) {
+        url +=
+            `&l2_name=${encodeURIComponent(selectedL2)}`;
+    }
+
+    // L2 → L3 / HOD
+    if (
+        status === "Approved" &&
+        isL2Approval &&
+        selectedL3
+    ) {
+        url +=
+            `&l3_name=${encodeURIComponent(selectedL3)}`;
     }
 
     try {
@@ -28967,16 +29623,19 @@ async function executeOTFinalDecision(otId, status) {
             let iconType = "success";
 
             if (status === "Rejected") {
-                modalTitle = "Claim Rejected";
-                modalMsg = "The overtime claim has been rejected.";
-                iconType = "info"; // Professional blue for records
-            } else if (l2Name) {
-                modalTitle = "Routed for Final Approval";
-                modalMsg = `L1 Check complete. OT Claim routed to <strong>${l2Name}</strong> for final Approval.`;
-            } else {
-                modalTitle = "Claim Approved";
-                modalMsg = "The overtime claim has been fully approved.";
-            }
+            modalTitle = "Claim Rejected";
+            modalMsg = "The overtime claim has been rejected.";
+            iconType = "info"; // Professional blue for records
+        } else if (selectedL2) {
+            modalTitle = "Routed to L2";
+            modalMsg = `L1 approval complete. OT Claim has been routed to <strong>${selectedL2}</strong> for L2 approval.`;
+        } else if (isL2Approval && selectedL3) {
+            modalTitle = "Routed to HOD";
+            modalMsg = `L2 approval complete. OT Claim has been routed to <strong>${selectedL3}</strong> for HOD approval.`;
+        } else {
+            modalTitle = "Claim Fully Approved";
+            modalMsg = "The overtime claim has been fully approved.";
+        }
 
             // 2. Close the Input Modal immediately
             closeReviewModal();
@@ -34974,6 +35633,9 @@ async function executeFinalAdjustment() {
 
   </body>
 </html>
+
+
+
 
 
 

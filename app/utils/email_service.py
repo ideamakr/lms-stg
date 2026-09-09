@@ -7,15 +7,15 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # ---------------------------------------------------------
-# âš™ï¸ CONFIGURATION (Synchronized with .env)
+# ⚙️ CONFIGURATION (Synchronized with .env)
 # ---------------------------------------------------------
 USE_MOCK_EMAIL = False 
 
-# ðŸ”‘ BREVO API V3 KEY 
+# 🔑 BREVO API V3 KEY 
 # Updated to match the "BREVO_API_KEY" name found in your .env file
 API_KEY = os.getenv("BREVO_API_KEY")
 
-# ðŸš€ THE VERIFIED SENDER 
+# 🚀 THE VERIFIED SENDER 
 # Pulls from .env if available, otherwise defaults to your verified gmail
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
 
@@ -25,28 +25,28 @@ def send_email(to_email: str, subject: str, body: str):
     Sends a professional HTML email using Brevo HTTP API.
     Bypasses cloud provider SMTP port restrictions (Port 587/465) for Staging/Production.
     """
-    # ðŸ›¡ï¸ Safety Guard
+    # 🛡️ Safety Guard
     if not to_email or to_email == "---" or "@" not in str(to_email):
-        print(f"âš ï¸ Skipping email: Invalid recipient address '{to_email}'")
+        print(f"⚠️ Skipping email: Invalid recipient address '{to_email}'")
         return False
 
-    # ðŸ”‘ CONFIGURATION SYNC WITH SMART FALLBACK
-    # ðŸŽ¯ FIX: Looks for BREVO_API_KEY first; if empty, automatically grabs BREVO_SMTP_PASS!
+    # 🔑 CONFIGURATION SYNC WITH SMART FALLBACK
+    # 🎯 FIX: Looks for BREVO_API_KEY first; if empty, automatically grabs BREVO_SMTP_PASS!
     current_api_key = os.getenv("BREVO_API_KEY") or os.getenv("BREVO_SMTP_PASS")
     current_sender = os.getenv("SENDER_EMAIL", "leavesystemnotif@gmail.com")
 
-    # ðŸŒ System URL - Environment controlled
+    # 🌐 System URL - Environment controlled
     # Production / Staging URL is supplied through .env
     SYSTEM_URL = os.getenv("CLIENT_DOMAIN", "http://127.0.0.1:8000").rstrip("/") + "/"
 
-    # ðŸ›‘ Crash Prevention Guard
+    # 🛑 Crash Prevention Guard
     if not current_api_key:
-        print("âŒ API ERROR: Could not find any Brevo Key in your .env file (Checked BREVO_API_KEY and BREVO_SMTP_PASS)")
+        print("❌ API ERROR: Could not find any Brevo Key in your .env file (Checked BREVO_API_KEY and BREVO_SMTP_PASS)")
         return False
 
     if USE_MOCK_EMAIL:
         print("\n" + "="*60)
-        print(f"ðŸ“§ [MOCK EMAIL SERVICE] ðŸ“§")
+        print(f"📧 [MOCK EMAIL SERVICE] 📧")
         print(f"To:      {to_email}")
         print(f"Subject: {subject}")
         print("-" * 60)
@@ -55,7 +55,7 @@ def send_email(to_email: str, subject: str, body: str):
         return True
 
     try:
-        # ðŸŽ¨ THE MAGIC WRAPPER (HTML & BUTTON)
+        # 🎨 THE MAGIC WRAPPER (HTML & BUTTON)
         formatted_body = body.replace('\n', '<br>').replace('--------------------------------', '<hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0;">')
         
         html_content = f"""
@@ -99,20 +99,20 @@ def send_email(to_email: str, subject: str, body: str):
 
         with urllib.request.urlopen(req) as response:
             if response.getcode() in [200, 201, 202]:
-                print(f"âœ… Real Email sent successfully to {to_email} via HTTP API Web Request")
+                print(f"✅ Real Email sent successfully to {to_email} via HTTP API Web Request")
                 return True
             
     except Exception as e:
         try:
             error_detail = e.read().decode('utf-8')
-            print(f"âŒ Brevo API Error: {error_detail}")
+            print(f"❌ Brevo API Error: {error_detail}")
         except:
-            print(f"âŒ Failed to send real email via HTTP API: {e}")
+            print(f"❌ Failed to send real email via HTTP API: {e}")
         return False
     
 
 # ---------------------------------------------------------
-# ðŸ“ TEMPLATE HELPERS (Keep your existing templates below)
+# 📝 TEMPLATE HELPERS (Keep your existing templates below)
 # ---------------------------------------------------------
 
 def template_new_user(name, username, password):
@@ -135,7 +135,7 @@ HR Team
 
 def template_new_request(manager_name, employee_name, type, start, end, days, admin_name=None):
     """
-    ðŸš€ FIXED: Added 'admin_name' as the 7th argument to prevent the error.
+    🚀 FIXED: Added 'admin_name' as the 7th argument to prevent the error.
     """
     # Create a note only if Natasha/Admin applied on behalf of someone
     admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
@@ -178,7 +178,7 @@ Leave System
 
 def template_request_rejected(employee_name, manager_name, type, start, end, remarks):
     """
-    ðŸš€ UPDATED: Named 'remarks' to match leave.py and added a fallback for empty notes.
+    🚀 UPDATED: Named 'remarks' to match leave.py and added a fallback for empty notes.
     """
     return f"""
 Hi {employee_name},
@@ -189,7 +189,7 @@ Your leave request has been REJECTED.
 Approver:   {manager_name}
 Type:       {type}
 Dates:      {start} to {end}
-Status:     âŒ REJECTED
+Status:     ❌ REJECTED
 Remarks:    {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
@@ -310,7 +310,7 @@ Leave System
 
 def template_new_ot_request(manager_name, employee_name, ot_type, ot_date, duration, admin_name=None):
     """
-    ðŸš€ FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
+    🚀 FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
     """
     # Create a note only if Natasha/Admin applied on behalf of someone
     admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
@@ -333,8 +333,8 @@ Leave System
 """
 
 def template_ot_decision(employee_name, manager_name, status, ot_type, ot_date, remarks):
-    # ðŸš€ Use .upper() to ensure the icon works even if 'status' is lowercase
-    icon = "âœ…" if status.upper() == "APPROVED" else "âŒ"
+    # 🚀 Use .upper() to ensure the icon works even if 'status' is lowercase
+    icon = "✅" if status.upper() == "APPROVED" else "❌"
     
     return f"""
 Hi {employee_name},
@@ -358,10 +358,10 @@ def template_l2_ot_request(l2_manager_name, l1_manager_name, employee_name, ot_t
     return f"""
 Hi {l2_manager_name},
 
-Action Required: Final Approval Needed (L2 Overtime)
+Action Required: L2 Approval Needed (L2 Overtime)
 
 {l1_manager_name} has completed the first level approval for an Overtime claim by {employee_name}.
-This request now requires your final sign-off as Department Head.
+This request now requires your approval as the Line Manager (L2).
 
 --------------------------------
 Employee:   {employee_name}
@@ -371,14 +371,38 @@ Duration:   {duration}
 L1 Status:  Approved by {l1_manager_name}
 --------------------------------
 
-Please log in to the Manager Dashboard to finalize this request.
+Please log in to the Manager Dashboard to review and approve this request.
+
+Best regards,
+Leave System
+"""
+
+
+def template_l3_ot_request(l3_manager_name, l2_manager_name, employee_name, ot_type, ot_date, duration):
+    return f"""
+Hi {l3_manager_name},
+
+Action Required: HOD Approval Needed (L3 Overtime)
+
+{l2_manager_name} has completed the second level approval for an Overtime claim by {employee_name}.
+This request now requires your approval as the HOD.
+
+--------------------------------
+Employee:   {employee_name}
+OT Type:    {ot_type}
+Date:       {ot_date}
+Duration:   {duration}
+L2 Status:  Approved by {l2_manager_name}
+--------------------------------
+
+Please log in to the Manager Dashboard to review and approve this request.
 
 Best regards,
 Leave System
 """
 
 # ---------------------------------------------------------
-# ðŸš€ CANCELLATION WORKFLOW TEMPLATES
+# 🚀 CANCELLATION WORKFLOW TEMPLATES
 # ---------------------------------------------------------
 
 def template_cancellation_request(manager_name, employee_name, type, start, end, reason):
@@ -460,13 +484,13 @@ Leave System
 """
 
 # ---------------------------------------------------------
-# ðŸ¥ MEDICAL & SECURITY TEMPLATES
+# 🏥 MEDICAL & SECURITY TEMPLATES
 # ---------------------------------------------------------
 
 def template_medical_request(manager_name, employee_name, start, end, days, admin_name=None):
     """
     Specific template for Medical Leaves.
-    ðŸš€ FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
+    🚀 FIXED: Added admin_name to support "Apply on Behalf" and prevent crashes.
     """
     # Create a note only if Natasha/Admin applied on behalf of someone
     admin_note = f"\n(Submitted by {admin_name} on behalf of employee)\n" if admin_name else ""
@@ -477,7 +501,7 @@ Hi {manager_name},
 Action Required: Medical Leave Reported{admin_note}
 --------------------------------
 Employee:   {employee_name}
-Type:       Medical Leave ðŸš‘
+Type:       Medical Leave 🚑
 Duration:   {days} Day(s)
 Dates:      {start} to {end}
 --------------------------------
@@ -496,8 +520,8 @@ We received a request to recover your account credentials.
 
 --------------------------------
 Account Recovery Details:
-â€¢ Username:      {username}
-â€¢ Temp Password: {temp_password}
+• Username:      {username}
+• Temp Password: {temp_password}
 --------------------------------
 
 Please log in using the credentials above. We highly recommend that you immediately navigate to your profile and change this to a secure password of your choice.
@@ -579,7 +603,7 @@ Your Carry Forward request has been REJECTED.
 
 --------------------------------
 Approver:   {manager_name}
-Status:     âŒ REJECTED
+Status:     ❌ REJECTED
 Remarks:    {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
@@ -656,6 +680,153 @@ Reason:     {reason if reason else 'No reason provided'}
 --------------------------------
 
 Please log in to the Manager Dashboard to Confirm or Deny this cancellation.
+
+Best regards,
+Leave System
+"""
+# ---------------------------------------------------------
+# OT CANCELLATION WORKFLOW TEMPLATES
+# ---------------------------------------------------------
+
+def template_ot_cancellation_request(
+    manager_name,
+    employee_name,
+    ot_type,
+    ot_date,
+    duration,
+    reason
+):
+    return f"""
+Hi {manager_name},
+
+Action Required: OT Cancellation Request
+
+{employee_name} has requested to CANCEL an already approved Overtime claim.
+
+--------------------------------
+Employee:   {employee_name}
+OT Type:    {ot_type}
+Date:       {ot_date}
+Duration:   {duration}
+Reason:     {reason if reason else 'No reason provided'}
+--------------------------------
+
+Please log in to the Manager Dashboard to Confirm or Deny this OT cancellation.
+
+Best regards,
+Leave System
+"""
+
+
+def template_l2_ot_cancellation_request(
+    l2_manager_name,
+    l1_manager_name,
+    employee_name,
+    ot_type,
+    ot_date,
+    duration
+):
+    return f"""
+Hi {l2_manager_name},
+
+Action Required: OT Cancellation Approval (Level 2)
+
+{l1_manager_name} has approved the CANCELLATION request for an Overtime claim by {employee_name}.
+This request now requires your approval as the Level 2 Line Manager.
+
+--------------------------------
+Employee:   {employee_name}
+OT Type:    {ot_type}
+Date:       {ot_date}
+Duration:   {duration}
+L1 Status:  Cancellation Approved by {l1_manager_name}
+--------------------------------
+
+Please log in to the Manager Dashboard to review and approve this OT cancellation.
+
+Best regards,
+Leave System
+"""
+
+
+def template_l3_ot_cancellation_request(
+    l3_manager_name,
+    l2_manager_name,
+    employee_name,
+    ot_type,
+    ot_date,
+    duration
+):
+    return f"""
+Hi {l3_manager_name},
+
+Action Required: OT Cancellation Approval (Level 3)
+
+{l2_manager_name} has approved the CANCELLATION request for an Overtime claim by {employee_name}.
+This request now requires your final approval as the HOD.
+
+--------------------------------
+Employee:   {employee_name}
+OT Type:    {ot_type}
+Date:       {ot_date}
+Duration:   {duration}
+L2 Status:  Cancellation Approved by {l2_manager_name}
+--------------------------------
+
+Please log in to the Manager Dashboard to finalize this OT cancellation.
+
+Best regards,
+Leave System
+"""
+
+
+def template_ot_cancellation_approved(
+    employee_name,
+    manager_name,
+    ot_type,
+    ot_date,
+    duration
+):
+    return f"""
+Hi {employee_name},
+
+Your request to CANCEL your Overtime claim has been APPROVED.
+
+--------------------------------
+Approved By: {manager_name}
+OT Type:     {ot_type}
+Date:        {ot_date}
+Duration:    {duration}
+Status:      CANCELLED (OT Bank Restored)
+--------------------------------
+
+Best regards,
+Leave System
+"""
+
+
+def template_ot_cancellation_rejected(
+    employee_name,
+    manager_name,
+    ot_type,
+    ot_date,
+    duration,
+    remarks
+):
+    return f"""
+Hi {employee_name},
+
+Your request to CANCEL your Overtime claim was DENIED.
+The original Overtime claim remains approved.
+
+--------------------------------
+Denied By:   {manager_name}
+OT Type:     {ot_type}
+Date:        {ot_date}
+Duration:    {duration}
+Status:      CANCELLATION REJECTED
+Remarks:     {remarks if remarks else 'No specific remarks provided.'}
+--------------------------------
 
 Best regards,
 Leave System
