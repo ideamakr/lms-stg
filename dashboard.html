@@ -5250,7 +5250,7 @@ html.dark #card_unpaid {
                 </div>
 
                 <div class="menu-text" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600; margin-top: 6px;">
-                    Â© 2026 Built by <span style="color: #ED553B;">Idea</span><span style="color: #3b82f6;">Makr</span>
+                    © 2026 Built by <span style="color: #ED553B;">Idea</span><span style="color: #3b82f6;">Makr</span>
                 </div>
                 <div class="menu-text" style="font-size: 0.6rem; color: #64748b; font-weight: 500;">
                     All rights reserved.
@@ -7678,6 +7678,7 @@ html.dark #card_unpaid {
                     <option value="">All Active</option>
                     <option value="Pending">L1 Pending</option>
                     <option id="opt_l2_pending" value="Pending L2 Approval">L2 Pending</option>
+                    <option id="opt_l3_pending" value="Pending L3 Approval">HOD Pending</option>
                     <option value="Pending Cancel">Cancellations</option>
                 </select>
             </div>
@@ -7795,10 +7796,8 @@ html.dark #card_unpaid {
                         <option value="">Needs Attention (All)</option>
                         <option value="Pending">Pending L1 Only</option>
                         <option id="opt_ot_l2_pending" value="Pending L2 Approval">Pending L2 Approval</option>
+                        <option id="opt_ot_l3_pending" value="Pending L3 Approval">HOD Pending</option>
                         <option value="Pending Cancel">Pending Cancellations</option>
-                        <hr>
-                        <option value="Approved">Approved History</option>
-                        <option value="Rejected">Rejected History</option>
                     </select>
                 </div>
                 <div style="display: flex; gap: 8px;">
@@ -7892,18 +7891,18 @@ html.dark #card_unpaid {
                               <input type="text" id="mgr_hist_name" placeholder="Search name..." oninput="loadTeamHistory(1)" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 180px;">
                           </div>
           
-<div class="filter-group">
-    <label style="font-size: 0.65rem; font-weight: 800; color: #475569; display: block; margin-bottom: 5px; text-transform: uppercase;">Leave Type</label>
-    <select id="mgr_hist_type" onchange="loadTeamHistory(1)" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 180px; background: white; cursor: pointer;">
-        <option value="Any">Any</option>
-        <option>Annual Leave</option>
-        <option>Medical Leave</option>
-        <option>Emergency Leave</option>
-        <option>Compassionate Leave</option>
-        <option value="Claim Carry Forward">Carry Forward</option>
-        <option value="Overtime">Overtime</option>
-    </select>
-</div>
+                        <div class="filter-group">
+                            <label style="font-size: 0.65rem; font-weight: 800; color: #475569; display: block; margin-bottom: 5px; text-transform: uppercase;">Leave Type</label>
+                            <select id="mgr_hist_type" onchange="loadTeamHistory(1)" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 180px; background: white; cursor: pointer;">
+                                <option value="Any">Any</option>
+                                <option>Annual Leave</option>
+                                <option>Medical Leave</option>
+                                <option>Emergency Leave</option>
+                                <option>Compassionate Leave</option>
+                                <option value="Claim Carry Forward">Carry Forward</option>
+                                <option value="Overtime">Overtime</option>
+                            </select>
+                        </div>
           
                           <div class="filter-group">
                               <label style="font-size: 0.65rem; font-weight: 800; color: #475569; display: block; margin-bottom: 5px; text-transform: uppercase;">Duration</label>
@@ -10175,13 +10174,15 @@ html.dark #card_unpaid {
 
         <div style="display: flex; background: #0f172a; padding: 0 25px; border-bottom: 1px solid #1e293b; gap: 10px;">
             <div id="v_tab_1" onclick="switchViewProfileTab(1)" style="color: white; padding: 15px 18px; font-weight: 700; font-size: 0.85rem; cursor: pointer; border-bottom: 3px solid #2563eb; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-briefcase" style="color: #3b82f6;"></i> Step 1: Employment
+                <i class="fas fa-briefcase" style="color: #3b82f6;"></i> Employment
             </div>
+
             <div id="v_tab_2" onclick="switchViewProfileTab(2)" style="color: #94a3b8; padding: 15px 18px; font-weight: 600; font-size: 0.85rem; cursor: pointer; border-bottom: 3px solid transparent; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.color='white'" onmouseout="if(currentActiveViewTab!==2)this.style.color='#94a3b8'">
-                <i class="fas fa-user" style="color: #10b981;"></i> Step 2: Personal Details
+                <i class="fas fa-user" style="color: #10b981;"></i> Personal Details
             </div>
+
             <div id="v_tab_3" onclick="switchViewProfileTab(3)" style="color: #94a3b8; padding: 15px 18px; font-weight: 600; font-size: 0.85rem; cursor: pointer; border-bottom: 3px solid transparent; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.color='white'" onmouseout="if(currentActiveViewTab!==3)this.style.color='#94a3b8'">
-                <i class="fas fa-university" style="color: #f59e0b;"></i> Step 3: Bank & Contact
+                <i class="fas fa-university" style="color: #f59e0b;"></i> Bank &amp; Contact
             </div>
         </div>
 
@@ -10319,7 +10320,7 @@ html.dark #card_unpaid {
                     </div>
 
                 </div>
-
+            </div>
             <div id="v_pane_2" style="display: none;">
                 <h4 style="margin: 0 0 15px 0; font-size: 0.8rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.6px;">Personal Identity Specifications</h4>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 25px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
@@ -27754,7 +27755,7 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
           currentViewedUserCache = user;
 
           document.getElementById('m_view_header_name').innerText = user.full_name || "Unknown Employee";
-          document.getElementById('m_view_header_empid').innerText = `ID: ${user.employee_id || 'N/A'} â€¢ Role Privilege: ${(user.role || 'employee').toUpperCase()}`;
+          document.getElementById('m_view_header_empid').innerText = `ID: ${user.employee_id || 'N/A'} • Role Privilege: ${(user.role || 'employee').toUpperCase()}`;
           
           const avatarImg = document.getElementById('mv_view_avatar');
           if (avatarImg) {
@@ -33909,7 +33910,7 @@ function executeGlobalTopbarSearch() {
                 <div style="flex-shrink: 0;">${avatarLayout}</div>
                 <div style="min-width: 0; flex: 1;">
                     <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
-                    <div style="font-size: 0.7rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">${title} â€¢ <span style="font-weight: 600;">${dept}</span></div>
+                    <div style="font-size: 0.7rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">${title} • <span style="font-weight: 600;">${dept}</span></div>
                 </div>
                 <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 0.65rem; margin-left: auto;"></i>
             </div>`;
@@ -33960,25 +33961,47 @@ function openGlobalProfileModal(user) {
     const prefName = user.preferred_name ? `("${user.preferred_name}")` : "";
     const jobTitle = user.job_title || user.role || "Operations Specialist";
     const department = user.department || "Corporate Track";
-    const businessUnit = user.business_unit || "â€”";
-    const company = user.company || "â€”";
-    const employeeId = user.employee_id || "â€”";
+    const businessUnit = user.business_unit || "—";
+    const company = user.company || "—";
+    const employeeId = user.employee_id || "—";
     const email = user.email || "employee@company.com";
-    const personalEmail = user.personal_email || "â€”";
-    const mobile = user.mobile || "â€”";
+    const personalEmail = user.personal_email || "—";
+    const mobile = user.mobile || "—";
     const location = user.work_location || user.location || "Main Corporate Headquarters";
     const contractType = user.contract_type || "Regular Full-Time";
-    const joinedDate = user.joined_date || "â€”";
+    const joinedDate = user.joined_date || "—";
 
-    const managerRaw = user.line_manager || "â€”";
-    const hodRaw = user.hod_name || "â€”";
+    const teamLeadRaw = user.team_lead || user.team_leads || "—";
+    const managerRaw = user.line_manager || "—";
+    const hodRaw = user.hod_name || "—";
+
+    const teamLeadArray = Array.isArray(teamLeadRaw)
+    ? teamLeadRaw
+    : [teamLeadRaw];
+
+    const teamLeadBadgesHTML = teamLeadArray.map(t => {
+        if (!t || t === "—") {
+            return `<span style="font-weight: 600; color: #64748b;">—</span>`;
+        }
+
+        const escapedName = t.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+        return `
+            <span onclick="openProfileByName('${escapedName}')" style="font-weight: 700; color: #6d28d9; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; background: #ede9fe; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.background='#ddd6fe'; this.style.color='#5b21b6';" onmouseout="this.style.background='#ede9fe'; this.style.color='#6d28d9';">
+                <i class="fas fa-user-check" style="font-size: 0.6rem; opacity: 0.5;"></i> ${t}
+            </span>`;
+    }).join(" ");
 
     // ðŸ”— DYNAMIC INTERACTIVE BADGE TOKEN MATRIX GENERATION
     // Compiles manager strings/arrays into hoverable, responsive inline click-links
     const managerArray = Array.isArray(managerRaw) ? managerRaw : [managerRaw];
     const managerBadgesHTML = managerArray.map(m => {
-        if (!m || m === 'â€”') return `<span style="font-weight: 600; color: #64748b;">â€”</span>`;
+        if (!m || m === '—') {
+            return `<span style="font-weight: 600; color: #64748b;">—</span>`;
+        }
+
         const escapedName = m.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
         return `
             <span onclick="openProfileByName('${escapedName}')" style="font-weight: 700; color: #1e293b; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; background: #e2e8f0; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.background='#cbd5e1'; this.style.color='#0f172a';" onmouseout="this.style.background='#e2e8f0'; this.style.color='#1e293b';">
                 <i class="fas fa-user-tie" style="font-size: 0.6rem; opacity: 0.5;"></i> ${m}
@@ -33987,8 +34010,12 @@ function openGlobalProfileModal(user) {
 
     const hodArray = Array.isArray(hodRaw) ? hodRaw : [hodRaw];
     const hodBadgesHTML = hodArray.map(h => {
-        if (!h || h === 'â€”') return `<span style="font-weight: 600; color: #64748b;">â€”</span>`;
+        if (!h || h === '—') {
+            return `<span style="font-weight: 600; color: #64748b;">—</span>`;
+        }
+
         const escapedName = h.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
         return `
             <span onclick="openProfileByName('${escapedName}')" style="font-weight: 700; color: #b45309; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; background: #fef3c7; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.background='#fde68a'; this.style.color='#78350f';" onmouseout="this.style.background='#fef3c7'; this.style.color='#b45309';">
                 <i class="fas fa-shield-alt" style="font-size: 0.6rem; opacity: 0.5;"></i> ${h}
@@ -33996,17 +34023,28 @@ function openGlobalProfileModal(user) {
     }).join(" ");
 
     // Emergency Contact Sub-matrix
-    const emName = user.emergency_contact_name || "â€”";
-    const emRel = user.emergency_contact_rel || "â€”";
-    const emMobile = user.emergency_contact_mobile || "â€”";
+    const emName = user.emergency_contact_name || "—";
+    const emRel = user.emergency_contact_rel || "—";
+    const emMobile = user.emergency_contact_mobile || "—";
 
-    const initials = fullName.split(" ").filter(n => n).map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    const initials = fullName
+        .split(" ")
+        .filter(n => n)
+        .map(n => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+
     const photoUrl = getFullPath(user.profile_pic_url);
 
     // Live Availability Evaluation
-    const isAccountInactive = user.is_active === false || (user.employee_status && user.employee_status.toLowerCase() === 'inactive');
-    const isAwayToday = (window.currentAwayToday || []).some(l => l.employee_name === fullName);
-    
+    const isAccountInactive =
+        user.is_active === false ||
+        (user.employee_status && user.employee_status.toLowerCase() === 'inactive');
+
+    const isAwayToday =
+        (window.currentAwayToday || []).some(l => l.employee_name === fullName);
+
     let presenceBadge = '';
 
     if (isAccountInactive) {
@@ -34026,29 +34064,29 @@ function openGlobalProfileModal(user) {
             </span>`;
     }
 
-    const avatarImgHTML = photoUrl 
+    const avatarImgHTML = photoUrl
         ? `<img src="${photoUrl}" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">`
         : `<div style="width: 90px; height: 90px; background: #f1f5f9; color: #475569; font-size: 1.6rem; font-weight: 900; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">${initials}</div>`;
 
     Swal.fire({
         html: `
             <div style="text-align: left; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 0 5px;">
-                
+
                 <div style="height: 85px; background: linear-gradient(135deg, #1e3a8a, #0f172a); margin: -1rem -1rem 0 -1rem; border-radius: 12px 12px 0 0; position: relative;">
                     <button onclick="Swal.close()" style="position: absolute; top: 16px; right: 16px; background: rgba(255, 255, 255, 0.15); border: none; width: 28px; height: 28px; border-radius: 50%; color: rgba(255, 255, 255, 0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; z-index: 100;" onmouseover="this.style.background='rgba(255, 255, 255, 0.25)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(255, 255, 255, 0.15)'; this.style.color='rgba(255, 255, 255, 0.8)';">
                         <i class="fas fa-times" style="font-size: 0.85rem;"></i>
                     </button>
                 </div>
-                
+
                 <div style="text-align: center; margin-top: -45px; margin-bottom: 16px; position: relative; z-index: 10;">
                     <div style="display: inline-block;">${avatarImgHTML}</div>
                     <h3 style="margin: 10px 0 2px 0; font-size: 1.4rem; font-weight: 800; color: #0f172a;">${fullName} <span style="font-size: 1.1rem; color: #64748b; font-weight: 500;">${prefName}</span></h3>
                     <div style="font-size: 0.85rem; color: #2563eb; font-weight: 700;">${jobTitle}</div>
                     <div style="margin-top: 8px;">${presenceBadge}</div>
                 </div>
-                
+
                 <div style="display: flex; flex-direction: column; gap: 16px;">
-                    
+
                     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
                         <h4 style="margin: 0 0 12px 0; font-size: 0.7rem; color: #2563eb; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 6px;"><i class="fas fa-briefcase"></i> Corporate Tracking Allocation</h4>
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 20px; font-size: 0.8rem;">
@@ -34077,7 +34115,11 @@ function openGlobalProfileModal(user) {
                                 <span style="font-weight: 600; color: #1e293b;">${contractType} <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 500;">(Joined: ${joinedDate})</span></span>
                             </div>
                             <div>
-                                <span style="display: block; font-size: 0.65rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px;">Line Manager</span>
+                                <span style="display: block; font-size: 0.65rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px;">L1 Team Lead(s)</span>
+                                ${teamLeadBadgesHTML}
+                            </div>
+                            <div>
+                                <span style="display: block; font-size: 0.65rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px;">L2 Line Manager(s)</span>
                                 ${managerBadgesHTML}
                             </div>
                             <div>
@@ -34129,10 +34171,10 @@ function openGlobalProfileModal(user) {
             </div>`,
         showConfirmButton: true,
         confirmButtonText: "Close",
-        confirmButtonColor: "#0f172a", 
-        showCloseButton: false, 
+        confirmButtonColor: "#0f172a",
+        showCloseButton: false,
         buttonsStyling: true,
-        width: "640px", 
+        width: "640px",
         customClass: {
             popup: 'swal2-popup-profile-override-layer'
         }

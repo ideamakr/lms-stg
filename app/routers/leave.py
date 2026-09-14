@@ -188,7 +188,13 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
         return None
 
     # Fetch all active records
-    active_statuses = ["Approved", "Pending", "Pending Cancel", "Pending L2 Approval"]
+    active_statuses = [
+        "Approved",
+        "Pending",
+        "Pending Cancel",
+        "Pending L2 Approval",
+        "Pending L3 Approval",
+    ]
     used_leaves = db.query(models.Leave).filter(
         models.Leave.employee_name == employee_name,
         models.Leave.leave_type.in_(types_to_scan),
@@ -227,7 +233,7 @@ def _calculate_shared_balance(db: Session, employee_name: str, year: int, leave_
             spent_annual += days
 
         # --- 3. TRACK UI STATUS ---
-        if status_str in ["Pending", "Pending L2 Approval"]:
+        if status_str in ["Pending", "Pending L2 Approval", "Pending L3 Approval"]:
             pending_total += days
         elif status_str in ["Approved", "Pending Cancel"]:
             approved_taken_total += days
@@ -399,6 +405,7 @@ async def create_leave(
             models.Leave.status.in_([
                 "Pending",
                 "Pending L2 Approval",
+                "Pending L3 Approval",
                 "Pending Cancel"
             ])
         ).first()
@@ -409,6 +416,7 @@ async def create_leave(
             models.Leave.status.in_([
                 "Pending",
                 "Pending L2 Approval",
+                "Pending L3 Approval",
                 "Approved",
                 "Pending Cancel"
             ]),
@@ -1383,7 +1391,7 @@ def get_manager_pending(
                 )
             )
         )
-        # --- ðŸš€ NEW ID-BASED LOOKUP END ---
+        # --- ID-BASED LOOKUP END ---
 
     # 2. Filters
     if name: query = query.filter(models.Leave.employee_name.ilike(f"%{name}%"))
@@ -2583,7 +2591,7 @@ def get_all_manager_leaves(
     # 1. RBAC: Managers only see what they touched. Admins and Superusers see all.
     if not is_admin_or_super:
         if approver_name:
-            # --- ðŸš€ NEW ID-BASED LOOKUP START ---
+            # --- NEW ID-BASED LOOKUP START ---
             manager = db.query(models.User).filter(models.User.full_name == approver_name.strip()).first()
             manager_id = manager.id if manager else -1
             
@@ -2825,7 +2833,13 @@ def get_team_entitlements(
             models.LeaveBalance.year == current_year
         ).all()
         
-        active_statuses = ["Approved", "Pending", "Pending Cancel", "Pending L2 Approval"]
+        active_statuses = [
+            "Approved",
+            "Pending",
+            "Pending Cancel",
+            "Pending L2 Approval",
+            "Pending L3 Approval",
+        ]
         all_leaves = db.query(models.Leave).filter(
             models.Leave.employee_name.in_(user_names),
             models.Leave.status.in_(active_statuses),
