@@ -6590,37 +6590,95 @@ html.dark #card_unpaid {
 
                                     <div id="tab-emp-lifecycle" class="sub-tab-content">
                                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px 30px;">
-                                            
+
+                                            <!-- 1. L1 TEAM LEAD -->
                                             <div class="saas-form-group">
-                                                <label class="reg-label">Line Manager(s) <span style="color: #ef4444;">*</span></label>
+                                                <label class="reg-label">
+                                                    L1 Team Lead(s)
+                                                </label>
+
+                                                <div id="reg_l1_container" class="approver-selection-box">
+                                                    <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">
+                                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- 2. L2 LINE MANAGER -->
+                                            <div class="saas-form-group">
+                                                <label class="reg-label">
+                                                    L2 Line Manager(s)
+                                                    <span style="color: #ef4444;">*</span>
+                                                </label>
+
                                                 <div id="reg_mgr_container" class="approver-selection-box">
                                                     <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">
                                                         <i class="fas fa-spinner fa-spin"></i> Loading...
                                                     </div>
                                                 </div>
-                                                <small id="manager_error" class="error-text" style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;"></small>
+
+                                                <small id="manager_error"
+                                                       class="error-text"
+                                                       style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;">
+                                                </small>
                                             </div>
+
+                                            <!-- 3. HOD / DEPT HEAD -->
                                             <div class="saas-form-group">
-                                                <label class="reg-label">HOD / Dept Head(s) <span style="color: #ef4444;">*</span></label> 
+                                                <label class="reg-label">
+                                                    HOD / Dept Head(s)
+                                                    <span style="color: #ef4444;">*</span>
+                                                </label>
+
                                                 <div id="reg_hod_container" class="approver-selection-box">
                                                     <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">
                                                         <i class="fas fa-spinner fa-spin"></i> Loading...
                                                     </div>
                                                 </div>
-                                                <small id="hod_error" class="error-text" style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;"></small>
+
+                                                <small id="hod_error"
+                                                       class="error-text"
+                                                       style="display: none; color: #ef4444; margin-top: 5px; font-weight: 500;">
+                                                </small>
                                             </div>
+
+
+                                            <!-- CONTRACT TYPE -->
                                             <div class="saas-form-group">
-                                                <label class="reg-label">Contract Type</label>
-                                                <select id="reg_contract_type_new" class="saas-form-control">
-                                                    <option value="" disabled selected>Select Type...</option>
-                                                    <option value="Full-Time">Full-Time</option> 
-                                                    <option value="Regular">Regular</option>
-                                                    <option value="Contractor">Contractor</option>
-                                                    <option value="Probation">Probation</option>
-                                                    <option value="Internship">Internship</option>
+                                                <label class="reg-label">
+                                                    Contract Type
+                                                </label>
+
+                                                <select id="reg_contract_type_new"
+                                                        class="saas-form-control">
+
+                                                    <option value="" disabled selected>
+                                                        Select Type...
+                                                    </option>
+
+                                                    <option value="Full-Time">
+                                                        Full-Time
+                                                    </option>
+
+                                                    <option value="Regular">
+                                                        Regular
+                                                    </option>
+
+                                                    <option value="Contractor">
+                                                        Contractor
+                                                    </option>
+
+                                                    <option value="Probation">
+                                                        Probation
+                                                    </option>
+
+                                                    <option value="Internship">
+                                                        Internship
+                                                    </option>
+
                                                 </select>
                                             </div>
-                            
+
                                             <div class="saas-form-group">
                                                 <label class="reg-label">Joined Date <span style="color: #ef4444;">*</span></label>
                                                 <input type="date" id="reg_joined_new" class="saas-form-control" required oninput="clearError('date_error_new')">
@@ -6634,7 +6692,7 @@ html.dark #card_unpaid {
                                                 <label class="reg-label">Highest Qualification</label>
                                                 <input type="text" id="reg_highest_qualification" class="saas-form-control" placeholder="e.g. Master of Science">
                                             </div>
-                            
+
                                             <div class="saas-form-group">
                                                 <label class="reg-label">Shift Employee</label>
                                                 <select id="reg_shift_employee" class="saas-form-control">
@@ -6656,7 +6714,7 @@ html.dark #card_unpaid {
                                                     <option value="Yes">Yes</option>
                                                 </select>
                                             </div>
-                            
+
                                             <div class="saas-form-group">
                                                 <label class="reg-label">Scholar Track</label>
                                                 <select id="reg_scholar" class="saas-form-control">
@@ -6669,13 +6727,13 @@ html.dark #card_unpaid {
                                                 <input type="text" id="reg_document_status" class="saas-form-control" placeholder="e.g. Verified">
                                             </div>
                                             <div>&nbsp;</div>
-                            
+
                                             <div style="grid-column: span 3; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin: 15px 0 5px 0;">
                                                 <h4 style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #ef4444; text-transform: uppercase;">
                                                     <i class="fas fa-door-open" style="margin-right: 8px;"></i>Offboarding / Termination
                                                 </h4>
                                             </div>
-                            
+
                                             <div class="saas-form-group">
                                                 <label class="reg-label">Date Resigned</label>
                                                 <input type="date" id="reg_date_resigned" class="saas-form-control">
@@ -7342,8 +7400,18 @@ html.dark #card_unpaid {
                                 <div><label class="data-label">Organization (O)</label><div id="prof_organization_o" class="data-value">---</div></div>
                                 <div><label class="data-label">Organization 1 (OU1)</label><div id="prof_organization_ou1" class="data-value">---</div></div>
                                 <div><label class="data-label">Organization 2 (OU2)</label><div id="prof_organization_ou2" class="data-value">---</div></div>
-                                <div><label class="data-label">Line Manager</label><div id="prof_line_mgr" class="data-value" style="color: #2563eb;">---</div></div>
-                                <div><label class="data-label">HOD (Head of Dept)</label><div id="prof_hod" class="data-value">---</div></div>
+                                <div>
+                                    <label class="data-label">L1 Team Lead(s)</label>
+                                    <div id="prof_team_lead" class="data-value" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">---</div>
+                                </div>
+                                <div>
+                                    <label class="data-label">L2 Line Manager(s)</label>
+                                    <div id="prof_line_mgr" class="data-value" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">---</div>
+                                </div>
+                                <div>
+                                    <label class="data-label">Head of Department (HOD)</label>
+                                    <div id="prof_hod" class="data-value" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">---</div>
+                                </div>
                             </div>
                         </div>
 
@@ -9588,7 +9656,7 @@ html.dark #card_unpaid {
 </div>
 
 
-    <!-- ==========================================
+        <!-- ==========================================
              REVIEW REQUEST - id="reviewModal"
             ========================================== -->
 
@@ -9644,66 +9712,250 @@ html.dark #card_unpaid {
              !!!USER MANAGEMENT > MANAGER PERMISSION - id="userEditModal"
             ========================================== -->
 
-            <div id="userEditModal" class="modal" style="
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 10006;
-            align-items: center;
-            justify-content: center;
+    <div id="userEditModal" class="modal" style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.6);
+          z-index: 10006;
+          align-items: center;
+          justify-content: center;
+        ">
+        <div style="
+            background: white;
+            border-radius: 16px;
+            width: 95%;
+            max-width: 600px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: none;
           ">
-  <div style="
-              background: white;
-              border-radius: 16px;
-              width: 95%;
-              max-width: 600px;
-              overflow: hidden; 
-              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-              border: none;
-            ">
-      
-      <div style="
-                background: #1e293b;
-                color: white;
-                padding: 20px 25px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin: 0;
-              ">
-          <div>
-              <h3 id="userEditModalTitle" style="
-                    margin: 0;
-                    font-size: 1.25rem;
-                    font-weight: 700;
-                    background: transparent !important;
-                    border: none !important;
-                  ">
-                  Manage Permissions
-              </h3>
-              <p style="
-                    margin: 4px 0 0 0;
-                    font-size: 0.75rem;
-                    color: #94a3b8;
-                    letter-spacing: 0.3px;
-                  ">
-                  Configure system access levels and security
-              </p>
-          </div>
-          <i class="fas fa-times" onclick="closeUserEditModal()" style="
-                  cursor: pointer;
-                  font-size: 1.2rem;
-                  opacity: 0.7;
-                  transition: 0.2s;
-                " onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"></i>
-      </div>
 
-      <div style="padding: 25px">
-          <label style="
+            <div style="
+              background: #1e293b;
+              color: white;
+              padding: 20px 25px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin: 0;
+            ">
+                <div>
+                    <h3 id="userEditModalTitle" style="
+                  margin: 0;
+                  font-size: 1.25rem;
+                  font-weight: 700;
+                  background: transparent !important;
+                  border: none !important;
+                ">
+                        Manage Permissions
+                    </h3>
+                    <p style="
+                  margin: 4px 0 0 0;
+                  font-size: 0.75rem;
+                  color: #94a3b8;
+                  letter-spacing: 0.3px;
+                ">
+                        Configure system access levels and security
+                    </p>
+                </div>
+                <i class="fas fa-times" onclick="closeUserEditModal()" style="
+                cursor: pointer;
+                font-size: 1.2rem;
+                opacity: 0.7;
+                transition: 0.2s;
+              " onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"></i>
+            </div>
+
+            <div style="padding: 25px">
+                <label style="
+                font-weight: 800;
+                display: block;
+                margin-bottom: 15px;
+                font-size: 0.75rem;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              ">
+                    <i class="fas fa-user-shield" style="margin-right: 8px"></i>
+                    Access Roles
+                </label>
+
+                <div style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                background: #f8fafc;
+                padding: 20px;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                margin-bottom: 30px;
+              ">
+
+                    <!-- EMPLOYEE -->
+                    <label style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: not-allowed;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: #f1f5f9;
+                  border: 1px solid #e2e8f0;
+                ">
+                        <input type="checkbox" id="edit_role_employee" checked disabled style="width: 20px; height: 20px" />
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #64748b;
+                    ">
+                                Employee
+                            </div>
+                            <div style="font-size: 0.7rem; color: #94a3b8">
+                                Base System Access
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- HR ADMIN -->
+                    <label style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: pointer;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: white;
+                  border: 1px solid #e2e8f0;
+                  transition: 0.2s;
+                " onmouseover="this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'">
+                        <input type="checkbox" id="edit_role_hr" value="hr_admin" style="width: 20px; height: 20px" />
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #1e293b;
+                    ">
+                                HR Admin
+                            </div>
+                            <div style="font-size: 0.7rem; color: #64748b">
+                                Full System Control
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- L2 / MANAGER -->
+                    <label style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: pointer;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: white;
+                  border: 1px solid #e2e8f0;
+                  transition: 0.2s;
+                " onmouseover="this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'">
+                        <input type="checkbox" id="edit_role_manager" value="manager" style="width: 20px; height: 20px" />
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #1e293b;
+                    ">
+                                Manager
+                            </div>
+                            <div style="font-size: 0.7rem; color: #64748b">
+                                Approval Authority
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- L1 / TEAM LEAD -->
+                    <label id="l1_team_lead_wrapper" style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: pointer;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: #f0fdf4;
+                  border: 1px solid #bbf7d0;
+                  transition: 0.2s;
+                " onmouseover="this.style.background='#dcfce7'; this.style.borderColor='#86efac';"
+                           onmouseout="this.style.background='#f0fdf4'; this.style.borderColor='#bbf7d0';">
+
+                        <input type="checkbox"
+                               id="edit_role_l1"
+                               value="l1"
+                               style="width: 20px; height: 20px" />
+
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #166534;
+                    ">
+                                <i class="fas fa-user-check"></i> L1 Team Lead
+                            </div>
+
+                            <div style="
+                      font-size: 0.7rem;
+                      color: #15803d;
+                    ">
+                                First-Level Leave Approval
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- L2 POWER -->
+                    <label id="senior_manager_wrapper" style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  cursor: pointer;
+                  padding: 12px;
+                  border-radius: 10px;
+                  background: #eff6ff;
+                  border: 1px solid #bfdbfe;
+                  transition: 0.2s;
+                " onmouseover="this.style.background='#dbeafe'">
+
+                        <input type="checkbox"
+                               id="edit_is_senior"
+                               style="width: 20px; height: 20px" />
+
+                        <div>
+                            <div style="
+                      font-size: 0.9rem;
+                      font-weight: 700;
+                      color: #1e40af;
+                    ">
+                                <i class="fas fa-award"></i> L2 Power
+                            </div>
+
+                            <div style="
+                      font-size: 0.7rem;
+                      color: #1e40af;
+                      opacity: 0.8
+                    ">
+                                Dept Head Level
+                            </div>
+                        </div>
+                    </label>
+
+                </div>
+
+                <div style="
+                margin-top: 25px;
+                padding-top: 20px;
+                border-top: 1px dashed #e2e8f0;
+              ">
+                    <label style="
                   font-weight: 800;
                   display: block;
                   margin-bottom: 15px;
@@ -9712,141 +9964,9 @@ html.dark #card_unpaid {
                   text-transform: uppercase;
                   letter-spacing: 1px;
                 ">
-              <i class="fas fa-user-shield" style="margin-right: 8px"></i>
-              Access Roles
-          </label>
-
-          <div style="
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 15px;
-                  background: #f8fafc;
-                  padding: 20px;
-                  border-radius: 12px;
-                  border: 1px solid #e2e8f0;
-                  margin-bottom: 30px;
-                ">
-              <label style="
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: not-allowed;
-                    padding: 12px;
-                    border-radius: 10px;
-                    background: #f1f5f9;
-                    border: 1px solid #e2e8f0;
-                  ">
-                  <input type="checkbox" id="edit_role_employee" checked disabled style="width: 20px; height: 20px" />
-                  <div>
-                      <div style="
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        color: #64748b;
-                      ">
-                          Employee
-                      </div>
-                      <div style="font-size: 0.7rem; color: #94a3b8">
-                          Base System Access
-                      </div>
-                  </div>
-              </label>
-
-              <label style="
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    padding: 12px;
-                    border-radius: 10px;
-                    background: white;
-                    border: 1px solid #e2e8f0;
-                    transition: 0.2s;
-                  " onmouseover="this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'">
-                  <input type="checkbox" id="edit_role_hr" value="hr_admin" style="width: 20px; height: 20px" />
-                  <div>
-                      <div style="
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        color: #1e293b;
-                      ">
-                          HR Admin
-                      </div>
-                      <div style="font-size: 0.7rem; color: #64748b">
-                          Full System Control
-                      </div>
-                  </div>
-              </label>
-
-              <label style="
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    padding: 12px;
-                    border-radius: 10px;
-                    background: white;
-                    border: 1px solid #e2e8f0;
-                    transition: 0.2s;
-                  " onmouseover="this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'">
-                  <input type="checkbox" id="edit_role_manager" value="manager" style="width: 20px; height: 20px" />
-                  <div>
-                      <div style="
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        color: #1e293b;
-                      ">
-                          Manager
-                      </div>
-                      <div style="font-size: 0.7rem; color: #64748b">
-                          Approval Authority
-                      </div>
-                  </div>
-              </label>
-
-              <label id="senior_manager_wrapper" style="
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    padding: 12px;
-                    border-radius: 10px;
-                    background: #eff6ff;
-                    border: 1px solid #bfdbfe;
-                    transition: 0.2s;
-                  " onmouseover="this.style.background='#dbeafe'">
-                  <input type="checkbox" id="edit_is_senior" style="width: 20px; height: 20px" />
-                  <div>
-                      <div style="
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        color: #1e40af;
-                      ">
-                          <i class="fas fa-award"></i> L2 Power
-                      </div>
-                      <div style="font-size: 0.7rem; color: #1e40af; opacity: 0.8">
-                          Dept Head Level
-                      </div>
-                  </div>
-              </label>
-          </div>
-
-          <div style="
-                  margin-top: 25px;
-                  padding-top: 20px;
-                  border-top: 1px dashed #e2e8f0;
-                ">
-              <label style="
-                    font-weight: 800;
-                    display: block;
-                    margin-bottom: 15px;
-                    font-size: 0.75rem;
-                    color: #64748b;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                  ">
-                  <i class="fas fa-key" style="margin-right: 6px"></i> Account
-                  Security
-              </label>
+                        <i class="fas fa-key" style="margin-right: 6px"></i> Account
+                        Security
+                    </label>
 
               <div style="
                     display: grid;
@@ -10142,18 +10262,26 @@ html.dark #card_unpaid {
                 </div>
 
                 <h4 style="margin: 0 0 15px 0; font-size: 0.8rem; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.6px;">Enterprise Hierarchy & Assigned Management</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+
+                <!-- 🚀 UPDATED: Changed from 1fr 1fr to 3 equal columns -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+
                     <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Assigned Line Manager(s)</span>
+                        <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">L1 Team Lead(s)</span>
+                        <div id="mv_team_lead_view" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center;"></div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">L2 Line Manager(s)</span>
                         <div id="mv_line_manager_view" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center;"></div>
                     </div>
+
                     <div style="display: flex; flex-direction: column; gap: 6px;">
                         <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Head of Department (HOD)</span>
                         <div id="mv_hod_name_view" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center;"></div>
                     </div>
-                </div>
 
-            </div>
+                </div>
 
             <div id="v_pane_2" style="display: none;">
                 <h4 style="margin: 0 0 15px 0; font-size: 0.8rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.6px;">Personal Identity Specifications</h4>
@@ -10942,11 +11070,20 @@ Used by the HR Admin Settings script. When you toggle "Carry Forward" or "L2 App
 // 📡 DYNAMIC API HANDSHAKE (HARDENED)
 const getApiUrl = () => {
     const host = window.location.hostname;
+    const port = window.location.port;
     let url = "";
 
     // 1. Local Development
     if (host === "127.0.0.1" || host === "localhost") {
-        url = "http://127.0.0.1:8081";
+
+        // Staging frontend :8083 → Staging API :8082
+        if (port === "8083") {
+            url = "http://127.0.0.1:8082";
+        } else {
+            // Production frontend → Production API :8081
+            url = "http://127.0.0.1:8081";
+        }
+
     } else {
         // 2. Production / Staging / DDNS
         url = `https://${host}:8443`;
@@ -13256,130 +13393,256 @@ function updateCarryForwardMath() {
       /**
        * 💾 Step 2: Saves the updated roles to the database
        */
-       async function saveUserRoles() {
+      async function saveUserRoles() {
     const userId = window.editingUserId;
     if (!userId) return;
 
-    // 1. Capture Current Form State
-    const currentManager = document.getElementById("edit_role_manager").checked;
-    const currentHR = document.getElementById("edit_role_hr").checked;
-    const currentSenior = document.getElementById("edit_is_senior").checked;
-    const userName = document.getElementById("userEditModalTitle").innerText.replace("Manage Permissions: ", "");
+    // ==============================================================
+    // 1. CAPTURE CURRENT FORM STATE
+    // ==============================================================
 
-    // 2. Snapshot Comparison (The "Shake" logic)
+    const managerCb = document.getElementById("edit_role_manager");
+    const hrCb = document.getElementById("edit_role_hr");
+    const seniorCb = document.getElementById("edit_is_senior");
+    const l1Cb = document.getElementById("edit_role_l1");
+
+    const currentManager = managerCb ? managerCb.checked : false;
+    const currentHR = hrCb ? hrCb.checked : false;
+    const currentSenior = seniorCb ? seniorCb.checked : false;
+    const currentL1 = l1Cb ? l1Cb.checked : false;
+
+    const titleEl = document.getElementById("userEditModalTitle");
+    const userName = titleEl
+        ? titleEl.innerText.replace("Manage Permissions: ", "").trim()
+        : "";
+
+    // ==============================================================
+    // 2. SNAPSHOT COMPARISON
+    // ==============================================================
+
     const hasChanged = (
         currentManager !== initialPermissionState.manager ||
         currentHR !== initialPermissionState.hr ||
-        currentSenior !== initialPermissionState.senior
+        currentSenior !== initialPermissionState.senior ||
+        currentL1 !== initialPermissionState.l1
     );
 
     if (!hasChanged) {
         const btn = document.getElementById("btnUpdatePermissions");
         const msg = document.getElementById("noChangeMsg");
-        if (msg) msg.style.display = "block";
+
+        if (msg) {
+            msg.style.display = "block";
+        }
+
         if (btn) {
-            btn.classList.remove("shake-animation"); 
-            void btn.offsetWidth; 
+            btn.classList.remove("shake-animation");
+            void btn.offsetWidth;
             btn.classList.add("shake-animation");
         }
-        return; 
+
+        return;
     }
 
-    // 3. User Confirmation
-    Swal.fire({
-        title: 'Update Permissions?',
+    // ==============================================================
+    // 3. USER CONFIRMATION
+    // ==============================================================
+
+    const result = await Swal.fire({
+        title: "Update Permissions?",
         text: `Apply these access level changes to ${userName}?`,
-        icon: 'question',
+        icon: "question",
         showCancelButton: true,
-        confirmButtonColor: '#2563eb',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, Update User',
-        cancelButtonText: 'Cancel'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            
-            // 🛡️ GUARD C: THE "APPROVAL LIMBO" SAFETY NET
-            // If Natasha is trying to UNCHECK 'Manager', we must check if Tony has work to do.
-            if (initialPermissionState.manager === true && currentManager === false) {
-                try {
-                    // Check if user has Pending/Pending Cancel leaves as an assigned approver
-                    const checkRes = await fetchWithAuth(`${API_URL}/leaves/manager/pending?approver_name=${encodeURIComponent(userName)}&page_size=1`);
-                    if (checkRes && checkRes.ok) {
-                        const checkData = await checkRes.json();
-                        if (checkData.total > 0) {
-                            // 🛑 HARD STOP: Prevent demotion while work is pending
-                            await Swal.fire({
-                                icon: 'warning',
-                                title: 'Action Blocked',
-                                html: `<strong>${userName}</strong> has <strong>${checkData.total} request(s)</strong> awaiting their approval.<br><br>Reassign or process these requests before removing the Manager role.`,
-                                confirmButtonColor: '#f59e0b'
-                            });
-                            return; // Exit the function entirely
-                        }
-                    }
-                } catch (e) { console.error("Guard C Check failed:", e); }
-            }
+        confirmButtonColor: "#2563eb",
+        cancelButtonColor: "#64748b",
+        confirmButtonText: "Yes, Update User",
+        cancelButtonText: "Cancel"
+    });
 
-            // 🚀 PROCEED: Show Loading Spinner
-            Swal.fire({
-                title: 'Updating Permissions...',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
+    if (!result.isConfirmed) {
+        return;
+    }
 
-            // 🛡️ GUARD B: THE FAIL-SAFE IDENTITY PROTECTION
-            const selectedRoles = ["employee"];
-            
-            // Logic: Even if UI glitches, if Senior Power is true, Manager Role is forced.
-            if (currentManager || currentSenior) {
-                selectedRoles.push("manager");
-            }
-            
-            if (currentHR) {
-                selectedRoles.push("hr_admin");
-            }
+    // ==============================================================
+    // 4. MANAGER APPROVAL SAFETY CHECK
+    // Prevent removing Manager role while pending work exists.
+    // ==============================================================
 
-            const formData = new FormData();
-            formData.append("roles", JSON.stringify(selectedRoles));
-            formData.append("is_senior_manager", currentSenior);
+    if (
+        initialPermissionState.manager === true &&
+        currentManager === false
+    ) {
+        try {
+            const checkRes = await fetchWithAuth(
+                `${API_URL}/leaves/manager/pending?approver_name=${encodeURIComponent(userName)}&page_size=1`
+            );
 
-            try {
-                const res = await fetchWithAuth(`${API_URL}/users/${userId}/roles-update`, {
-                    method: "PUT",
-                    body: formData,
-                });
+            if (checkRes && checkRes.ok) {
+                const checkData = await checkRes.json();
 
-                if (res && res.ok) {
-                    const data = await res.json();
-                    closeUserEditModal();
-                    await loadAllUsers(); // Refresh background table
-
-                    Swal.fire({
-                        title: 'Updated!',
-                        html: data.message,
-                        icon: 'success',
-                        confirmButtonColor: '#2563eb'
+                if (checkData.total > 0) {
+                    await Swal.fire({
+                        icon: "warning",
+                        title: "Action Blocked",
+                        html:
+                            `<strong>${userName}</strong> has ` +
+                            `<strong>${checkData.total} request(s)</strong> ` +
+                            `awaiting their approval.<br><br>` +
+                            `Reassign or process these requests before ` +
+                            `removing the Manager role.`,
+                        confirmButtonColor: "#f59e0b"
                     });
-                } else {
-                    const err = await res.json();
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Update Failed',
-                        text: err.detail || "Could not modify user roles.",
-                        confirmButtonColor: '#ef4444'
-                    });
+
+                    return;
                 }
-            } catch (e) {
-                console.error("Role Update Error:", e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Network Error',
-                    text: "Connection lost. Please try again.",
-                    confirmButtonColor: '#ef4444'
-                });
             }
+        } catch (e) {
+            console.error("Guard C Check failed:", e);
+        }
+    }
+
+    // ==============================================================
+    // 5. SHOW LOADING
+    // ==============================================================
+
+    Swal.fire({
+        title: "Updating Permissions...",
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
         }
     });
+
+    // ==============================================================
+    // 6. BUILD SELECTED ROLES
+    // ==============================================================
+
+    const selectedRoles = ["employee"];
+
+    // --------------------------------------------------------------
+    // Manager
+    // Senior Manager automatically requires Manager authority.
+    // --------------------------------------------------------------
+
+    if (currentManager || currentSenior) {
+        selectedRoles.push("manager");
+    }
+
+    // --------------------------------------------------------------
+    // L1 TEAM LEAD
+    // --------------------------------------------------------------
+    // IMPORTANT:
+    // This was missing in the previous version.
+    // Without this, the checkbox can appear selected in the UI,
+    // but "team_lead" is never sent to the backend.
+    // --------------------------------------------------------------
+
+    if (currentL1) {
+        selectedRoles.push("team_lead");
+    }
+
+    // --------------------------------------------------------------
+    // HR Admin
+    // --------------------------------------------------------------
+
+    if (currentHR) {
+        selectedRoles.push("hr_admin");
+    }
+
+    // ==============================================================
+    // 7. PREPARE REQUEST
+    // ==============================================================
+
+    const formData = new FormData();
+
+    formData.append(
+        "roles",
+        JSON.stringify(selectedRoles)
+    );
+
+    formData.append(
+        "is_senior_manager",
+        currentSenior
+    );
+
+    // ==============================================================
+    // 8. SEND UPDATE
+    // ==============================================================
+
+    try {
+        const res = await fetchWithAuth(
+            `${API_URL}/users/${userId}/roles-update`,
+            {
+                method: "PUT",
+                body: formData
+            }
+        );
+
+        // ----------------------------------------------------------
+        // SUCCESS
+        // ----------------------------------------------------------
+
+        if (res && res.ok) {
+            const data = await res.json();
+
+            closeUserEditModal();
+
+            // Refresh user table so the new role is immediately visible.
+            await loadAllUsers();
+
+            await Swal.fire({
+                title: "Updated!",
+                html: data.message,
+                icon: "success",
+                confirmButtonColor: "#2563eb"
+            });
+
+            return;
+        }
+
+        // ----------------------------------------------------------
+        // API ERROR
+        // ----------------------------------------------------------
+
+        let err = {};
+
+        try {
+            err = await res.json();
+        } catch (parseError) {
+            console.error(
+                "Unable to parse role update error response:",
+                parseError
+            );
+        }
+
+        await Swal.fire({
+            icon: "error",
+            title: "Update Failed",
+            text:
+                err.detail ||
+                "Could not modify user roles.",
+            confirmButtonColor: "#ef4444"
+        });
+
+    } catch (e) {
+
+        // ----------------------------------------------------------
+        // NETWORK ERROR
+        // ----------------------------------------------------------
+
+        console.error(
+            "Role Update Error:",
+            e
+        );
+
+        await Swal.fire({
+            icon: "error",
+            title: "Network Error",
+            text:
+                "Connection lost. Please try again.",
+            confirmButtonColor: "#ef4444"
+        });
+    }
 }
 
       // Run this immediately when the dashboard scripts load
@@ -16584,21 +16847,55 @@ let attachmentHtml = "";
         timelineHtml += `</div></div>`;
     }
 
-    // --- 6. L2 LOGIC ---
-    const isSenior = localStorage.getItem("is_senior_manager") === "true";
-    if (actionType === "Approved" && currentStatus === "Pending" && !isSenior && !isCancellationFlow) {
-        try {
-            const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
-            if (res && res.ok) {
-                const policy = await res.json();
-                if (policy.l2_approval_enabled && l2Container) {
-                    l2Container.style.display = "block";
-                    // 🚀 FIX #2: Pass the applicant's name so we get THEIR HOD
-                    await populateL2ManagerDropdown(employeeName);
-                }
+// --- 6. APPROVAL HIERARCHY LOGIC ---
+// L1 = Team Lead
+// L2 = Line Manager
+// L3 = HOD
+//
+// IMPORTANT:
+// The existing l2_approval_enabled policy controls whether
+// the multi-level approval workflow is enabled.
+// We are NOT changing the policy setting itself here.
+
+const isSenior = localStorage.getItem("is_senior_manager") === "true";
+
+const isL1Approval =
+    currentStatus === "Pending";
+
+const isL2Approval =
+    currentStatus === "Pending L2 Approval";
+
+const isL3Approval =
+    currentStatus === "Pending L3 Approval";
+
+// L1 Team Lead:
+// Do NOT route directly to HOD here.
+// The backend will determine the next approval level.
+if (
+    actionType === "Approved" &&
+    isL1Approval &&
+    !isSenior &&
+    !isCancellationFlow
+) {
+    try {
+        const res = await fetchWithAuth(`${API_URL}/users/policy/current`);
+
+        if (res && res.ok) {
+            const policy = await res.json();
+
+            if (policy.l2_approval_enabled) {
+                console.log(
+                    "Approval workflow enabled: L1 Team Lead approval will proceed to L2 Line Manager."
+                );
             }
-        } catch (e) { console.error("L2 Policy Check Error:", e); }
+        }
+    } catch (e) {
+        console.error("Approval Policy Check Error:", e);
     }
+}
+
+// L2 and L3 are handled by their respective backend workflow states.
+// Do not show the old HOD selector here yet.
 
     // --- 7. RENDER SUMMARY (Aligned with Leave Details) ---
     const currentApprover = (currentStatus === "Pending L2 Approval") 
@@ -16823,127 +17120,218 @@ async function populateL2ManagerDropdown(applicantName) {
        * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
        * This function is called by the modal buttons in processApproval()
        */
-/**
- * ⚖️ Step 1: Handle Leave Decisions (Approve/Reject)
- * This function is called by the modal buttons in processApproval()
- */
-async function submitDecision(leaveId, status) {
-    const remarks = document.getElementById("mgr_review_remarks").value;
-    const l2Container = document.getElementById("l2SelectorContainer");
-    
-    // 🛡️ Safe Access
-    const l2Select = document.getElementById("l2_manager_select");
-    let l2Name = l2Select ? l2Select.value : ""; 
+        /**
+         * ⚖️ Handle Leave Approval / Rejection
+         *
+         * Approval workflow:
+         * L1 Team Lead
+         *     ↓
+         * L2 Line Manager
+         *     ↓
+         * L3 HOD
+         *     ↓
+         * Final Approved
+         *
+         * The frontend does NOT manually select the next approver.
+         * The backend determines the next approval level based on
+         * the employee's configured approval hierarchy.
+         */
+        async function submitDecision(leaveId, status) {
+            const remarksElement = document.getElementById("mgr_review_remarks");
+            const remarks = remarksElement ? remarksElement.value : "";
 
-    // ✅ STEP 1 FIX: Use our new centralized identity resolver
-    // This guarantees we never send "null" or "undefined" strings to the backend.
-    const approverName = getSafeUserName() || "System Administrator";
+            // Centralized requester identity
+            const approverName = getSafeUserName() || "System Administrator";
 
-    // 🚀 THE FAILSAFE: If L2 is OFF (Container Hidden), wipe the L2 name 
-    if (l2Container && l2Container.style.display === "none") {
-        l2Name = "";
-    }
+            // 🛡️ Prevent accidental duplicate submission
+            if (
+                typeof processedActionIds !== "undefined" &&
+                processedActionIds.has(leaveId)
+            ) {
+                console.warn(`Leave ${leaveId} has already been processed.`);
+                return;
+            }
 
-    // 1. Validation: L2 Selection Check
-    if (status === "Approved" && l2Container && l2Container.style.display !== "none" && !l2Name) {
-        Swal.fire({
-            title: "Routing Required",
-            text: "Please select a Department Head (L2 Approver) to route this request.",
-            icon: "warning",
-            confirmButtonColor: "#f59e0b"
-        });
-        return;
-    }
+            try {
+                // ------------------------------------------------------------
+                // 1. Build approval action URL
+                // ------------------------------------------------------------
+                //
+                // IMPORTANT:
+                // We intentionally DO NOT send l2_name here.
+                //
+                // The backend will determine whether this approval moves:
+                // L1 → L2
+                // L2 → L3
+                // L3 → Final Approved
+                //
+                let url =
+                    `${API_URL}/leaves/manager/action/${leaveId}` +
+                    `?status=${encodeURIComponent(status)}` +
+                    `&remarks=${encodeURIComponent(remarks)}` +
+                    `&approver_name=${encodeURIComponent(approverName)}`;
 
-    try {
-        let url = `${API_URL}/leaves/manager/action/${leaveId}?status=${status}&remarks=${encodeURIComponent(remarks)}&approver_name=${encodeURIComponent(approverName)}`;
+                // ------------------------------------------------------------
+                // 2. Show processing state
+                // ------------------------------------------------------------
+                Swal.fire({
+                    title: "Processing Decision...",
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-        if (status === "Approved" && l2Name) {
-            url += `&l2_name=${encodeURIComponent(l2Name)}`;
+                const res = await fetchWithAuth(url, {
+                    method: "POST"
+                });
+
+                if (!res) {
+                    return;
+                }
+
+                // ------------------------------------------------------------
+                // 3. Successful action
+                // ------------------------------------------------------------
+                if (res.ok) {
+
+                    // Lock this ID immediately
+                    if (typeof processedActionIds !== "undefined") {
+                        processedActionIds.add(leaveId);
+                    }
+
+                    // Remove the processed request from the current queue
+                    const row = document.getElementById(`mgr_row_${leaveId}`);
+
+                    if (row) {
+                        row.style.opacity = "0";
+                        row.style.transform = "translateX(20px)";
+
+                        setTimeout(() => {
+                            row.remove();
+                        }, 300);
+                    }
+
+                    // --------------------------------------------------------
+                    // 4. Read backend response
+                    // --------------------------------------------------------
+                    //
+                    // The backend should tell us the resulting workflow state.
+                    //
+                    let result = {};
+
+                    try {
+                        result = await res.json();
+                    } catch (e) {
+                        console.warn("Approval response is not JSON.");
+                    }
+
+                    const resultingStatus =
+                        result.status ||
+                        result.new_status ||
+                        result.leave_status ||
+                        "";
+
+                    // --------------------------------------------------------
+                    // 5. User messaging
+                    // --------------------------------------------------------
+                    let modalTitle = "";
+                    let modalMsg = "";
+                    let iconType = "success";
+
+                    if (status === "Rejected") {
+
+                        modalTitle = "Request Rejected";
+                        modalMsg =
+                            "The leave request has been rejected and closed.";
+                        iconType = "info";
+
+                    } else if (resultingStatus === "Pending L2 Approval") {
+
+                        modalTitle = "Request Sent to L2";
+                        modalMsg =
+                            "L1 approval is complete. The request has been routed to the Line Manager for Level 2 approval.";
+
+                    } else if (resultingStatus === "Pending L3 Approval") {
+
+                        modalTitle = "Request Sent to L3";
+                        modalMsg =
+                            "L2 approval is complete. The request has been routed to the HOD for Level 3 approval.";
+
+                    } else if (resultingStatus === "Approved") {
+
+                        modalTitle = "Request Approved";
+                        modalMsg =
+                            "The leave request has received all required approvals.";
+
+                    } else {
+
+                        // Safe fallback if the backend does not return
+                        // the resulting status.
+                        modalTitle = "Request Processed";
+                        modalMsg =
+                            "The leave request has been successfully processed.";
+                    }
+
+                    // Close review modal
+                    closeReviewModal();
+
+                    // Show result
+                    await Swal.fire({
+                        title: modalTitle,
+                        html: modalMsg,
+                        icon: iconType,
+                        confirmButtonColor: "#2563eb",
+                        confirmButtonText: "OK",
+                        allowOutsideClick: false
+                    });
+
+                    // --------------------------------------------------------
+                    // 6. Refresh manager queue
+                    // --------------------------------------------------------
+                    console.log("🔄 Synchronizing approval queue...");
+
+                    await loadManagerRequests();
+
+                    if (typeof refreshManagerBadges === "function") {
+                        refreshManagerBadges();
+                    }
+
+                } else {
+
+                    // --------------------------------------------------------
+                    // 7. Backend rejected the action
+                    // --------------------------------------------------------
+                    let err = {};
+
+                    try {
+                        err = await res.json();
+                    } catch (e) {
+                        console.warn("Unable to parse backend error response.");
+                    }
+
+                    Swal.fire({
+                        title: "Action Failed",
+                        text:
+                            err.detail ||
+                            "The leave request could not be processed.",
+                        icon: "error",
+                        confirmButtonColor: "#ef4444"
+                    });
+                }
+
+            } catch (e) {
+
+                console.error("Decision Submission Error:", e);
+
+                Swal.fire({
+                    title: "Network Error",
+                    text: "Could not reach the server.",
+                    icon: "error",
+                    confirmButtonColor: "#ef4444"
+                });
+            }
         }
-
-        // Show a subtle loading state
-        Swal.fire({
-            title: 'Processing Decision...',
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); }
-        });
-
-        const res = await fetchWithAuth(url, { method: "POST" });
-        if (!res) return;
-
-        if (res.ok) {
-            // 🛡️ 1. LOCK THIS ID: Prevents opening the modal again
-            if (typeof processedActionIds !== 'undefined') {
-                processedActionIds.add(leaveId);
-            }
-
-            // 🚀 2. OPTIMISTIC UI: Remove row INSTANTLY using the unique ID
-            // This is the specific fix for the "Pending Leave still showing" bug
-            const row = document.getElementById(`mgr_row_${leaveId}`);
-            if (row) {
-                row.style.opacity = "0";
-                row.style.transform = "translateX(20px)";
-                setTimeout(() => row.remove(), 300); // Remove from DOM after fade
-            }
-
-            // --- SMART MESSAGING LOGIC ---
-            let modalTitle = "";
-            let modalMsg = "";
-            let iconType = "success";
-
-            if (status === "Rejected") {
-                modalTitle = "Request Rejected";
-                modalMsg = "The request has been rejected and closed.";
-                iconType = "info"; 
-            } else if (l2Name) {
-                modalTitle = "Routed for Final Approval";
-                modalMsg = `Request routed to <strong>${l2Name}</strong>.`;
-            } else {
-                modalTitle = "Request Approved";
-                modalMsg = "The request has been successfully processed.";
-            }
-
-            // Close the Review Modal FIRST
-            closeReviewModal();
-
-            // Show Success Message
-            await Swal.fire({
-                title: modalTitle,
-                html: modalMsg,
-                icon: iconType,
-                confirmButtonColor: '#2563eb',
-                confirmButtonText: 'OK',
-                allowOutsideClick: false
-            });
-
-            // 3. REFRESH DATA (Background Sync)
-            console.log("🔄 Synchronizing queue...");
-            await loadManagerRequests(); 
-            
-            if (typeof refreshManagerBadges === "function") {
-                refreshManagerBadges();
-            }
-
-        } else {
-            const err = await res.json();
-            Swal.fire({
-                title: "Action Failed",
-                text: err.detail || "Could not process request.",
-                icon: "error",
-                confirmButtonColor: "#ef4444"
-            });
-        }
-    } catch (e) {
-        console.error("Decision Submission Error:", e);
-        Swal.fire({
-            title: "Network Error",
-            text: "Could not reach the server.",
-            icon: "error",
-            confirmButtonColor: "#ef4444"
-        });
-    }
-}
 
  // 🚀 THE FIX: Unified Cancel Logic (Fixed ReferenceError & Zero-Freeze)
  async function cancelLeave(id, currentStatus) {
@@ -18359,133 +18747,167 @@ let summaryHtml = `
     }
 }
 
-async function loadApproverList() {
-    // 🎯 Target dropdowns
-    const ids = ["dash_approver", "dash_approver_ot", "dash_approver_cf"];
-    const selects = ids.map((id) => document.getElementById(id)).filter((el) => el);
+        async function loadApproverList() {
+            // 🎯 Target dropdowns and their corresponding alert containers
+            const configs = [
+                { selectId: "dash_approver", alertId: "dash_approver_alert" },
+                { selectId: "dash_approver_ot", alertId: "dash_approver_ot_alert" },
+                { selectId: "dash_approver_cf", alertId: "dash_approver_cf_alert" }
+            ];
 
-    if (selects.length === 0) return;
+            const selects = configs.map(c => document.getElementById(c.selectId)).filter(el => el);
+            if (selects.length === 0) return;
 
-    // 🎯 Identify who is applying (Handles Admin Proxy Mode & Julian)
-    const targetName = window.proxyUser ? window.proxyUser : currentUser;
+            // 🎯 Identify who is applying (Handles Admin Proxy Mode & Employee)
+            const targetName = window.proxyUser ? window.proxyUser : currentUser;
 
-    // 🚀 STEP 1: CACHE CHECK (Ultra-Fast Path)
-    if (teamEntitlementCache && teamEntitlementCache.length > 0) {
-        const applicantRecord = teamEntitlementCache.find(u => u.name === targetName);
-        const assignedManagers = applicantRecord ? (applicantRecord.line_manager || []) : [];
+            // 🛡️ Helper to globally block or unblock leave/overtime submission buttons
+            const toggleSubmitButtons = (disable) => {
+                const submitBtns = document.querySelectorAll("button[type='submit'], .submit-leave-btn, #submit_leave_btn");
+                submitBtns.forEach(btn => {
+                    btn.disabled = disable;
+                    btn.style.opacity = disable ? "0.5" : "1";
+                    btn.style.cursor = disable ? "not-allowed" : "pointer";
+                    btn.title = disable ? "Action blocked: Missing required approval hierarchy. Please contact HR Admin." : "";
+                });
+            };
 
-        selects.forEach((sel) => {
-            if (sel.value && sel.value !== "") return;
+            // 🛡️ Core Evaluation Engine: Enforces strict L1 -> L2 -> HOD dependency
+            const evaluateHierarchy = (applicantRecord) => {
+                configs.forEach(cfg => {
+                    const sel = document.getElementById(cfg.selectId);
+                    const alertBox = document.getElementById(cfg.alertId);
+                    if (!sel) return;
 
-            // ✅ FIXED: Wipes out the loading placeholder and establishes standard selection layout
-            sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
-            
-            if (assignedManagers.length === 0) {
-                sel.add(new Option("No Managers Assigned (Contact HR)", ""));
+                    // 1. Check if record exists
+                    if (!applicantRecord) {
+                        sel.innerHTML = '<option value="" disabled selected hidden>-- Record Not Found --</option>';
+                        sel.disabled = true;
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> Employee profile record not found. Please contact HR Admin.</div>`;
+                        }
+                        toggleSubmitButtons(true);
+                        return;
+                    }
+
+                    const teamLeads = applicantRecord.team_lead || applicantRecord.team_leads || [];
+                    const lineManagers = applicantRecord.line_manager || applicantRecord.line_managers || [];
+                    const hodNames = applicantRecord.hod_name || applicantRecord.hod_names || [];
+
+                    // 🛑 2. STRICT L1 CHECK (Mandatory First Tier)
+                    if (teamLeads.length === 0) {
+                        sel.innerHTML = '<option value="" disabled selected hidden>-- Missing L1 Team Lead --</option>';
+                        sel.disabled = true;
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> <b>Missing L1 Team Lead</b> assignment. Please contact HR Admin.</div>`;
+                        }
+                        toggleSubmitButtons(true);
+                        return;
+                    }
+
+                    // 🛑 3. STRICT L2 CHECK (Mandatory Second Tier)
+                    if (lineManagers.length === 0) {
+                        sel.innerHTML = '<option value="" disabled selected hidden>-- Missing L2 Line Manager --</option>';
+                        sel.disabled = true;
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> <b>Missing L2 Line Manager</b> assignment. Please contact HR Admin.</div>`;
+                        }
+                        toggleSubmitButtons(true);
+                        return;
+                    }
+
+                    // 🛑 4. STRICT HOD CHECK (Mandatory Third Tier)
+                    if (hodNames.length === 0) {
+                        sel.innerHTML = '<option value="" disabled selected hidden>-- Missing HOD --</option>';
+                        sel.disabled = true;
+                        if (alertBox) {
+                            alertBox.style.display = "block";
+                            alertBox.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> <b>Missing HOD / Dept Head</b> assignment. Please contact HR Admin.</div>`;
+                        }
+                        toggleSubmitButtons(true);
+                        return;
+                    }
+
+                    // ✅ ALL TIERS VALIDATED: Enable dropdown, clear error alerts, unblock submission
+                    sel.disabled = false;
+                    if (alertBox) {
+                        alertBox.style.display = "none";
+                        alertBox.innerHTML = "";
+                    }
+                    toggleSubmitButtons(false);
+
+                    if (sel.value && sel.value !== "") return;
+
+                    sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
+
+                    teamLeads.forEach((mgrName) => {
+                        const opt = new Option(mgrName, mgrName);
+
+                        const awayRecord = (window.currentAwayToday || []).find(p => p.employee_name === mgrName);
+                        const mgrObj = (window.teamEntitlementCache || []).find(u => u.name === mgrName) ||
+                            (window.allUsersList || []).find(u => u.full_name === mgrName);
+
+                        const returnDate = awayRecord ? (awayRecord.current_leave_end || awayRecord.end_date) :
+                            (mgrObj ? mgrObj.current_leave_end : null);
+
+                        if (returnDate) {
+                            opt.dataset.awayUntil = returnDate;
+                        }
+
+                        sel.add(opt);
+                    });
+
+                    if (teamLeads.length === 1) {
+                        sel.value = teamLeads[0];
+                        setTimeout(() => {
+                            sel.dispatchEvent(new Event('change'));
+                        }, 300);
+                    }
+                });
+            };
+
+            // 🚀 STEP 1: CACHE CHECK (Ultra-Fast Path)
+            if (window.teamEntitlementCache && window.teamEntitlementCache.length > 0) {
+                const applicantRecord = window.teamEntitlementCache.find(u => u.name === targetName);
+                evaluateHierarchy(applicantRecord);
+                document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
                 return;
             }
 
-            assignedManagers.forEach((mgrName) => {
-                const opt = new Option(mgrName, mgrName);
-                
-                // 🕵️‍♂️ Phase 3: Check all available data pools for "Away" status
-                // We check the Working Away List (from the modal) AND the general cache
-                const awayRecord = (window.currentAwayToday || []).find(p => p.employee_name === mgrName);
-                const mgrObj = teamEntitlementCache.find(u => u.name === mgrName) || 
-                               (window.allUsersList || []).find(u => u.full_name === mgrName);
-
-                // Bind the date to the option metadata
-                const returnDate = awayRecord ? (awayRecord.current_leave_end || awayRecord.end_date) : 
-                                   (mgrObj ? mgrObj.current_leave_end : null);
-
-                if (returnDate) {
-                    opt.dataset.awayUntil = returnDate;
+            // 🚀 STEP 2: NETWORK FALLBACK
+            try {
+                const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
+                if (!res || !res.ok) {
+                    selects.forEach(sel => {
+                        if (!sel.value || sel.value === "") {
+                            sel.innerHTML = '<option value="" disabled selected hidden>❌ Failed to load managers</option>';
+                        }
+                    });
+                    document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
+                    return;
                 }
 
-                sel.add(opt);
-            });
+                const responseData = await res.json();
+                window.allUsersList = responseData.users || [];
 
-            // 🚀 THE POKE: Trigger alert if only 1 manager exists
-            if (assignedManagers.length === 1) {
-                sel.value = assignedManagers[0];
-                setTimeout(() => {
-                    sel.dispatchEvent(new Event('change'));
-                }, 300); // 300ms ensures the UI has finished painting
+                const applicantObj = window.allUsersList.find(u => u.full_name === targetName);
+                evaluateHierarchy(applicantObj);
+
+                document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
+
+            } catch (e) {
+                console.error("Smart Approver Load Error:", e);
+                selects.forEach(sel => {
+                    if (!sel.value || sel.value === "") {
+                        sel.innerHTML = '<option value="" disabled selected hidden>❌ Network error. Re-try...</option>';
+                    }
+                });
+                document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
             }
-        });
-
-        // ✅ PROGRESSIVE LOADING RESOLVED: Instantly hide out all visual spinner components
-        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
-        return; 
-    }
-
-    // 🚀 STEP 2: NETWORK FALLBACK
-    try {
-        const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
-        if (!res || !res.ok) {
-            // Safety: Revert selection string if API responds with a failure code
-            selects.forEach(sel => {
-                if (!sel.value || sel.value === "") {
-                    sel.innerHTML = '<option value="" disabled selected hidden>❌ Failed to load managers</option>';
-                }
-            });
-            // Clear out spinners on failure too so they don't spin forever
-            document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
-            return;
         }
-
-        const responseData = await res.json();
-        const allUsers = responseData.users || [];
-
-        const applicantObj = allUsers.find(u => u.full_name === targetName);
-        const assignedManagers = applicantObj ? (applicantObj.line_manager || []) : [];
-
-        selects.forEach((sel) => {
-            if (sel.value && sel.value !== "") return;
-
-            // ✅ FIXED: Wipes out the loading placeholder and establishes standard selection layout
-            sel.innerHTML = '<option value="" disabled selected hidden>-- Select Manager --</option>';
-            
-            if (assignedManagers.length === 0) {
-                sel.add(new Option("No Managers Assigned (Contact HR)", ""));
-                return;
-            }
-
-            assignedManagers.forEach((mgrName) => {
-                const opt = new Option(mgrName, mgrName);
-
-                // 🕵️‍♂️ Phase 3: Bind metadata from network result
-                const mgrObj = allUsers.find(u => u.full_name === mgrName);
-                if (mgrObj && mgrObj.current_leave_end) {
-                    opt.dataset.awayUntil = mgrObj.current_leave_end;
-                }
-
-                sel.add(opt);
-            });
-
-            if (assignedManagers.length === 1) {
-                sel.value = assignedManagers[0];
-                setTimeout(() => {
-                    sel.dispatchEvent(new Event('change'));
-                }, 300);
-            }
-        });
-
-        // ✅ NETWORK API STREAM RESOLVED: Hide all visual spinner components cleanly
-        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
-
-    } catch (e) {
-        console.error("Smart Approver Load Error:", e);
-        // Safety: Prevent permanent loading loop state if user is completely offline
-        selects.forEach(sel => {
-            if (!sel.value || sel.value === "") {
-                sel.innerHTML = '<option value="" disabled selected hidden>❌ Network error. Re-try...</option>';
-            }
-        });
-        // Clear spinners on error state too
-        document.querySelectorAll(".approver-spinner").forEach(spinner => spinner.style.display = "none");
-    }
-}
 
 
 /** 🚀 NEW LOCATION FOR STEP 3.3 🚀
@@ -22348,14 +22770,23 @@ async function submitNewUser(event) {
 
     const getJsonListFromCheckboxes = (containerId) => {
         const container = document.getElementById(containerId);
-        if (!container) return null; 
-        
+        if (!container) return null;
+
         const checked = container.querySelectorAll('input[type="checkbox"]:checked');
-        if (checked.length === 0) return null; 
+        if (checked.length === 0) return null;
 
         const values = Array.from(checked).map(cb => cb.value);
         return JSON.stringify(values);
     };
+
+    // =========================================================
+    // L1 TEAM LEAD SELECTION
+    // =========================================================
+    // L1 Team Lead is OPTIONAL during onboarding.
+    // If none is selected, null is submitted.
+    // This does NOT affect existing Manager/HOD behaviour.
+    // =========================================================
+    const selectedL1TeamLeads = getJsonListFromCheckboxes("reg_l1_container");
 
     const safeGet = (id) => document.getElementById(id) ? document.getElementById(id).value.trim() : "";
 
@@ -22366,13 +22797,13 @@ async function submitNewUser(event) {
     const fullName = `${first} ${middle} ${last}`.replace(/\s+/g, ' ').trim();
     const username = safeGet("reg_username_new");
     const joinedDate = safeGet("reg_joined_new");
-    const email = safeGet("reg_office_email_new").toLowerCase(); 
-    const mobile = safeGet("reg_mobile_new"); 
+    const email = safeGet("reg_office_email_new").toLowerCase();
+    const mobile = safeGet("reg_mobile_new");
 
     // 🛡️ INLINE VALIDATION GUARD
-    const mgrContainer = document.getElementById("reg_mgr_container");
-    const hasLineManager = mgrContainer && mgrContainer.querySelectorAll('input[type="checkbox"]:checked').length > 0;
-    
+    // Line Manager and HOD are optional during onboarding.
+    // They can be configured after the employee is created.
+
     let hasMissingFields = false;
     let targetErrorStep = null; 
 
@@ -22401,10 +22832,6 @@ async function submitNewUser(event) {
     if (!username) flagError("reg_username_new", "Username is required.", 1);
     if (!email) flagError("reg_office_email_new", "Office Email is required.", 1);
     if (!joinedDate) flagError("reg_joined_new", "Joined Date is required.", 1);
-    if (!hasLineManager) {
-        if (mgrContainer) mgrContainer.style.borderColor = "#ef4444";
-        flagError("reg_mgr_container", "At least one Line Manager must be selected.", 1);
-    }
     if (!mobile) flagError("reg_mobile_new", "Mobile Number is required.", 3);
 
     if (hasMissingFields) {
@@ -22414,11 +22841,17 @@ async function submitNewUser(event) {
             text: "Please fill in all mandatory fields highlighted in red.",
             confirmButtonColor: "#3b82f6"
         }).then(() => {
-            if (targetErrorStep && typeof currentRegStep !== 'undefined' && currentRegStep !== targetErrorStep) {
-                if (typeof navRegStep === 'function') navRegStep(targetErrorStep - currentRegStep); 
+            if (targetErrorStep &&
+                typeof currentRegStep !== 'undefined' &&
+                currentRegStep !== targetErrorStep) {
+
+                if (typeof navRegStep === "function") {
+                    navRegStep(targetErrorStep - currentRegStep);
+                }
             }
         });
-        return; 
+
+        return;
     }
 
     // ==========================================
@@ -22430,17 +22863,20 @@ async function submitNewUser(event) {
     };
 
     // 1. Get raw lists as arrays using your existing helper
+    let l1List = JSON.parse(getJsonListFromCheckboxes("reg_l1_container") || "[]");
     let mgrList = JSON.parse(getJsonListFromCheckboxes("reg_mgr_container") || "[]");
     let hodList = JSON.parse(getJsonListFromCheckboxes("reg_hod_container") || "[]");
 
     // 2. 🚀 SANITIZER: Data-Level Swap (Fixes the "Ghost Name" issue reliably)
     if (window.isEditingUser && window.originalFullName && fullName !== window.originalFullName) {
         const oldName = window.originalFullName.trim();
+
+        l1List = l1List.map(name => name.trim() === oldName ? fullName : name);
         mgrList = mgrList.map(name => name.trim() === oldName ? fullName : name);
         hodList = hodList.map(name => name.trim() === oldName ? fullName : name);
     }
-
     // 3. Convert to display strings for the template
+    const sanitizedSummaryL1 = l1List.length > 0 ? l1List.join(", ") : '<span style="color: #94a3b8; font-style: italic;">Not Assigned</span>';
     const sanitizedSummaryManagers = mgrList.length > 0 ? mgrList.join(", ") : '<span style="color: #94a3b8; font-style: italic;">Not Assigned</span>';
     const sanitizedSummaryHODs = hodList.length > 0 ? hodList.join(", ") : '<span style="color: #94a3b8; font-style: italic;">Not Assigned</span>';
 
@@ -22478,10 +22914,9 @@ async function submitNewUser(event) {
                         <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">COMPANY / DEPT</b>${getDisplayVal("reg_company")} <br> <span style="color:#64748b;">${getDisplayVal("reg_dept_new")}</span></div>
                         <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">BIZ UNIT / LOCATION</b>${getDisplayVal("reg_biz_unit_new")} <br> <span style="color:#64748b;">${getDisplayVal("reg_location_new")}</span></div>
                         
-                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">LINE MANAGER(S)</b>${sanitizedSummaryManagers}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">L1 TEAM LEAD(S)</b>${sanitizedSummaryL1}</div>
+                        <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">L2 LINE MANAGER(S)</b>${sanitizedSummaryManagers}</div>
                         <div><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HOD / DEPT HEAD(S)</b>${sanitizedSummaryHODs}</div>
-                        
-                        <div style="grid-column: span 2;"><b style="color: #94a3b8; font-size: 0.65rem; display:block;">HIERARCHY (L0 / L1 / L2)</b>${getDisplayVal("reg_level_0")} / ${getDisplayVal("reg_level_1")} / ${getDisplayVal("reg_level_2")}</div>
                     </div>
                 </div>
                 <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -22596,10 +23031,14 @@ async function submitNewUser(event) {
         formData.append("organization_ou1", safeGet("reg_organization_ou1"));
         formData.append("organization_ou2", safeGet("reg_organization_ou2"));
         
+        const l1TeamLeadData = getJsonListFromCheckboxes("reg_l1_container");
         const lineMgrData = getJsonListFromCheckboxes("reg_mgr_container");
         const hodData = getJsonListFromCheckboxes("reg_hod_container");
-        if (lineMgrData) formData.append("line_manager", lineMgrData);
-        if (hodData) formData.append("hod_name", hodData);
+
+        // 🚀 FIX: Always append the fields, falling back to an empty JSON array string so the backend clears them when unchecked
+        formData.append("team_lead", l1TeamLeadData || "[]");
+        formData.append("line_manager", lineMgrData || "[]");
+        formData.append("hod_name", hodData || "[]");
 
         // Enterprise Operational Flags & Milestones
         formData.append("shift_employee", safeGet("reg_shift_employee") || "No");
@@ -24553,7 +24992,7 @@ async function loadUserProfile() {
             // 📑 TAB 2: CORE EMPLOYMENT MAPPING
             setHtml("prof_emp_id", me.employee_id);
             setHtml("prof_employee_no_old", me.employee_no_old);
-            setHtml("prof_username", me.username); 
+            setHtml("prof_username", me.username);
             setHtml("prof_employee_status", me.employee_status);
             setHtml("prof_company", me.company);
             setHtml("prof_location", me.work_location || me.location);
@@ -24569,8 +25008,23 @@ async function loadUserProfile() {
             setHtml("prof_organization_o", me.organization_o);
             setHtml("prof_organization_ou1", me.organization_ou1);
             setHtml("prof_organization_ou2", me.organization_ou2);
-            setHtml("prof_line_mgr", formatArray(me.line_manager)); 
-            setHtml("prof_hod", formatArray(me.hod_name));
+
+            // 🚀 Helper function to render stylized pill badges with icons
+            const renderManagerPills = (list, bgCol, textCol, iconClass) => {
+                if (!Array.isArray(list) || list.length === 0) {
+                    return '<span style="color:#94a3b8; font-style:italic; font-size:0.85rem;">---</span>';
+                }
+                return list.map(name => `
+                    <span style="display:inline-flex; align-items:center; background:${bgCol}; color:${textCol}; padding:3px 10px; border-radius:6px; font-weight:700; font-size:0.75rem; gap:4px; margin: 2px 4px 2px 0;">
+                        <i class="${iconClass}"></i>${name}
+                    </span>
+                `).join('');
+            };
+
+            // 🚀 Render the 3 hierarchy levels using stylized pill badges
+            document.getElementById("prof_team_lead").innerHTML = renderManagerPills(me.team_lead, "#ede9fe", "#6d28d9", "fas fa-user-check");
+            document.getElementById("prof_line_mgr").innerHTML = renderManagerPills(me.line_manager, "#e0f2fe", "#0369a1", "fas fa-user-tie");
+            document.getElementById("prof_hod").innerHTML = renderManagerPills(me.hod_name, "#fef3c7", "#92400e", "fas fa-shield-alt");
 
             // 📑 TAB 3: CONTACT & LOGISTICS MAPPING
             setHtml("prof_office_email", me.email); 
@@ -24902,9 +25356,9 @@ async function clearBrandingFavicon() {
     async function submitProfileUpdate(event, userId) {
     if (event) event.preventDefault();
 
-    // 1. --- RESET PHASE (Solves Issue #2) ---
+    // 1. --- RESET PHASE ---
     // Clear all red borders and hide messages before re-validating
-    const errorSlots = ["name_error", "user_error", "mobile_error", "date_error", "manager_error"];
+    const errorSlots = ["name_error", "user_error", "mobile_error", "date_error"];
     errorSlots.forEach(id => clearError(id));
 
     // 2. --- DATA GATHERING ---
@@ -24917,47 +25371,51 @@ async function clearBrandingFavicon() {
     const email = getVal("reg_email");
     const mobile = getVal("reg_mobile");
     const joinedDate = getVal("reg_joined");
-    const lineManager = getVal("reg_manager"); // 🚀 Gathered for validation
+    const lineManager = getVal("reg_manager");
 
-    // 3. --- FRONTEND VALIDATION (Solves Issue #1) ---
+    // 3. --- FRONTEND VALIDATION ---
+    // Line Manager and HOD are OPTIONAL during onboarding.
+    // They can be configured later by HR.
     let hasError = false;
 
-    if (!fullName) { 
-        showInlineError("name_error", "Full Name is required"); 
-        hasError = true; 
-    }
-    if (!email) { 
-        showInlineError("user_error", "Business Email is required"); 
-        hasError = true; 
-    }
-    if (!mobile) { 
-        showInlineError("mobile_error", "Mobile number is required"); 
-        hasError = true; 
-    }
-    if (!joinedDate) { 
-        showInlineError("date_error", "Joined Date is required"); 
-        hasError = true; 
-    }
-    // 🚀 NEW: Validate Line Manager Selection
-    if (!lineManager) {
-        showInlineError("manager_error", "Please select a Line Manager");
+    if (!fullName) {
+        showInlineError("name_error", "Full Name is required");
         hasError = true;
     }
 
-    if (hasError) return; // Stop if any inline errors exist
+    if (!email) {
+        showInlineError("user_error", "Business Email is required");
+        hasError = true;
+    }
+
+    if (!mobile) {
+        showInlineError("mobile_error", "Mobile number is required");
+        hasError = true;
+    }
+
+    if (!joinedDate) {
+        showInlineError("date_error", "Joined Date is required");
+        hasError = true;
+    }
+
+    if (hasError) return;
 
     // 4. --- PREPARE PAYLOAD ---
     const formData = new FormData();
+
     formData.append("full_name", fullName);
     formData.append("employee_id", getVal("reg_emp_id"));
     formData.append("gender", getVal("reg_gender"));
     formData.append("marital_status", getVal("reg_marital"));
-    formData.append("email", email.toLowerCase()); 
+    formData.append("email", email.toLowerCase());
     formData.append("mobile", mobile);
     formData.append("job_title", getVal("reg_job_title"));
     formData.append("business_unit", getVal("reg_unit"));
     formData.append("department", getVal("reg_dept"));
+
+    // Optional hierarchy mapping
     formData.append("line_manager", lineManager);
+
     formData.append("joined_date", joinedDate);
 
     try {
@@ -24965,7 +25423,9 @@ async function clearBrandingFavicon() {
         Swal.fire({
             title: 'Updating Profile...',
             allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); }
+            didOpen: () => {
+                Swal.showLoading();
+            }
         });
 
         const res = await fetchWithAuth(
@@ -24979,7 +25439,6 @@ async function clearBrandingFavicon() {
         if (!res) return;
 
         if (res.ok) {
-            // 🚀 SUCCESS (Issue #3 Upgrade)
             Swal.fire({
                 icon: 'success',
                 title: 'Success!',
@@ -24987,26 +25446,46 @@ async function clearBrandingFavicon() {
                 timer: 2000,
                 showConfirmButton: false
             });
+
             closeRegisterModal();
             await loadAllUsers();
+
         } else {
             const err = await res.json();
-            // Handle backend validation errors inline
+
             if (err.detail && Array.isArray(err.detail)) {
                 err.detail.forEach(e => {
                     const field = e.loc[e.loc.length - 1];
-                    if (field === "full_name") showInlineError("name_error", e.msg);
-                    if (field === "email") showInlineError("user_error", e.msg);
-                    if (field === "mobile") showInlineError("mobile_error", e.msg);
+
+                    if (field === "full_name")
+                        showInlineError("name_error", e.msg);
+
+                    if (field === "email")
+                        showInlineError("user_error", e.msg);
+
+                    if (field === "mobile")
+                        showInlineError("mobile_error", e.msg);
                 });
-                Swal.close(); // Close loading if showing inline errors
+
+                Swal.close();
+
             } else {
-                Swal.fire('Update Failed', err.detail || 'Check all fields', 'error');
+                Swal.fire(
+                    'Update Failed',
+                    err.detail || 'Check all fields',
+                    'error'
+                );
             }
         }
+
     } catch (e) {
         console.error("Profile Update Error:", e);
-        Swal.fire('System Error', 'Could not reach server. Please check your connection.', 'error');
+
+        Swal.fire(
+            'System Error',
+            'Could not reach server. Please check your connection.',
+            'error'
+        );
     }
 }
 
@@ -25569,16 +26048,21 @@ async function openFullProfileEditModal(userJsonRaw, targetStep = 1) {
     safeSetDropdown("reg_commissioning_engineer", user.commissioning_engineer, "No");
     safeSetDropdown("reg_scholar", user.scholar, "No");
 
-    await populateOnboardingManagers(); 
+    await populateOnboardingManagers();
 
     const assignedMgrs = user.line_manager || [];
     const assignedHODs = user.hod_name || [];
+    const assignedL1s = user.team_lead || []; // Add this line
 
     document.querySelectorAll('#reg_mgr_container input[type="checkbox"]').forEach(cb => {
         if (assignedMgrs.includes(cb.value)) cb.checked = true;
     });
     document.querySelectorAll('#reg_hod_container input[type="checkbox"]').forEach(cb => {
         if (assignedHODs.includes(cb.value)) cb.checked = true;
+    });
+    // Add this new block
+    document.querySelectorAll('#reg_l1_container input[type="checkbox"]').forEach(cb => {
+        if (assignedL1s.includes(cb.value)) cb.checked = true;
     });
 
     const passContainer = document.getElementById("reg_password_container");
@@ -25896,10 +26380,12 @@ async function openFullProfileEditModal(userJsonRaw, targetStep = 1) {
     // 🚀 2. CHECKBOX COMPARISON LOGIC
     const currentMgrs = getCheckboxes("reg_mgr_container");
     const currentHODs = getCheckboxes("reg_hod_container");
-    
+    const currentL1s = getCheckboxes("reg_l1_container");
+
     // 🚀 Using the new normalizer to prevent false positives!
     const originalMgrs = normalizeArray(original.line_manager);
     const originalHODs = normalizeArray(original.hod_name);
+    const originalL1s = normalizeArray(original.team_lead);
 
     if (currentMgrs !== originalMgrs) {
         console.log(`🚩 Change detected in [line_manager]: From ${originalMgrs} to ${currentMgrs}`);
@@ -25907,6 +26393,11 @@ async function openFullProfileEditModal(userJsonRaw, targetStep = 1) {
     }
     if (currentHODs !== originalHODs) {
         console.log(`🚩 Change detected in [hod_name]: From ${originalHODs} to ${currentHODs}`);
+        return true;
+    }
+
+    if (currentL1s !== originalL1s) {
+        console.log(`🚩 Change detected in [team_lead]: From ${originalL1s} to ${currentL1s}`);
         return true;
     }
 
@@ -26033,23 +26524,41 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
     if (updateBtn) updateBtn.classList.remove("shake-animation");
     if (msgEl) msgEl.style.display = "none";
 
-    // 4. Get the checkboxes
+    // 4. Get the permission checkboxes
     const managerCb = document.getElementById("edit_role_manager");
     const hrCb = document.getElementById("edit_role_hr");
     const seniorCb = document.getElementById("edit_is_senior");
+    const l1Cb = document.getElementById("edit_role_l1");
 
-    // 5. Set Checkbox States
-    if (managerCb) managerCb.checked = currentRoles.includes("manager");
-    if (hrCb) hrCb.checked = currentRoles.includes("hr_admin");
-    
+// 5. Set Checkbox States
+    if (managerCb) {
+        managerCb.checked = currentRoles.includes("manager");
+    }
+
+    if (hrCb) {
+        hrCb.checked = currentRoles.includes("hr_admin");
+    }
+
+// L1 Team Lead permission
+// Backend uses "team_lead"; "l1" is also supported for compatibility.
+    if (l1Cb) {
+        l1Cb.checked =
+            currentRoles.includes("team_lead") ||
+            currentRoles.includes("l1");
+    }
+
     const seniorStatus = (isSenior === true || isSenior === 1);
-    if (seniorCb) seniorCb.checked = seniorStatus;
 
-    // 6. 📸 SNAPSHOT: Save the initial state
+    if (seniorCb) {
+        seniorCb.checked = seniorStatus;
+    }
+
+// 6. 📸 SNAPSHOT: Save the initial state
     initialPermissionState = {
         manager: managerCb ? managerCb.checked : false,
         hr: hrCb ? hrCb.checked : false,
-        senior: seniorCb ? seniorCb.checked : false
+        senior: seniorCb ? seniorCb.checked : false,
+        l1: l1Cb ? l1Cb.checked : false
     };
 
     // 🚀 THE MISSING PIECE: GUARD INTEGRATION
@@ -26308,8 +26817,15 @@ function openUserEditModal(userId, fullName, currentRoles, isSenior) {
           setBadgeStyle('mv_badge_scholar', user.scholar);
 
           // Render Managers & HOD pills
-          const mgrDiv = document.getElementById('mv_line_manager_view');
-          const hodDiv = document.getElementById('mv_hod_name_view');
+            const l1Div = document.getElementById('mv_team_lead_view');
+            const mgrDiv = document.getElementById('mv_line_manager_view');
+            const hodDiv = document.getElementById('mv_hod_name_view');
+
+            if (l1Div) {
+                l1Div.innerHTML = Array.isArray(user.team_lead) && user.team_lead.length > 0
+                    ? user.team_lead.map(t => `<span style="display:inline-block; background:#ede9fe; color:#6d28d9; padding:3px 10px; border-radius:6px; font-weight:700; font-size:0.75rem;"><i class="fas fa-user-check" style="margin-right:4px;"></i>${t}</span>`).join('')
+                    : '<span style="color:#94a3b8; font-style:italic; font-size:0.85rem;">No Team Leads Assigned</span>';
+            }
           
           if (mgrDiv) {
               mgrDiv.innerHTML = Array.isArray(user.line_manager) && user.line_manager.length > 0 
@@ -29450,71 +29966,97 @@ function clearManagerError() {
     if (mgrError) mgrError.style.display = "none";
 }
 
-//   # =========================================================
-//          NEW EMPLOYEE REGISTRATION FORM - ENHANCED
-//   # ========================================================= 
+// =========================================================
+//        NEW EMPLOYEE REGISTRATION FORM - ENHANCED
+// =========================================================
 
 /**
- * 🛡️ STEP 1 VALIDATION GUARD (The Security Guard)
- * Checks mandatory fields before allowing the user to move to Step 2.
+ * 🛡️ STEP 1 VALIDATION GUARD
+ *
+ * Validates only the mandatory employee onboarding fields.
+ *
+ * Approval hierarchy is intentionally OPTIONAL during onboarding:
+ *   L1 = Team Lead
+ *   L2 = Line Manager
+ *   L3 = HOD / Department Head
+ *
+ * These approval mappings can be configured after
+ * the employee has been successfully onboarded.
  */
- function validateStep1() {
+function validateStep1() {
     let isValid = true;
-    
-    // Standard Inputs
+
+    // =========================================================
+    // STANDARD MANDATORY INPUTS
+    // =========================================================
     const first = document.getElementById("reg_first_name")?.value.trim();
     const last = document.getElementById("reg_last_name")?.value.trim();
     const username = document.getElementById("reg_username_new")?.value.trim();
     const joinedDate = document.getElementById("reg_joined_new")?.value;
 
-    // 🚀 Checkbox Containers
-    const mgrContainer = document.getElementById("reg_mgr_container");
-    const checkedManagers = mgrContainer ? mgrContainer.querySelectorAll('input[type="checkbox"]:checked') : [];
-    const hasLineManager = checkedManagers.length > 0;
-
-    // 🆕 HOD Container Check
-    const hodContainer = document.getElementById("reg_hod_container");
-    const checkedHODs = hodContainer ? hodContainer.querySelectorAll('input[type="checkbox"]:checked') : [];
-    const hasHOD = checkedHODs.length > 0;
-
+    // =========================================================
+    // INLINE ERROR HANDLER
+    // =========================================================
     const flagError = (inputId, errorSpanId, message) => {
         const inputEl = document.getElementById(inputId);
         const errorEl = document.getElementById(errorSpanId);
-        if (inputEl) inputEl.style.borderColor = "#ef4444";
+
+        if (inputEl) {
+            inputEl.style.borderColor = "#ef4444";
+        }
+
         if (errorEl) {
             errorEl.innerText = message;
             errorEl.style.display = "block";
         }
+
         isValid = false;
     };
 
-    // Validate Standard Inputs
-    if (!first) flagError("reg_first_name", "first_name_error", "First Name is required.");
-    if (!last) flagError("reg_last_name", "last_name_error", "Surname is required.");
-    if (!username) flagError("reg_username_new", "user_error_new", "Username is required.");
-    if (!joinedDate) flagError("reg_joined_new", "date_error_new", "Joined Date is required.");
-    
-// 🛡️ Line Manager Validation (Clean version)
-if (!hasLineManager) {
-        if (mgrContainer) mgrContainer.style.borderColor = "#ef4444";
-        const mgrError = document.getElementById("manager_error");
-        if (mgrError) {
-            mgrError.innerText = "⚠️ At least one Line Manager must be selected.";
-            mgrError.style.display = "block";
-        }
-        isValid = false;
+    // =========================================================
+    // VALIDATE MANDATORY EMPLOYEE FIELDS
+    // =========================================================
+    if (!first) {
+        flagError(
+            "reg_first_name",
+            "first_name_error",
+            "First Name is required."
+        );
     }
 
-    // 🛡️ HOD Validation (Clean version)
-    if (!hasHOD) {
-        if (hodContainer) hodContainer.style.borderColor = "#ef4444";
-        const hodError = document.getElementById("hod_error");
-        if (hodError) {
-            hodError.innerText = "⚠️ At least one HOD must be selected.";
-            hodError.style.display = "block";
-        }
-        isValid = false;
+    if (!last) {
+        flagError(
+            "reg_last_name",
+            "last_name_error",
+            "Surname is required."
+        );
     }
+
+    if (!username) {
+        flagError(
+            "reg_username_new",
+            "user_error_new",
+            "Username is required."
+        );
+    }
+
+    if (!joinedDate) {
+        flagError(
+            "reg_joined_new",
+            "date_error_new",
+            "Joined Date is required."
+        );
+    }
+
+    // =========================================================
+    // APPROVAL HIERARCHY
+    // =========================================================
+    // L1 Team Lead, L2 Line Manager and L3 HOD are OPTIONAL
+    // during employee onboarding.
+    //
+    // They can be configured after the employee is created.
+    // Therefore, NO validation or blocking is performed here.
+    // =========================================================
 
     if (!isValid) {
         Swal.fire({
@@ -29891,15 +30433,21 @@ async function resumeDraft() {
         safeSet('reg_location_new', data.work_location);
 
         // 🚀 THE CHECKBOX FIX: Re-tick the saved managers
-        await populateOnboardingManagers(); 
+        // 🚀 THE CHECKBOX FIX: Re-tick the saved managers
+        await populateOnboardingManagers();
         const savedMgrs = data.line_managers || [];
         const savedHODs = data.hod_names || [];
+        const savedL1s = data.team_lead || data.team_leads || []; // Add this line
 
         document.querySelectorAll('#reg_mgr_container input[type="checkbox"]').forEach(cb => {
             if (savedMgrs.includes(cb.value)) cb.checked = true;
         });
         document.querySelectorAll('#reg_hod_container input[type="checkbox"]').forEach(cb => {
             if (savedHODs.includes(cb.value)) cb.checked = true;
+        });
+        // Add this new block
+        document.querySelectorAll('#reg_l1_container input[type="checkbox"]').forEach(cb => {
+            if (savedL1s.includes(cb.value)) cb.checked = true;
         });
 
         // 📋 2. RESTORE STEP 2 (Personal Details)
@@ -29995,99 +30543,262 @@ async function resumeDraft() {
 }
 
 
-/**
- * 👥 MANAGER & HOD LOADER (Checkbox Edition - Ultra Fast)
- * Fetches the directory and populates the scrollable checkbox boxes.
- */
- async function populateOnboardingManagers() {
-    const mgrContainer = document.getElementById("reg_mgr_container");
-    const hodContainer = document.getElementById("reg_hod_container");
-    
-    if (!mgrContainer || !hodContainer) return;
+        /**
+         * 👥 MANAGER, HOD & L1 TEAM LEAD LOADER
+         * Fetches the directory and populates the approver checkbox boxes.
+         *
+         * Existing behaviour preserved:
+         *   - Manager/HOD eligibility remains unchanged.
+         *   - L1 Team Lead is now available separately.
+         *   - Away-status display remains unchanged.
+         */
+        async function populateOnboardingManagers() {
+            const mgrContainer = document.getElementById("reg_mgr_container");
+            const hodContainer = document.getElementById("reg_hod_container");
+            const l1Container = document.getElementById("reg_l1_container");
 
-    // 🚀 THE FIX STEP 1: Show loading feedback
-    const loadingHtml = '<div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;"><i class="fas fa-spinner fa-spin"></i> Loading list...</div>';
-    mgrContainer.innerHTML = loadingHtml;
-    hodContainer.innerHTML = loadingHtml;
-    
-    mgrContainer.style.cursor = "wait";
-    hodContainer.style.cursor = "wait";
+            // Manager + HOD are existing mandatory containers.
+            // L1 container is optional so older UI does not break.
+            if (!mgrContainer || !hodContainer) return;
 
-    try {
-        let users = [];
+            // 🚀 THE FIX STEP 1: Show loading feedback
+            const loadingHtml =
+                '<div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">' +
+                '<i class="fas fa-spinner fa-spin"></i> Loading list...</div>';
 
-        // ⚡ THE SPEED UPGRADE: Instant RAM Cache Lookup
-        if (window.allUsersList && window.allUsersList.length > 0) {
-            users = window.allUsersList;
-        } else {
-            // Fallback to Network only if the cache is empty
-            const res = await fetchWithAuth(`${API_URL}/users/all?page_size=1000`);
-            if (!res || !res.ok) throw new Error("Failed to reach server");
+            mgrContainer.innerHTML = loadingHtml;
+            hodContainer.innerHTML = loadingHtml;
 
-            const responseData = await res.json();
-            users = responseData.users || [];
-            window.allUsersList = users; // Cache it for next time
-        }
+            if (l1Container) {
+                l1Container.innerHTML = loadingHtml;
+            }
 
-        // 🛡️ THE IRONCLAD FILTER LOGIC
-        const eligible = users.filter(u => {
-            // 1. Must be an active employee
-            const isActive = u.is_active !== false; 
-            
-            // 2. Safely gather all role data (Checks both 'roles_list' array AND 'role' string)
-            const roles = (u.roles_list || []).map(r => String(r).toLowerCase());
-            if (u.role) roles.push(String(u.role).toLowerCase());
+            mgrContainer.style.cursor = "wait";
+            hodContainer.style.cursor = "wait";
 
-            // 3. STRICT CHECK: Do they possess actual managerial power?
-            const isManager = roles.includes("manager");
-            const isSenior = u.is_senior_manager === true;
+            if (l1Container) {
+                l1Container.style.cursor = "wait";
+            }
 
-            // ⛔ If they are only an HR Admin (and not a Manager/Senior), this evaluates to FALSE
-            return isActive && (isManager || isSenior);
-        });
+            try {
+                let users = [];
 
-        // 🛠️ Updated "buildRows": Now includes the Phase 3 Away Status Logic
-        const buildRows = (list, nameAttr, errorTarget = false) => {
-            if (list.length === 0) return '<div style="padding:10px; color:#94a3b8; font-size:0.8rem;">No eligible staff found.</div>';
-            
-            return list.map(m => {
-                // 🚀 PHASE 3: Check for Away Status from Backend
-                const awayUntil = m.current_leave_end;
-                const statusHtml = awayUntil 
-                    ? `<span style="color: #94a3b8; font-size: 0.75rem; font-style: italic; margin-left: 5px;">(Away until ${awayUntil})</span>` 
-                    : '';
+                // ⚡ THE SPEED UPGRADE: Instant RAM Cache Lookup
+                if (window.allUsersList && window.allUsersList.length > 0) {
+                    users = window.allUsersList;
+                } else {
+                    // Fallback to Network only if the cache is empty
+                    const res = await fetchWithAuth(
+                        `${API_URL}/users/all?page_size=1000`
+                    );
 
-                return `
+                    if (!res || !res.ok) {
+                        throw new Error("Failed to reach server");
+                    }
+
+                    const responseData = await res.json();
+                    users = responseData.users || [];
+
+                    // Cache it for next time
+                    window.allUsersList = users;
+                }
+
+                // ============================================================
+                // 🛡️ ROLE ANALYSIS
+                // ============================================================
+                //
+                // We intentionally keep the existing Manager/HOD eligibility
+                // logic intact and add L1 Team Lead as a separate role.
+                //
+                const eligible = users.filter(u => {
+                    // 1. Must be an active employee
+                    const isActive = u.is_active !== false;
+
+                    // 2. Safely gather all role data
+                    const roles = (u.roles_list || [])
+                        .map(r => String(r).toLowerCase());
+
+                    if (u.role) {
+                        roles.push(String(u.role).toLowerCase());
+                    }
+
+                    // 3. Existing Manager/HOD power
+                    const isManager = roles.includes("manager");
+                    const isSenior = u.is_senior_manager === true;
+
+                    // 4. NEW: L1 Team Lead
+                    const isTeamLead =
+                        roles.includes("team_lead") ||
+                        roles.includes("l1");
+
+                    // Keep any user who can serve as:
+                    // Manager/HOD OR L1 Team Lead
+                    return isActive && (
+                        isManager ||
+                        isSenior ||
+                        isTeamLead
+                    );
+                });
+
+                // ============================================================
+                // 🛠️ BUILD APPROVER ROWS
+                // ============================================================
+                //
+                // Existing checkbox rendering is preserved.
+                //
+                const buildRows = (
+                    list,
+                    nameAttr,
+                    errorTarget = false
+                ) => {
+                    if (list.length === 0) {
+                        return `
+                    <div style="
+                        padding:10px;
+                        color:#94a3b8;
+                        font-size:0.8rem;
+                    ">
+                        No eligible staff found.
+                    </div>
+                `;
+                    }
+
+                    return list.map(m => {
+
+                        // 🚀 PHASE 3: Check for Away Status from Backend
+                        const awayUntil = m.current_leave_end;
+
+                        const statusHtml = awayUntil
+                            ? `
+                        <span style="
+                            color: #94a3b8;
+                            font-size: 0.75rem;
+                            font-style: italic;
+                            margin-left: 5px;
+                        ">
+                            (Away until ${awayUntil})
+                        </span>
+                    `
+                            : "";
+
+                        return `
                     <label class="approver-item">
                         <div class="approver-info">
-                            <span class="approver-name">${m.full_name}</span>
-                            ${statusHtml} 
+                            <span class="approver-name">
+                                ${m.full_name}
+                            </span>
+                            ${statusHtml}
                         </div>
-                        <input type="checkbox" name="${nameAttr}" value="${m.full_name}" 
-                               ${errorTarget ? "onchange=\"clearError('manager_error')\"" : ""}>
+
+                        <input
+                            type="checkbox"
+                            name="${nameAttr}"
+                            value="${m.full_name}"
+                            ${
+                            errorTarget
+                                ? "onchange=\"clearError('manager_error')\""
+                                : ""
+                        }
+                        >
                     </label>
                 `;
-            }).join("");
-        };
+                    }).join("");
+                };
 
-        // 🚀 Render the lists
-        mgrContainer.innerHTML = buildRows(eligible, "mgr_checkbox", true);
-        hodContainer.innerHTML = buildRows(eligible, "hod_checkbox", false);
-        
-        mgrContainer.style.cursor = "default";
-        hodContainer.style.cursor = "default";
-        mgrContainer.style.borderColor = "#e2e8f0";
-        hodContainer.style.borderColor = "#e2e8f0";
+                // ============================================================
+                // 👔 EXISTING MANAGER / HOD LIST
+                // ============================================================
+                //
+                // IMPORTANT:
+                // Manager and HOD continue using the same eligibility criteria.
+                //
+                const managerEligible = eligible.filter(u => {
+                    const roles = (u.roles_list || [])
+                        .map(r => String(r).toLowerCase());
 
-    } catch (e) {
-        console.error("🚨 Onboarding Manager load error:", e);
-        const errorHtml = '<div style="color:#ef4444; padding:10px; font-size:0.8rem;">❌ Error loading list</div>';
-        mgrContainer.innerHTML = errorHtml;
-        hodContainer.innerHTML = errorHtml;
-    }
-}
+                    if (u.role) {
+                        roles.push(String(u.role).toLowerCase());
+                    }
 
-let isUsernameAutoGenerated = true; // Track if we should still auto-fill
+                    return (
+                        roles.includes("manager") ||
+                        u.is_senior_manager === true
+                    );
+                });
+
+                // ============================================================
+                // 🟢 NEW L1 TEAM LEAD LIST
+                // ============================================================
+                const l1Eligible = eligible.filter(u => {
+                    const roles = (u.roles_list || [])
+                        .map(r => String(r).toLowerCase());
+
+                    if (u.role) {
+                        roles.push(String(u.role).toLowerCase());
+                    }
+
+                    return (
+                        roles.includes("team_lead") ||
+                        roles.includes("l1")
+                    );
+                });
+
+                // 🚀 Render existing Manager/HOD lists
+                mgrContainer.innerHTML = buildRows(
+                    managerEligible,
+                    "mgr_checkbox",
+                    true
+                );
+
+                hodContainer.innerHTML = buildRows(
+                    managerEligible,
+                    "hod_checkbox",
+                    false
+                );
+
+                // 🚀 Render NEW L1 list only if the container exists
+                if (l1Container) {
+                    l1Container.innerHTML = buildRows(
+                        l1Eligible,
+                        "l1_checkbox",
+                        false
+                    );
+                }
+
+                // ============================================================
+                // 🎨 RESTORE CONTAINER STATE
+                // ============================================================
+                mgrContainer.style.cursor = "default";
+                hodContainer.style.cursor = "default";
+
+                mgrContainer.style.borderColor = "#e2e8f0";
+                hodContainer.style.borderColor = "#e2e8f0";
+
+                if (l1Container) {
+                    l1Container.style.cursor = "default";
+                    l1Container.style.borderColor = "#e2e8f0";
+                }
+
+            } catch (e) {
+                console.error(
+                    "🚨 Onboarding Manager / L1 load error:",
+                    e
+                );
+
+                const errorHtml =
+                    '<div style="color:#ef4444; padding:10px; font-size:0.8rem;">' +
+                    '❌ Error loading list</div>';
+
+                mgrContainer.innerHTML = errorHtml;
+                hodContainer.innerHTML = errorHtml;
+
+                if (l1Container) {
+                    l1Container.innerHTML = errorHtml;
+                }
+            }
+        }
+
+        let isUsernameAutoGenerated = true; // Track if we should still auto-fill
 
 /**
  * 1. Triggered by First Name and Surname inputs
@@ -31209,35 +31920,25 @@ function applyBulkAssignments() {
 }
 
 /**
- * 🛡️ Real-time workspace lookups evaluator logic locks/unlocks action execution button
+ * 🛡️ Real-time workspace evaluator
+ *
+ * L1 / L2 / HOD are OPTIONAL during onboarding.
+ * HR can proceed with bulk onboarding even when the
+ * approval hierarchy has not been configured yet.
  */
 function validateHierarchyCompletion() {
     const rows = document.querySelectorAll("#excel-table-body tr:not(#empty-state-row)");
     const commitBtn = document.getElementById("btn-commit-upload");
-    if (rows.length === 0) return;
 
-    let allAssigned = true;
+    if (!commitBtn) return;
 
-    rows.forEach(row => {
-        const mgrDropdown = row.querySelector(".row-manager-dropdown");
-        const hodDropdown = row.querySelector(".row-hod-dropdown");
-
-        if (mgrDropdown && !mgrDropdown.disabled) {
-            if (!mgrDropdown.value || !hodDropdown.value) {
-                allAssigned = false;
-            }
-        }
-    });
-
-    if (allAssigned) {
-        commitBtn.disabled = false;
-        commitBtn.style.opacity = "1";
-        commitBtn.style.cursor = "pointer";
-    } else {
-        commitBtn.disabled = true;
-        commitBtn.style.opacity = "0.4";
-        commitBtn.style.cursor = "not-allowed";
-    }
+    // Hierarchy mapping is NOT required during onboarding.
+    // HR can onboard employees first and configure
+    // Team Lead (L1) -> Line Manager (L2) -> HOD (L3)
+    // later.
+    commitBtn.disabled = false;
+    commitBtn.style.opacity = "1";
+    commitBtn.style.cursor = "pointer";
 }
 
 /**

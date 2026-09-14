@@ -634,9 +634,17 @@
 // 🌐 Dynamic API Handshake
 const getApiUrl = () => {
     const host = window.location.hostname;
+    const port = window.location.port;
 
     // Local Development
     if (host === "127.0.0.1" || host === "localhost") {
+
+        // Staging frontend :8083 → Staging API :8082
+        if (port === "8083") {
+            return "http://127.0.0.1:8082";
+        }
+
+        // Production frontend → Production API :8081
         return "http://127.0.0.1:8081";
     }
 
