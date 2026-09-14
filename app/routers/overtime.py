@@ -82,6 +82,20 @@ def _find_user_by_name_or_username(db: Session, name: Optional[str]):
         or_(models.User.full_name.ilike(cleaned), models.User.username.ilike(cleaned))
     ).first()
 
+
+def _normalize_approver_list(value):
+    if not value:
+        return []
+
+    if not isinstance(value, list):
+        value = [value]
+
+    return [
+        str(x).strip()
+        for x in value
+        if x and str(x).strip()
+    ]
+
 # ============================================================
 # 🌍 GLOBAL CONFIGURATION
 # ============================================================
@@ -93,16 +107,23 @@ try:
         template_new_ot_request, 
         template_ot_decision,
         template_l2_ot_request,
-        template_cancellation_request,      
+        template_l3_ot_request,
+        template_cancellation_request,
         template_cancellation_approved,
-        template_cancellation_rejected
+        template_cancellation_rejected,
+        template_ot_cancellation_request,
+        template_l2_ot_cancellation_request,
+        template_l3_ot_cancellation_request,
+        template_ot_cancellation_approved,
+        template_ot_cancellation_rejected
     )
 except ImportError:
     from app.utils.email_service import (
         send_email, 
         template_new_ot_request, 
         template_ot_decision,
-        template_l2_ot_request
+        template_l2_ot_request,
+        template_l3_ot_request
     )
 
 router = APIRouter(prefix="/overtime", tags=["Overtime"])
@@ -131,9 +152,188 @@ async def apply_overtime(
     approver_name = approver_name.strip()
     ot_date_obj = date.fromisoformat(ot_date)
 
-    # 🚀 NEW: Resolve Approver ID safely before any DB operations
-    manager_user = _find_user_by_name_or_username(db, approver_name)
-    approver_id = manager_user.id if manager_user else None
+    # ============================================================
+    # GLOBAL APPROVAL POLICY
+    # Same workflow switches used by Leave
+    # ============================================================
+    policy = db.query(models.GlobalPolicy).filter(
+        models.GlobalPolicy.id == 1
+    ).first()
+
+    l1_enabled = policy.l1_approval_enabled if policy else False
+    l2_enabled = policy.l2_approval_enabled if policy else False
+
+    # ============================================================
+    # APPROVAL ID RESOLUTION
+    # L1 = Team Lead       -> approver_l1_id
+    # L2 = Line Manager    -> approver_id
+    # L3 = HOD             -> approver_l2_id
+    # ============================================================
+
+    employee_user = db.query(models.User).filter(
+        models.User.full_name == employee_name
+    ).first()
+
+    if not employee_user:
+        raise HTTPException(
+            status_code=404,
+            detail="Employee record not found."
+        )
+
+    assigned_team_leads = _normalize_approver_list(
+        employee_user.team_lead
+    )
+
+    assigned_line_managers = _normalize_approver_list(
+        employee_user.line_manager
+    )
+
+    assigned_hods = _normalize_approver_list(
+        employee_user.hod_name
+    )
+
+    # ------------------------------------------------------------
+    # L1 - TEAM LEAD
+    # ------------------------------------------------------------
+
+    approver_l1_id = None
+    team_lead = None
+
+    if l1_enabled:
+        if not assigned_team_leads:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Missing Team Lead approver configuration. "
+                    "Please contact HR Admin."
+                )
+            )
+
+        if not approver_name:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Please select a Team Lead approver "
+                    "before submitting this overtime request."
+                )
+            )
+
+        if approver_name not in assigned_team_leads:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid Team Lead approver selected. "
+                    "Please contact HR Admin."
+                )
+            )
+
+        team_lead = _find_user_by_name_or_username(
+            db,
+            approver_name
+        )
+
+        if not team_lead or not team_lead.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "The selected Team Lead approver is not "
+                    "available. Please contact HR Admin."
+                )
+            )
+
+        approver_l1_id = team_lead.id
+
+    # ------------------------------------------------------------
+    # L2 - LINE MANAGER
+    # ------------------------------------------------------------
+
+    manager = None
+    approver_id = None
+    resolved_approver_name = None
+
+    if assigned_line_managers:
+        for manager_name in assigned_line_managers:
+            candidate = _find_user_by_name_or_username(
+                db,
+                manager_name
+            )
+
+            if candidate and candidate.is_active:
+                manager = candidate
+                break
+
+    if l2_enabled:
+        if not assigned_line_managers:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Missing Line Manager approver configuration. "
+                    "Please contact HR Admin."
+                )
+            )
+
+        if not manager:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "The assigned Line Manager approver is not available. "
+                    "Please contact HR Admin."
+                )
+            )
+
+        approver_id = manager.id
+        resolved_approver_name = manager.full_name
+
+    # ------------------------------------------------------------
+    # L3 - HOD
+    # HOD is always required as the final approval level.
+    # ------------------------------------------------------------
+
+    if not assigned_hods:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Missing HOD approver configuration. "
+                "Please contact HR Admin."
+            )
+        )
+
+    hod = None
+    approver_l2_id = None
+    approver_l2_name = None
+
+    for hod_name in assigned_hods:
+        candidate = _find_user_by_name_or_username(
+            db,
+            hod_name
+        )
+
+        if candidate and candidate.is_active:
+            hod = candidate
+            break
+
+    if not hod:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "The assigned HOD approver is not available. "
+                "Please contact HR Admin."
+            )
+        )
+
+    approver_l2_id = hod.id
+    approver_l2_name = hod.full_name
+
+    # ------------------------------------------------------------
+    # INITIAL APPROVAL STATUS
+    # ------------------------------------------------------------
+
+    if l1_enabled:
+        initial_status = "Pending"
+    elif l2_enabled:
+        initial_status = "Pending L2 Approval"
+    else:
+        initial_status = "Pending L3 Approval"
 
     # A. Check Duplicates
     existing_ot = db.query(models.Overtime).filter(
@@ -181,11 +381,28 @@ async def apply_overtime(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid time format.")
 
-    # D. Create Record (🚀 UPDATED: Includes approver_id)
+    # D. Create Record
+    # ============================================================
+    # Approval hierarchy:
+    # L1 = Team Lead       -> approver_l1_id
+    # L2 = Line Manager    -> approver_id
+    # L3 = HOD             -> approver_l2_id
+    # ============================================================
+
     new_ot = models.Overtime(
         employee_name=employee_name,
-        approver_name=approver_name,
-        approver_id=approver_id, # Link the database ID here
+
+        # L1 - Team Lead
+        approver_l1_id=approver_l1_id,
+
+        # L2 - Line Manager
+        approver_name=resolved_approver_name,
+        approver_id=approver_id,
+
+        # L3 - HOD
+        approver_l2=approver_l2_name,
+        approver_l2_id=approver_l2_id,
+
         ot_date=ot_date_obj,
         ot_type=ot_type,
         ot_unit=ot_unit,
@@ -194,31 +411,53 @@ async def apply_overtime(
         total_value=total_val,
         reason=reason,
         attachment_path=saved_filename,
-        status="Pending",
+
+        # Initial workflow status
+        status=initial_status,
+
         status_history=f"Submitted ({get_utc_timestamp()})"
     )
+
     db.add(new_ot)
     db.commit()
     db.refresh(new_ot)
 
-    # E. Email Manager (Kept logic same, reused manager_user)
-    if manager_user and manager_user.email:
+    # E. Email First Workflow Approver
+    # L1 takes priority when L1 workflow is enabled.
+    email_approver = team_lead if l1_enabled else manager
+
+    if email_approver and email_approver.email:
         try:
             admin_name = applied_by if (applied_by and applied_by != employee_name) else None
+
             body = template_new_ot_request(
-                manager_name=manager_user.full_name, 
-                employee_name=employee_name, 
-                ot_type=ot_type, 
-                ot_date=ot_date, 
+                manager_name=email_approver.full_name,
+                employee_name=employee_name,
+                ot_type=ot_type,
+                ot_date=ot_date,
                 duration=f"{total_val} {ot_unit}",
                 admin_name=admin_name
             )
-            background_tasks.add_task(send_email, manager_user.email, f"Action Required: OT Claim - {employee_name}", body)
-            print(f"📧 OT Manager Notification queued for {manager_user.email}")
+
+            background_tasks.add_task(
+                send_email,
+                email_approver.email,
+                f"Action Required: OT Claim - {employee_name}",
+                body
+            )
+
+            print(
+                f"📧 OT Manager Notification queued for "
+                f"{email_approver.email}"
+            )
+
         except Exception as e:
             print(f"⚠️ OT Email Trigger Warning: {e}")
 
-    return {"message": "Overtime request submitted successfully", "id": new_ot.id}
+    return {
+        "message": "Overtime request submitted successfully",
+        "id": new_ot.id
+    }
 
 
 # 2. GET ALL REQUESTS (Admin Audit)
@@ -234,7 +473,19 @@ def get_all_overtime_requests(db: Session = Depends(get_db)):
         formatted.append({
             "id": o.id,
             "employee_name": o.employee_name,
+
+            # L2 - Line Manager
             "approver_name": o.approver_name,
+
+            # L1 - Team Lead
+            "approver_l1_id": o.approver_l1_id,
+
+            # L2 - Line Manager ID
+            "approver_id": o.approver_id,
+
+            # L3 - HOD
+            "approver_l2_id": o.approver_l2_id,
+
             "ot_date": o.ot_date.strftime("%Y-%m-%d"),
             "ot_type": o.ot_type,
             "ot_unit": o.ot_unit,
@@ -243,8 +494,9 @@ def get_all_overtime_requests(db: Session = Depends(get_db)):
             "reason": o.reason,
             "attachment_path": url,
             "manager_remarks": o.manager_remarks or "",
-            "status_history": convert_utc_string_to_kl(o.status_history) # 👈 FIXED
+            "status_history": convert_utc_string_to_kl(o.status_history)  # 👈 FIXED
         })
+
     return formatted
 
 # 3. GET MANAGER PENDING & HISTORY REQUESTS (Unified)
@@ -256,32 +508,139 @@ def get_manager_ot_requests(
     db: Session = Depends(get_db),
     x_username: Optional[str] = Header(None)  # 👑 Intercept requester identity header
 ):
-    # Check if the requester has authoritative Superuser privileges
-    user = db.query(models.User).filter(models.User.username == x_username).first()
+    # ============================================================
+    # AUTHENTICATED USER
+    # Resolve the actual requester from the security header.
+    # The frontend already supplies x-username through fetchWithAuth().
+    # ============================================================
+    user = db.query(models.User).filter(
+        models.User.username == x_username
+    ).first()
+
     is_super = user and user.role == "superuser"
 
+    # ============================================================
+    # BASE QUERY
+    # ============================================================
     query = db.query(models.Overtime)
-    
-    # If the user is NOT a superuser, apply strict manager assignment constraints
-    if not is_super:
-        if approver_name:
-            query = query.filter(
-                or_(
-                    models.Overtime.approver_name.ilike(approver_name.strip()),
-                    models.Overtime.approver_l2.ilike(approver_name.strip()),
-                    models.Overtime.status_history.ilike(f"%{approver_name.strip()}%") 
+
+    # ============================================================
+    # SUPERUSER
+    # Superusers retain the existing ability to see all OT records.
+    # ============================================================
+    if is_super:
+        results = query.order_by(
+            models.Overtime.id.desc()
+        ).all()
+
+    else:
+        # ========================================================
+        # NORMAL USER / MANAGER
+        #
+        # Security rule:
+        # The authenticated database user ID is authoritative.
+        # Do not use approver_name or status_history for access.
+        # ========================================================
+        if not user:
+            return []
+
+        manager_id = user.id
+
+        # ========================================================
+        # STAGE-SPECIFIC APPROVAL MATRIX
+        #
+        # L1 = Team Lead
+        #     status = Pending
+        #     ID     = approver_l1_id
+        #
+        # L2 = Line Manager
+        #     status = Pending L2 Approval
+        #     ID     = approver_id
+        #
+        # L3 = HOD
+        #     status = Pending L3 Approval
+        #     ID     = approver_l2_id
+        #
+        # IMPORTANT:
+        # Pending Cancel is intentionally NOT changed here.
+        # The cancellation workflow will be aligned separately
+        # so we do not create a temporary authorization mismatch.
+        # ========================================================
+        query = query.filter(
+            or_(
+                # NORMAL L1 APPROVAL
+                and_(
+                    models.Overtime.status == "Pending",
+                    models.Overtime.approver_l1_id == manager_id
+                ),
+
+                # CANCELLATION L1 APPROVAL
+                and_(
+                    models.Overtime.status == "Pending Cancel",
+                    models.Overtime.approver_l1_id == manager_id
+                ),
+
+                # NORMAL L2 APPROVAL
+                and_(
+                    models.Overtime.status == "Pending L2 Approval",
+                    models.Overtime.approver_id == manager_id
+                ),
+
+                # NORMAL / CANCELLATION L3 APPROVAL
+                and_(
+                    models.Overtime.status == "Pending L3 Approval",
+                    models.Overtime.approver_l2_id == manager_id
                 )
             )
-        else:
-            return []
-        
-    results = query.order_by(models.Overtime.id.desc()).all()
-    
+        )
+
+        results = query.order_by(
+            models.Overtime.id.desc()
+        ).all()
+
+    # ============================================================
+    # FORMAT RESPONSE
+    # ============================================================
     formatted_results = []
+
     for o in results:
-        # 🚀 FIXED: Using the centralized helper to prevent 404s
-        full_attachment_url = _normalize_attachment_url(o.attachment_path)
-        
+        # 🚀 Existing attachment handling preserved
+        full_attachment_url = _normalize_attachment_url(
+            o.attachment_path
+        )
+
+        # ========================================================
+        # DETERMINE WHETHER THIS IS THE CURRENT USER'S TURN
+        # ========================================================
+        if is_super:
+            is_my_turn = True
+        else:
+            is_my_turn = (
+                # NORMAL L1 APPROVAL
+                (
+                    o.status == "Pending"
+                    and o.approver_l1_id == user.id
+                )
+                or
+                # CANCELLATION L1 APPROVAL
+                (
+                    o.status == "Pending Cancel"
+                    and o.approver_l1_id == user.id
+                )
+                or
+                # NORMAL L2 APPROVAL
+                (
+                    o.status == "Pending L2 Approval"
+                    and o.approver_id == user.id
+                )
+                or
+                # NORMAL / CANCELLATION L3 APPROVAL
+                (
+                    o.status == "Pending L3 Approval"
+                    and o.approver_l2_id == user.id
+                )
+            )
+
         formatted_results.append({
             "id": o.id,
             "employee_name": o.employee_name,
@@ -294,12 +653,24 @@ def get_manager_ot_requests(
             "reason": o.reason,
             "attachment_path": full_attachment_url,
             "manager_remarks": o.manager_remarks or "",
-            "status_history": convert_utc_string_to_kl(o.status_history), # 👈 FIXED: Localized timestamp
-            
-            # 👑 CRITICAL MATRIX INTERLOCK
-            "is_my_turn": True if is_super else (o.approver_name == approver_name.strip() if approver_name else False)
+            "status_history": convert_utc_string_to_kl(
+                o.status_history
+            ),
+
+            # CRITICAL MATRIX INTERLOCK
+            # Current approval turn is determined by
+            # status + authoritative approver ID.
+            "is_my_turn": is_my_turn,
+
+            # ====================================================
+            # APPROVAL IDS
+            # Exposed for the frontend workflow update later.
+            # ====================================================
+            "approver_l1_id": o.approver_l1_id,
+            "approver_id": o.approver_id,
+            "approver_l2_id": o.approver_l2_id
         })
-        
+
     return formatted_results
 
 # 4. PROCESS MANAGER ACTION (Forensically Fixed)
@@ -309,8 +680,9 @@ async def process_ot_action(
     background_tasks: BackgroundTasks, 
     status: str, 
     remarks: str = "", 
-    approver_name: str = "", 
-    l2_name: str = Query(None), 
+    approver_name: str = "",
+    l2_name: str = Query(None),
+    l3_name: str = Query(None),
     db: Session = Depends(get_db),
     x_username: Optional[str] = Header(None) 
 ):
@@ -324,20 +696,139 @@ async def process_ot_action(
     is_superuser_override = acting_user and acting_user.role == "superuser"
     
     # 🚀 FIX: Effective approver name ensures auth works even if parameter is empty
-    effective_approver_name = approver_name if (approver_name and approver_name.strip()) else (acting_user.full_name if acting_user else ot.approver_name)
+    effective_approver_name = (
+        approver_name
+        if (approver_name and approver_name.strip())
+        else (acting_user.full_name if acting_user else ot.approver_name)
+    )
 
-    # --- 🛡️ SECURITY SCAN: Hybrid Authorization ---
+    # ============================================================
+    # CURRENT OT STATUS
+    # ============================================================
+    current_status = ot.status
+
+    # ============================================================
+    # CANCELLATION JOURNEY DETECTION
+    #
+    # IMPORTANT:
+    # Cancellation currently has its own existing workflow.
+    # Do NOT apply the new normal L1/L2/L3 authorization matrix
+    # to Pending Cancel yet.
+    # ============================================================
+    is_cancellation_journey = (
+        current_status == "Pending Cancel"
+    ) or (
+        current_status == "Pending L2 Approval"
+        and "Cancellation" in (ot.status_history or "")
+    ) or (
+        current_status == "Pending L3 Approval"
+        and "Cancellation" in (ot.status_history or "")
+    )
+
+    # ============================================================
+    # STAGE-AWARE APPROVAL AUTHORIZATION
+    #
+    # Normal OT workflow:
+    #
+    # L1 = Team Lead
+    #     Pending
+    #     approver_l1_id
+    #
+    # L2 = Line Manager
+    #     Pending L2 Approval
+    #     approver_id
+    #
+    # L3 = HOD
+    #     Pending L3 Approval
+    #     approver_l2_id
+    #
+    # Cancellation workflow:
+    #
+    # L1 = Team Lead
+    #     Pending Cancel
+    #     approver_l1_id
+    #
+    # L2 = Line Manager
+    #     Pending L2 Approval + Cancellation history
+    #     approver_id
+    #
+    # L3 = HOD
+    #     Pending L3 Approval + Cancellation history
+    #     approver_l2_id
+    #
+    # The authenticated user's database ID is authoritative.
+    # ============================================================
     is_authorized = is_superuser_override
+
     if not is_authorized and acting_user:
-        is_l1_match = (ot.approver_id and acting_user.id == ot.approver_id) or \
-                      (effective_approver_name and ot.approver_name and effective_approver_name.strip().lower() == ot.approver_name.strip().lower())
-        is_l2_match = (ot.approver_l2_id and acting_user.id == ot.approver_l2_id) or \
-                      (effective_approver_name and ot.approver_l2 and effective_approver_name.strip().lower() == ot.approver_l2.strip().lower())
-        if is_l1_match or is_l2_match:
-            is_authorized = True
-    
+
+        if is_cancellation_journey:
+
+            # ----------------------------------------------------
+            # CANCELLATION WORKFLOW
+            # ----------------------------------------------------
+
+            # L1 - Team Lead
+            if (
+                current_status == "Pending Cancel"
+                and ot.approver_l1_id
+                and acting_user.id == ot.approver_l1_id
+            ):
+                is_authorized = True
+
+            # L2 - Line Manager
+            elif (
+                current_status == "Pending L2 Approval"
+                and "Cancellation" in (ot.status_history or "")
+                and ot.approver_id
+                and acting_user.id == ot.approver_id
+            ):
+                is_authorized = True
+
+            # L3 - HOD
+            elif (
+                current_status == "Pending L3 Approval"
+                and "Cancellation" in (ot.status_history or "")
+                and ot.approver_l2_id
+                and acting_user.id == ot.approver_l2_id
+            ):
+                is_authorized = True
+
+        else:
+
+            # ----------------------------------------------------
+            # NORMAL OT APPROVAL WORKFLOW
+            # ----------------------------------------------------
+
+            # L1 - Team Lead
+            if (
+                current_status == "Pending"
+                and ot.approver_l1_id
+                and acting_user.id == ot.approver_l1_id
+            ):
+                is_authorized = True
+
+            # L2 - Line Manager
+            elif (
+                current_status == "Pending L2 Approval"
+                and ot.approver_id
+                and acting_user.id == ot.approver_id
+            ):
+                is_authorized = True
+
+            # L3 - HOD
+            elif (
+                current_status == "Pending L3 Approval"
+                and ot.approver_l2_id
+                and acting_user.id == ot.approver_l2_id
+            ):
+                is_authorized = True
+
     if not is_authorized:
-        raise HTTPException(status_code=403, detail="You are not authorized to approve this request.")
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to approve this request."
+        )
 
     # Contextual flags
     acting_mgr = _find_user_by_name_or_username(db, effective_approver_name)
@@ -350,8 +841,8 @@ async def process_ot_action(
     l2_active = policy.l2_approval_enabled if policy else False
     
     timestamp = get_utc_timestamp()
-    current_status = ot.status
     route_to_l2 = False
+    route_to_l3 = False
     l2_user = None
     note_str = f" | Note: {remarks.strip()}" if remarks and remarks.strip() else ""
     
@@ -361,76 +852,483 @@ async def process_ot_action(
 
     display_approver = effective_approver_name.strip()
 
- # --- PROCESSING ---
-    # 🚀 Robust: Detects both L1 and L2-level cancellations
+    # --- PROCESSING ---
+    # Robust: Detects cancellation workflow stages
     is_cancellation_journey = (current_status == "Pending Cancel") or \
-                              (current_status == "Pending L2 Approval" and "Cancellation" in (ot.status_history or ""))
-    
+                              (current_status == "Pending L2 Approval" and "Cancellation" in (ot.status_history or "")) or \
+                              (current_status == "Pending L3 Approval" and "Cancellation" in (ot.status_history or ""))
+
     if is_cancellation_journey:
         if status == "Approved":
-            # 1. L1 Approval -> Route to L2 (if enabled)
-            if current_status == "Pending Cancel" and l2_active and is_l1 and not is_senior and ot.approver_l2 and not is_superuser_override:
+
+            # ============================================================
+            # CANCELLATION L1 -> L2
+            #
+            # L1 = Team Lead
+            # Current status = Pending Cancel
+            # Authoritative approver = approver_l1_id
+            #
+            # Reuse the originally captured L2 Line Manager.
+            # ============================================================
+            if (
+                current_status == "Pending Cancel"
+                and l2_active
+                and ot.approver_l1_id
+                and acting_user
+                and acting_user.id == ot.approver_l1_id
+                and ot.approver_id
+                and not is_superuser_override
+            ):
+                l2_user = db.query(models.User).filter(
+                    models.User.id == ot.approver_id
+                ).first()
+
+                if not l2_user or not l2_user.is_active:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Assigned L2 Line Manager could not be found or is inactive."
+                    )
+
                 ot.status = "Pending L2 Approval"
-                ot.approver_name = ot.approver_l2
-                
-                l2_user = _find_user_by_name_or_username(db, ot.approver_l2)
-                if l2_user: ot.approver_l2_id = l2_user.id
-                
-                ot.status_history += f" > L1 Approved Cancellation by {display_approver}. Routed to {ot.approver_l2} ({timestamp}){note_str}"
-                route_to_l2 = True 
-            
-            # 2. Final Cancellation (Either L1 with no L2, or L2 Approval)
-            else:
+                ot.approver_name = l2_user.full_name
+
+                ot.status_history += (
+                    f" > L1 Approved Cancellation by "
+                    f"{display_approver}. "
+                    f"Routed to L2 "
+                    f"{l2_user.full_name} "
+                    f"({timestamp}){note_str}"
+                )
+
+                route_to_l2 = True
+
+            # ============================================================
+            # CANCELLATION L2 -> L3 / HOD
+            #
+            # L2 = Line Manager
+            # Current status = Pending L2 Approval
+            # Authoritative approver = approver_id
+            #
+            # Reuse the originally captured HOD.
+            # No new HOD selection during cancellation.
+            # ============================================================
+            elif (
+                current_status == "Pending L2 Approval"
+                and acting_user
+                and ot.approver_id
+                and acting_user.id == ot.approver_id
+                and ot.approver_l2_id
+                and not is_superuser_override
+            ):
+                l3_user = db.query(models.User).filter(
+                    models.User.id == ot.approver_l2_id
+                ).first()
+
+                if not l3_user or not l3_user.is_active:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Assigned L3 HOD approver could not be found or is inactive."
+                    )
+
+                ot.status = "Pending L3 Approval"
+                ot.approver_l2 = l3_user.full_name
+
+                ot.status_history += (
+                    f" > L2 Approved Cancellation by "
+                    f"{display_approver}. "
+                    f"Routed to L3 HOD "
+                    f"{l3_user.full_name} "
+                    f"({timestamp}){note_str}"
+                )
+
+                route_to_l3 = True
+
+            # ============================================================
+            # CANCELLATION L3 / HOD -> FINAL
+            #
+            # L3 = HOD
+            # Current status = Pending L3 Approval
+            # Authoritative approver = approver_l2_id
+            #
+            # ONLY HERE do we reverse the OT bank.
+            # ============================================================
+            elif (
+                current_status == "Pending L3 Approval"
+                and acting_user
+                and ot.approver_l2_id
+                and acting_user.id == ot.approver_l2_id
+                and not is_superuser_override
+            ):
                 if user_record:
-                    user_record.overtime_bank = max(0, float(user_record.overtime_bank or 0.0) - float(ot.total_value or 0.0))
+                    user_record.overtime_bank = max(
+                        0,
+                        float(user_record.overtime_bank or 0.0)
+                        - float(ot.total_value or 0.0)
+                    )
+
                 ot.status = "Cancelled"
-                ot.status_history += f" > Cancellation FINALIZED by {display_approver} ({timestamp}){note_str}"
-        
+
+                ot.status_history += (
+                    f" > Cancellation FINALIZED by "
+                    f"{display_approver} "
+                    f"({timestamp}){note_str}"
+                )
+
+            # ============================================================
+            # DIRECT / OVERRIDE CANCELLATION
+            #
+            # Preserve existing senior-manager / superuser behavior.
+            # ============================================================
+            elif is_superuser_override or is_senior:
+
+                if user_record:
+                    user_record.overtime_bank = max(
+                        0,
+                        float(user_record.overtime_bank or 0.0)
+                        - float(ot.total_value or 0.0)
+                    )
+
+                ot.status = "Cancelled"
+
+                ot.status_history += (
+                    f" > Cancellation FINALIZED by "
+                    f"{display_approver} "
+                    f"({timestamp}){note_str}"
+                )
+
+            else:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You are not authorized for this cancellation stage."
+                )
+
         else:
-            # 3. Rejection (L1 or L2) -> Loop Back to "Approved"
-            # This is the secret to the loop. Setting status back to "Approved" 
-            # makes the record ready for a NEW cancellation request.
+            # ============================================================
+            # CANCELLATION REJECTION
+            #
+            # Rejection at any cancellation stage returns the OT claim
+            # to Approved. The OT bank is not changed.
+            # ============================================================
             ot.status = "Approved"
-            ot.approver_name = ot.approver_l2 if ot.approver_l2 else ot.approver_name
-            ot.status_history += f" > Cancellation REJECTED by {display_approver} ({timestamp}){note_str}"
-            
+
+            if ot.approver_l2:
+                ot.approver_name = ot.approver_l2
+
+            ot.status_history += (
+                f" > Cancellation REJECTED by "
+                f"{display_approver} "
+                f"({timestamp}){note_str}"
+            )
+
             # Trigger Notification
             if user_record and user_record.email:
                 try:
                     subject = f"❌ OT Cancellation REJECTED - {ot.ot_date}"
                     body = template_cancellation_rejected(
-                        ot.employee_name, display_approver, str(ot.ot_date), remarks or "No remarks provided."
+                        ot.employee_name,
+                        display_approver,
+                        str(ot.ot_date),
+                        remarks or "No remarks provided."
                     )
-                    background_tasks.add_task(send_email, user_record.email, subject, body)
+                    background_tasks.add_task(
+                        send_email,
+                        user_record.email,
+                        subject,
+                        body
+                    )
                 except Exception as e:
                     print(f"⚠️ Cancellation Rejection Email Error: {e}")
-    
+
     else: # --- NORMAL JOURNEY ---
+
         if status == "Approved":
-            if l2_active and current_status in ["Pending", "Pending L2 Approval"] and not is_senior and not is_superuser_override:
+
+            # ============================================================
+            # L1 -> L2
+            #
+            # L1 = Team Lead
+            # Current status = Pending
+            # Authoritative approver = approver_l1_id
+            # ============================================================
+            if (
+                current_status == "Pending"
+                and acting_user
+                and ot.approver_l1_id
+                and acting_user.id == ot.approver_l1_id
+                and l2_active
+                and not is_superuser_override
+            ):
+
+                # --------------------------------------------------------
+                # L2 is already preassigned during OT submission.
+                #
+                # If the frontend supplies l2_name, validate that it is
+                # one of the employee's configured Line Managers.
+                # Otherwise retain the preassigned L2.
+                # --------------------------------------------------------
                 if l2_name:
-                    ot.approver_name = l2_name 
-                    ot.approver_l2 = l2_name
-                    l2_user = _find_user_by_name_or_username(db, l2_name)
-                    if l2_user:
-                        ot.approver_l2_id = l2_user.id
-                    ot.status = "Pending L2 Approval"
-                    ot.status_history += f" > L1 Approved by {display_approver}. Routed to {l2_name} ({timestamp}){note_str}"
-                    route_to_l2 = True
+
+                    employee_user = db.query(models.User).filter(
+                        models.User.full_name == ot.employee_name
+                    ).first()
+
+                    if not employee_user:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Employee profile could not be found for L2 routing."
+                        )
+
+                    assigned_line_managers = _normalize_approver_list(
+                        employee_user.line_manager
+                    )
+
+                    if not any(
+                        str(manager).strip().lower()
+                        == l2_name.strip().lower()
+                        for manager in assigned_line_managers
+                    ):
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Selected L2 Line Manager is not configured "
+                                "for this employee."
+                            )
+                        )
+
+                    selected_l2_user = _find_user_by_name_or_username(
+                        db,
+                        l2_name
+                    )
+
+                    if (
+                        not selected_l2_user
+                        or not selected_l2_user.is_active
+                    ):
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Selected L2 Line Manager could not be found "
+                                "or is inactive."
+                            )
+                        )
+
+                    ot.approver_id = selected_l2_user.id
+                    ot.approver_name = selected_l2_user.full_name
+                    l2_user = selected_l2_user
+
                 else:
-                    if user_record:
-                        user_record.overtime_bank = float(user_record.overtime_bank or 0.0) + float(ot.total_value or 0.0)
-                    ot.status = "Approved"
-                    ot.status_history += f" > Final Approval by {display_approver} ({timestamp}){note_str}"
-            else:
+
+                    if not ot.approver_id:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="L2 Line Manager is not configured for this request."
+                        )
+
+                    l2_user = db.query(models.User).filter(
+                        models.User.id == ot.approver_id
+                    ).first()
+
+                    if not l2_user or not l2_user.is_active:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "L2 Line Manager could not be found "
+                                "or is inactive."
+                            )
+                        )
+
+                ot.status = "Pending L2 Approval"
+
+                ot.status_history += (
+                    f" > L1 Approved by "
+                    f"{display_approver}. "
+                    f"Routed to L2 "
+                    f"{l2_user.full_name} "
+                    f"({timestamp}){note_str}"
+                )
+
+                route_to_l2 = True
+
+            # ============================================================
+            # L2 -> L3
+            #
+            # L2 = Line Manager
+            # Current status = Pending L2 Approval
+            # Authoritative approver = approver_id
+            # ============================================================
+            elif (
+                current_status == "Pending L2 Approval"
+                and acting_user
+                and ot.approver_id
+                and acting_user.id == ot.approver_id
+                and l2_active
+                and not is_superuser_override
+            ):
+
+                # --------------------------------------------------------
+                # L3 / HOD selection
+                #
+                # The employee's hod_name contains the configured
+                # L3/HOD candidates.
+                #
+                # If l3_name is supplied by the frontend, validate and
+                # store the selected HOD.
+                # Otherwise retain the preassigned HOD.
+                # --------------------------------------------------------
+                if l3_name:
+
+                    employee_user = db.query(models.User).filter(
+                        models.User.full_name == ot.employee_name
+                    ).first()
+
+                    if not employee_user:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Employee profile could not be found for L3 routing."
+                        )
+
+                    assigned_hods = _normalize_approver_list(
+                        employee_user.hod_name
+                    )
+
+                    if not any(
+                        str(hod).strip().lower()
+                        == l3_name.strip().lower()
+                        for hod in assigned_hods
+                    ):
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Selected L3 HOD approver is not configured "
+                                "for this employee."
+                            )
+                        )
+
+                    selected_l3_user = _find_user_by_name_or_username(
+                        db,
+                        l3_name
+                    )
+
+                    if (
+                        not selected_l3_user
+                        or not selected_l3_user.is_active
+                    ):
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Selected L3 HOD approver could not be found "
+                                "or is inactive."
+                            )
+                        )
+
+                    ot.approver_l2_id = selected_l3_user.id
+                    ot.approver_l2 = selected_l3_user.full_name
+                    l3_user = selected_l3_user
+
+                else:
+
+                    if not ot.approver_l2_id:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="L3 HOD approver is not configured for this request."
+                        )
+
+                    l3_user = db.query(models.User).filter(
+                        models.User.id == ot.approver_l2_id
+                    ).first()
+
+                    if not l3_user or not l3_user.is_active:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "L3 HOD approver could not be found "
+                                "or is inactive."
+                            )
+                        )
+
+                ot.status = "Pending L3 Approval"
+
+                ot.status_history += (
+                    f" > L2 Approved by "
+                    f"{display_approver}. "
+                    f"Routed to L3 HOD "
+                    f"{l3_user.full_name} "
+                    f"({timestamp}){note_str}"
+                )
+
+                route_to_l3 = True
+
+            # ============================================================
+            # L3 -> FINAL APPROVAL
+            #
+            # L3 = HOD
+            # Current status = Pending L3 Approval
+            # Authoritative approver = approver_l2_id
+            #
+            # THIS is the only normal approval stage where the OT Bank
+            # is credited.
+            # ============================================================
+            elif (
+                current_status == "Pending L3 Approval"
+                and acting_user
+                and ot.approver_l2_id
+                and acting_user.id == ot.approver_l2_id
+                and not is_superuser_override
+            ):
+
                 if user_record:
-                    user_record.overtime_bank = float(user_record.overtime_bank or 0.0) + float(ot.total_value or 0.0)
+                    user_record.overtime_bank = (
+                        float(user_record.overtime_bank or 0.0)
+                        + float(ot.total_value or 0.0)
+                    )
+
                 ot.status = "Approved"
-                ot.status_history += f" > Final Approval by {display_approver} ({timestamp}){note_str}"
-        
+
+                ot.status_history += (
+                    f" > Fully Approved by "
+                    f"{display_approver} "
+                    f"({timestamp}){note_str}"
+                )
+
+            # ============================================================
+            # DIRECT / OVERRIDE APPROVAL
+            #
+            # Preserve existing senior-manager / superuser behavior.
+            #
+            # IMPORTANT:
+            # Superuser override is already authorized above.
+            # ============================================================
+            elif is_superuser_override or is_senior:
+
+                if user_record:
+                    user_record.overtime_bank = (
+                        float(user_record.overtime_bank or 0.0)
+                        + float(ot.total_value or 0.0)
+                    )
+
+                ot.status = "Approved"
+
+                ot.status_history += (
+                    f" > Final Approval by "
+                    f"{display_approver} "
+                    f"({timestamp}){note_str}"
+                )
+
+            else:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You are not authorized for this approval stage."
+                )
+
         elif status == "Rejected":
+
             ot.status = "Rejected"
-            ot.status_history += f" > Rejected by {display_approver} ({timestamp}){note_str}"
+
+            ot.status_history += (
+                f" > Rejected by "
+                f"{display_approver} "
+                f"({timestamp}){note_str}"
+            )
             
     ot.manager_remarks = remarks
 
@@ -445,45 +1343,215 @@ async def process_ot_action(
     db.commit()
     
 
-# 📧 --- EMAIL NOTIFICATION FLOW (Standard Journey Only) ---
-    print(f"DEBUG: Status={status}, route_to_l2={route_to_l2}, target_email={user_record.email if user_record else 'N/A'}")
-    
-    if status == "Approved":
-        # 🚀 STATE 1: L2 Routing
-        if route_to_l2 and l2_user and l2_user.email:
+    # --- EMAIL NOTIFICATION FLOW ---
+    #
+    # Cancellation and normal OT approval journeys are intentionally
+    # separated so cancellation never sends normal OT approval emails.
+    # ---------------------------------------------------------------
+
+    if is_cancellation_journey:
+
+        # ============================================================
+        # CANCELLATION EMAIL FLOW
+        # ============================================================
+
+        if status == "Approved":
+
+            # --------------------------------------------------------
+            # Cancellation L1 -> L2
+            # --------------------------------------------------------
+            if route_to_l2 and l2_user and l2_user.email:
+                try:
+                    body = template_l2_ot_cancellation_request(
+                        l2_manager_name=l2_user.full_name or l2_user.username,
+                        l1_manager_name=approver_name or display_approver,
+                        employee_name=ot.employee_name,
+                        ot_type=ot.ot_type,
+                        ot_date=str(ot.ot_date),
+                        duration=str(ot.total_value)
+                    )
+
+                    background_tasks.add_task(
+                        send_email,
+                        l2_user.email,
+                        f"ACTION REQUIRED: OT Cancellation Approval - {ot.employee_name}",
+                        body
+                    )
+                except Exception as e:
+                    print(f"OT L2 Cancellation Email Error: {e}")
+
+            # --------------------------------------------------------
+            # Cancellation L2 -> L3 / HOD
+            # --------------------------------------------------------
+            elif route_to_l3 and l3_user and l3_user.email:
+                try:
+                    body = template_l3_ot_cancellation_request(
+                        l3_manager_name=l3_user.full_name or l3_user.username,
+                        l2_manager_name=approver_name or display_approver,
+                        employee_name=ot.employee_name,
+                        ot_type=ot.ot_type,
+                        ot_date=str(ot.ot_date),
+                        duration=str(ot.total_value)
+                    )
+
+                    background_tasks.add_task(
+                        send_email,
+                        l3_user.email,
+                        f"ACTION REQUIRED: OT Cancellation Approval - {ot.employee_name}",
+                        body
+                    )
+                except Exception as e:
+                    print(f"OT L3 Cancellation Email Error: {e}")
+
+            # --------------------------------------------------------
+            # Cancellation final approval -> Employee
+            # --------------------------------------------------------
+            elif not route_to_l2 and not route_to_l3 and user_record and user_record.email:
+                try:
+                    subject = f"OT Cancellation APPROVED - {ot.ot_date}"
+
+                    body = template_ot_cancellation_approved(
+                        employee_name=ot.employee_name,
+                        manager_name=display_approver,
+                        ot_type=ot.ot_type,
+                        ot_date=str(ot.ot_date),
+                        duration=str(ot.total_value)
+                    )
+
+                    background_tasks.add_task(
+                        send_email,
+                        user_record.email,
+                        subject,
+                        body
+                    )
+                except Exception as e:
+                    print(f"OT Cancellation Approval Email Error: {e}")
+
+        # ------------------------------------------------------------
+        # Cancellation rejection -> Employee
+        # ------------------------------------------------------------
+        elif status == "Rejected" and user_record and user_record.email:
             try:
-                body = template_l2_ot_request(
-                    l2_manager_name=l2_user.full_name or l2_user.username, 
-                    l1_manager_name=approver_name or display_approver, 
-                    employee_name=ot.employee_name, 
-                    ot_type=ot.ot_type, 
-                    ot_date=str(ot.ot_date), 
-                    duration=str(ot.total_value)
+                subject = f"OT Cancellation REJECTED - {ot.ot_date}"
+
+                body = template_ot_cancellation_rejected(
+                    employee_name=ot.employee_name,
+                    manager_name=display_approver,
+                    ot_type=ot.ot_type,
+                    ot_date=str(ot.ot_date),
+                    duration=str(ot.total_value),
+                    remarks=remarks or "No remarks provided."
                 )
-                background_tasks.add_task(send_email, l2_user.email, f"ACTION REQUIRED: Final Approval Needed - {ot.employee_name}", body)
-            except Exception as e: 
-                print(f"⚠️ OT L2 Email Error: {e}")
-        
-        # 🚀 STATE 2: Final Approval (Employee Notification)
-        elif not route_to_l2 and user_record and user_record.email:
+
+                background_tasks.add_task(
+                    send_email,
+                    user_record.email,
+                    subject,
+                    body
+                )
+            except Exception as e:
+                print(f"OT Cancellation Rejection Email Error: {e}")
+
+    else:
+
+        # ============================================================
+        # NORMAL OT EMAIL FLOW
+        #
+        # IMPORTANT:
+        # Existing normal OT email logic is preserved.
+        # ============================================================
+
+        if status == "Approved":
+
+            # STATE 1: L1 -> L2 Routing
+            if route_to_l2 and l2_user and l2_user.email:
+                try:
+                    body = template_l2_ot_request(
+                        l2_manager_name=l2_user.full_name or l2_user.username,
+                        l1_manager_name=approver_name or display_approver,
+                        employee_name=ot.employee_name,
+                        ot_type=ot.ot_type,
+                        ot_date=str(ot.ot_date),
+                        duration=str(ot.total_value)
+                    )
+
+                    background_tasks.add_task(
+                        send_email,
+                        l2_user.email,
+                        f"ACTION REQUIRED: L2 Approval Needed - {ot.employee_name}",
+                        body
+                    )
+                except Exception as e:
+                    print(f"OT L2 Email Error: {e}")
+
+            # STATE 2: L2 -> L3 / HOD Routing
+            elif route_to_l3 and l3_user and l3_user.email:
+                try:
+                    body = template_l3_ot_request(
+                        l3_manager_name=l3_user.full_name or l3_user.username,
+                        l2_manager_name=approver_name or display_approver,
+                        employee_name=ot.employee_name,
+                        ot_type=ot.ot_type,
+                        ot_date=str(ot.ot_date),
+                        duration=str(ot.total_value)
+                    )
+
+                    background_tasks.add_task(
+                        send_email,
+                        l3_user.email,
+                        f"ACTION REQUIRED: HOD Approval Needed - {ot.employee_name}",
+                        body
+                    )
+                except Exception as e:
+                    print(f"OT L3 Email Error: {e}")
+
+            # STATE 3: Final L3 Approval -> Employee Notification
+            elif not route_to_l2 and not route_to_l3 and user_record and user_record.email:
+                try:
+                    print(f"DEBUG: Triggering Final Approval email to {user_record.email}")
+
+                    subject = f"OT Claim APPROVED - {ot.ot_date}"
+
+                    body = template_ot_decision(
+                        ot.employee_name,
+                        display_approver,
+                        "Approved",
+                        ot.ot_type,
+                        str(ot.ot_date),
+                        remarks or "No remarks provided."
+                    )
+
+                    background_tasks.add_task(
+                        send_email,
+                        user_record.email,
+                        subject,
+                        body
+                    )
+                except Exception as e:
+                    print(f"OT Approval Email Error: {e}")
+
+        # STATE 4: Standard Rejection -> Employee Notification
+        elif status == "Rejected" and user_record and user_record.email:
             try:
-                print(f"DEBUG: Triggering Final Approval email to {user_record.email}")
-                subject = f"✅ OT Claim APPROVED - {ot.ot_date}"
-                body = template_ot_decision(ot.employee_name, display_approver, "Approved", ot.ot_type, str(ot.ot_date), remarks or "No remarks provided.")
-                background_tasks.add_task(send_email, user_record.email, subject, body)
-            except Exception as e: 
-                print(f"⚠️ OT Approval Email Error: {e}")
+                subject = f"OT Claim REJECTED - {ot.ot_date}"
 
-    # 🔴 STATE 3: Standard Rejection (Employee Notification)
-    elif status == "Rejected" and user_record and user_record.email:
-        try:
-            subject = f"❌ OT Claim REJECTED - {ot.ot_date}"
-            body = template_ot_decision(ot.employee_name, display_approver, "Rejected", ot.ot_type, str(ot.ot_date), remarks or "No remarks provided.")
-            background_tasks.add_task(send_email, user_record.email, subject, body)
-        except Exception as e: 
-            print(f"⚠️ OT Rejection Email Error: {e}")
+                body = template_ot_decision(
+                    ot.employee_name,
+                    display_approver,
+                    "Rejected",
+                    ot.ot_type,
+                    str(ot.ot_date),
+                    remarks or "No remarks provided."
+                )
 
-    return {"message": "Action processed and OT bank updated.", "status": ot.status, "routed_to_l2": route_to_l2}
+                background_tasks.add_task(
+                    send_email,
+                    user_record.email,
+                    subject,
+                    body
+                )
+            except Exception as e:
+                print(f"OT Rejection Email Error: {e}")
 
 
 # 5. CANCEL/WITHDRAW REQUEST (SECURED)
@@ -538,7 +1606,9 @@ async def cancel_overtime_request( # 👈 Renamed to match leave.py style
 
         try:
             # Look up the original L1 using the immutable approver_id safely stored at submission
-            l1_manager = db.query(models.User).filter(models.User.id == ot.approver_id).first() if ot.approver_id else None
+            l1_manager = db.query(models.User).filter(
+            models.User.id == ot.approver_l1_id
+        ).first() if ot.approver_l1_id else None
             
             if l1_manager:
                 ot.approver_name = l1_manager.full_name # Route back to L1's dashboard
@@ -552,16 +1622,21 @@ async def cancel_overtime_request( # 👈 Renamed to match leave.py style
                     manager_name = manager.full_name
 
             # Email L1 Manager safely
-            if manager_email and 'template_cancellation_request' in globals():
-                body = template_cancellation_request(
-                    manager_name, 
-                    ot.employee_name, 
-                    f"Overtime ({ot.ot_type})", 
-                    str(ot.ot_date), 
-                    str(ot.ot_date), 
+            if manager_email and 'template_ot_cancellation_request' in globals():
+                body = template_ot_cancellation_request(
+                    manager_name,
+                    ot.employee_name,
+                    ot.ot_type,
+                    str(ot.ot_date),
+                    str(ot.total_value),
                     reason_val
                 )
-                background_tasks.add_task(send_email, manager_email, "Action Required: OT Cancellation", body)
+                background_tasks.add_task(
+                    send_email,
+                    manager_email,
+                    "Action Required: OT Cancellation",
+                    body
+                )
         except Exception as e:
             print(f"⚠️ Email trigger failed: {e}")
             
@@ -599,11 +1674,21 @@ def get_my_overtime_requests(employee_name: str, db: Session = Depends(get_db)):
                 "status": o.status,
                 "reason": o.reason,
                 "approver_name": o.approver_name,
+
+                # L1 - Team Lead
+                "approver_l1_id": o.approver_l1_id,
+
+                # L2 - Line Manager
+                "approver_id": o.approver_id,
+
+                # L3 - HOD
+                "approver_l2_id": o.approver_l2_id,
+
                 "attachment_path": full_attachment_url,
                 "manager_remarks": o.manager_remarks or "",
-                "status_history": convert_utc_string_to_kl(o.status_history) # 👈 FIXED: Localized timestamp
+                "status_history": convert_utc_string_to_kl(o.status_history)  # 👈 FIXED: Localized timestamp
             })
-            
+
         return formatted_results
 
     except Exception as e:
@@ -689,3 +1774,5 @@ def get_overtime_balance(
     except Exception as e:
         print(f"Error fetching overtime balance: {str(e)}")
         raise HTTPException(status_code=500, detail="Could not load overtime balance")
+
+

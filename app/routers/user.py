@@ -255,6 +255,41 @@ async def update_user_roles_multiple(
             detail="Invalid role data format"
         )
 
+    # The frontend sends a JSON array of role names.
+    # Reject malformed payloads rather than allowing unexpected
+    # string/dict values to affect role checks below.
+    if not isinstance(role_list, list):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid role data format: roles must be a list."
+        )
+
+    # Normalize role names while preserving the existing order.
+    # This prevents duplicate UserRole rows without changing the
+    # meaning of the selected roles.
+    normalized_roles = []
+
+    for role_name in role_list:
+        if not isinstance(role_name, str):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid role data format: role names must be strings."
+            )
+
+        role_name = role_name.strip()
+
+        if not role_name:
+            continue
+
+        if role_name not in normalized_roles:
+            normalized_roles.append(role_name)
+
+    # Always retain at least Employee role.
+    if not normalized_roles:
+        normalized_roles = ["employee"]
+
+    role_list = normalized_roles
+
     # ==============================================================
     # 2. FIND USER
     # ==============================================================
@@ -274,11 +309,15 @@ async def update_user_roles_multiple(
     if not user.is_active:
         raise HTTPException(
             status_code=400,
-            detail=f"Modification Denied: {user.full_name} is currently Inactive."
+            detail=(
+                f"Modification Denied: {user.full_name} "
+                f"is currently Inactive."
+            )
         )
 
     # ==============================================================
     # 4. SECURITY LOCK FOR HR ADMIN
+    #
     # Prevent removing the last active HR Admin.
     # ==============================================================
     if user.role == "hr_admin" and "hr_admin" not in role_list:
@@ -292,184 +331,234 @@ async def update_user_roles_multiple(
         if other_active_admins < 1:
             raise HTTPException(
                 status_code=400,
-                detail="Security Lock: Cannot remove the last active HR Admin."
+                detail=(
+                    "Security Lock: Cannot remove the last "
+                    "active HR Admin."
+                )
             )
 
     # ==============================================================
     # 5. CAPTURE CURRENT APPROVAL ROLE STATES
-    # These values represent the user's state BEFORE the change.
+    #
+    # These represent the user's approval authority BEFORE the
+    # requested role change.
     # ==============================================================
 
-    # Manager / L1 approval authority
+    # --------------------------------------------------------------
+    # L2 = Line Manager
+    #
+    # Existing system uses:
+    #   UserRole "manager"
+    #   OR legacy User.role == "manager"
+    # --------------------------------------------------------------
     was_manager = (
-            any(
-                r.role_name == "manager"
-                for r in user.assigned_roles
-            )
-            or user.role == "manager"
+        any(
+            r.role_name == "manager"
+            for r in user.assigned_roles
+        )
+        or user.role == "manager"
     )
 
     is_now_manager = "manager" in role_list
 
+    # --------------------------------------------------------------
     # L1 = Team Lead
+    #
+    # Existing system supports both "team_lead" and legacy "l1".
+    # --------------------------------------------------------------
     was_l1 = any(
         r.role_name in ("team_lead", "l1")
         for r in user.assigned_roles
     )
 
     is_now_l1 = (
-            "team_lead" in role_list
-            or "l1" in role_list
+        "team_lead" in role_list
+        or "l1" in role_list
     )
 
-    # L2 = Senior Manager / HOD authority
-    was_senior = user.is_senior_manager
-    is_now_senior = is_senior_manager
+    # --------------------------------------------------------------
+    # L3 = HOD / Senior Manager
+    #
+    # HOD authority is represented by is_senior_manager.
+    # --------------------------------------------------------------
+    was_senior = bool(user.is_senior_manager)
+    is_now_senior = bool(is_senior_manager)
 
     # ==============================================================
-    # 6. IDENTIFY THE PERSON RECEIVING ESCALATED WORK
+    # 6. PRE-FLIGHT APPROVAL OWNERSHIP SAFEGUARD
+    #
+    # IMPORTANT:
+    #
+    # If an approval role is being REMOVED, do not:
+    #   - reassign pending approvals
+    #   - auto-approve pending approvals
+    #   - auto-escalate pending approvals
+    #   - silently detach the existing approver
+    #
+    # Instead, block the role change until the current approver
+    # completes the pending leave approvals belonging to that level.
+    #
+    # This prevents orphaned approval requests.
     # ==============================================================
-    acting_admin = (
-        x_requester_name
-        if x_requester_name
-        else "HR Admin"
-    )
 
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    reassigned_count = 0
+    pending_role_changes = []
 
-    # ==============================================================
-    # 7. MANAGER ROLE REVOCATION
-    # Reassign pending Manager approval tasks.
-    # ==============================================================
-
+    # --------------------------------------------------------------
+    # 6A. L2 LINE MANAGER ROLE REVOCATION
+    #
+    # L2 approval is identified by:
+    #
+    #   approver_id = current user
+    #   status = "Pending L2 Approval"
+    #
+    # "Pending" belongs to L1 and MUST NOT be counted here.
+    #
+    # "Pending L3 Approval" belongs to HOD and MUST NOT be counted
+    # here either.
+    # --------------------------------------------------------------
     if was_manager and not is_now_manager:
 
-        l1_leaves = db.query(models.Leave).filter(
-            models.Leave.approver_name == user.full_name,
+        pending_manager_leaves = db.query(models.Leave).filter(
+            models.Leave.approver_id == user.id,
             models.Leave.status.in_([
-                "Pending",
+                "Pending L2 Approval",
                 "Pending Cancel"
             ])
-        ).all()
+        ).count()
 
-        for l in l1_leaves:
-            l.approver_name = acting_admin
-            l.status_history += (
-                f" > Auto-Escalated to {acting_admin} "
-                f"{{Note: Manager Role Revoked}} "
-                f"({timestamp})"
+        if pending_manager_leaves > 0:
+            pending_role_changes.append(
+                f"L2 Manager ({pending_manager_leaves} pending)"
             )
-            reassigned_count += 1
 
-        l1_ots = db.query(models.Overtime).filter(
-            models.Overtime.approver_name == user.full_name,
-            models.Overtime.status.in_([
-                "Pending",
-                "Pending Cancel"
-            ])
-        ).all()
-
-        for ot in l1_ots:
-            ot.approver_name = acting_admin
-            ot.status_history += (
-                f" > Auto-Escalated to {acting_admin} "
-                f"{{Note: Manager Role Revoked}} "
-                f"({timestamp})"
-            )
-            reassigned_count += 1
-
-    # ==============================================================
-    # 8. L1 TEAM LEAD ROLE REVOCATION
-    # Prevent pending L1 approval tasks from remaining assigned
-    # to a user whose Team Lead role has been removed.
-    # ==============================================================
-
+    # --------------------------------------------------------------
+    # 6B. L1 TEAM LEAD ROLE REVOCATION
+    #
+    # L1 approval is identified by:
+    #
+    #   approver_l1_id = current user
+    #   status = "Pending"
+    #
+    # Pending Cancel is also included because the cancellation
+    # request may still require approval from the current L1 owner.
+    # --------------------------------------------------------------
     if was_l1 and not is_now_l1:
 
-        l1_leaves = db.query(models.Leave).filter(
+        pending_l1_leaves = db.query(models.Leave).filter(
             models.Leave.approver_l1_id == user.id,
             models.Leave.status.in_([
                 "Pending",
                 "Pending Cancel"
             ])
-        ).all()
+        ).count()
 
-        for l in l1_leaves:
-            l.approver_l1_id = None
-            l.status_history += (
-                f" > L1 Team Lead Role Revoked - "
-                f"Escalated to {acting_admin} "
-                f"({timestamp})"
+        if pending_l1_leaves > 0:
+            pending_role_changes.append(
+                f"L1 Team Lead ({pending_l1_leaves} pending)"
             )
-            reassigned_count += 1
 
-    # ==============================================================
-    # 9. L2 / SENIOR MANAGER ROLE REVOCATION
-    # Reassign pending L2 approval tasks.
-    # ==============================================================
-
+    # --------------------------------------------------------------
+    # 6C. L3 HOD / SENIOR MANAGER ROLE REVOCATION
+    #
+    # Current HOD workflow uses:
+    #
+    #   approver_l2_id = current user
+    #   status = "Pending L3 Approval"
+    #
+    # "Pending L2 Approval" is also included for backward
+    # compatibility with older HOD records created before the
+    # explicit L3 status was introduced.
+    #
+    # Pending Cancel is included because a cancellation approval
+    # can still be owned by the HOD.
+    # --------------------------------------------------------------
     if was_senior and not is_now_senior:
 
-        l2_leaves = db.query(models.Leave).filter(
-            models.Leave.approver_l2 == user.full_name,
+        pending_hod_leaves = db.query(models.Leave).filter(
+            models.Leave.approver_l2_id == user.id,
             models.Leave.status.in_([
+                "Pending L3 Approval",
                 "Pending L2 Approval",
                 "Pending Cancel"
             ])
-        ).all()
+        ).count()
 
-        for l in l2_leaves:
-            l.approver_l2 = acting_admin
-            l.status_history += (
-                f" > Auto-Escalated to {acting_admin} "
-                f"{{Note: L2 Role Revoked}} "
-                f"({timestamp})"
+        # Legacy HOD records may contain the HOD name rather than
+        # approver_l2_id. Keep this fallback ONLY for the HOD field.
+        if pending_hod_leaves == 0:
+            pending_hod_leaves = db.query(models.Leave).filter(
+                models.Leave.approver_l2 == user.full_name,
+                models.Leave.status.in_([
+                    "Pending L3 Approval",
+                    "Pending L2 Approval",
+                    "Pending Cancel"
+                ])
+            ).count()
+
+        if pending_hod_leaves > 0:
+            pending_role_changes.append(
+                f"HOD ({pending_hod_leaves} pending)"
             )
-            reassigned_count += 1
-
-        l2_ots = db.query(models.Overtime).filter(
-            models.Overtime.approver_l2 == user.full_name,
-            models.Overtime.status.in_([
-                "Pending L2 Approval",
-                "Pending Cancel"
-            ])
-        ).all()
-
-        for ot in l2_ots:
-            ot.approver_l2 = acting_admin
-            ot.status_history += (
-                f" > Auto-Escalated to {acting_admin} "
-                f"{{Note: L2 Role Revoked}} "
-                f"({timestamp})"
-            )
-            reassigned_count += 1
 
     # ==============================================================
-    # 10. UPDATE ROLES IN DATABASE
+    # 7. BLOCK THE ROLE CHANGE IF PENDING APPROVALS EXIST
+    #
+    # This occurs BEFORE:
+    #   - UserRole mappings are deleted
+    #   - user.is_senior_manager is changed
+    #   - user.role is changed
+    #   - database commit
+    #
+    # Therefore a blocked request leaves the existing role state
+    # completely untouched.
+    # ==============================================================
+
+    if pending_role_changes:
+
+        pending_summary = ", ".join(
+            pending_role_changes
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Cannot change {user.full_name}'s approval role. "
+                f"There are pending leave approval(s) assigned to "
+                f"this user: {pending_summary}. "
+                f"Please have the current approver complete all "
+                f"pending leave approvals before proceeding."
+            )
+        )
+
+    # ==============================================================
+    # 8. APPLY ROLE CHANGES
     # ==============================================================
 
     user.is_senior_manager = is_senior_manager
 
-    # Remove existing role mappings
+    # Remove existing role mappings for this user.
     db.query(models.UserRole).filter(
         models.UserRole.user_id == user_id
     ).delete()
 
-    # Always retain at least Employee role
-    if not role_list:
-        role_list = ["employee"]
-
-    # Insert new role mappings
-    for r_name in role_list:
+    # Insert the complete new role set.
+    for role_name in role_list:
         db.add(
             models.UserRole(
                 user_id=user_id,
-                role_name=r_name
+                role_name=role_name
             )
         )
 
-    # Maintain legacy/main role field
+    # ==============================================================
+    # 9. MAINTAIN LEGACY / PRIMARY ROLE FIELD
+    #
+    # Existing application logic relies on User.role for the
+    # primary account classification.
+    #
+    # Keep this mapping unchanged.
+    # ==============================================================
+
     if "hr_admin" in role_list:
         user.role = "hr_admin"
 
@@ -480,14 +569,19 @@ async def update_user_roles_multiple(
         user.role = "employee"
 
     # ==============================================================
-    # 11. COMMIT DATABASE CHANGES
+    # 10. COMMIT DATABASE CHANGES
     # ==============================================================
 
     try:
+
         db.commit()
 
         # ==========================================================
-        # 12. EMAIL NOTIFICATION
+        # 11. EMAIL NOTIFICATION
+        #
+        # Email is queued only AFTER a successful database commit.
+        # A notification failure therefore cannot roll back or
+        # invalidate the already-successful role update.
         # ==========================================================
 
         if user.email and "@" in str(user.email):
@@ -508,27 +602,23 @@ async def update_user_roles_multiple(
             )
 
         # ==========================================================
-        # 13. SUCCESS RESPONSE
+        # 12. SUCCESS RESPONSE
+        #
+        # No reassignment is performed by this implementation.
+        # Keep "reassigned": 0 for backward compatibility with the
+        # existing frontend response contract.
         # ==========================================================
 
-        msg = (
-            f"User account updated successfully for "
-            f"{user.full_name}."
-        )
-
-        if reassigned_count > 0:
-            msg += (
-                f"<br><br>⚠️ <b>{reassigned_count} pending request(s)"
-                f"</b> were automatically transferred to your queue."
-            )
-
         return {
-            "message": msg,
-            "reassigned": reassigned_count
+            "message": (
+                f"User account updated successfully for "
+                f"{user.full_name}."
+            ),
+            "reassigned": 0
         }
 
     # ==============================================================
-    # 14. DATABASE ERROR / ROLLBACK
+    # 13. DATABASE ERROR / ROLLBACK
     # ==============================================================
 
     except Exception as e:
@@ -1473,16 +1563,30 @@ def get_next_employee_id(db: Session = Depends(get_db)):
 @router.get("/policy/current")
 def get_global_policy(db: Session = Depends(get_db)):
     # Fetch the master policy (ID=1)
-    policy = db.query(models.GlobalPolicy).filter(models.GlobalPolicy.id == 1).first()
+    policy = (
+        db.query(models.GlobalPolicy)
+        .filter(models.GlobalPolicy.id == 1)
+        .first()
+    )
+
     if not policy:
-        # Fallback if seed hasn't run
-        return {"l2_approval_enabled": False, "max_seats": 0, "registration_lock": False}
-    
-    return {
-        "l2_approval_enabled": policy.l2_approval_enabled,
-        "max_seats": policy.max_seats if policy.max_seats else 0,
-        "registration_lock": policy.registration_lock if policy.registration_lock else False
+        return {
+        "l1_approval_enabled": False,
+        "l2_approval_enabled": False,
+        "max_seats": 0,
+        "registration_lock": False
     }
+
+    return {
+        "l1_approval_enabled": bool(policy.l1_approval_enabled),
+        "l2_approval_enabled": bool(policy.l2_approval_enabled),
+        "max_seats": policy.max_seats if policy.max_seats else 0,
+        "registration_lock": (
+            policy.registration_lock
+            if policy.registration_lock
+            else False
+    )
+}
 
 @router.put("/policy/update-l2")
 def update_l2_toggle(enabled: bool = Form(...), db: Session = Depends(get_db)):

@@ -1,4 +1,4 @@
-import smtplib
+﻿import smtplib
 import re
 import os
 import json
@@ -167,7 +167,7 @@ Good news! Your leave request has been APPROVED.
 Approver:   {manager_name}
 Type:       {type}
 Dates:      {start} to {end}
-Status:     ✅ APPROVED
+Status:     APPROVED
 --------------------------------
 
 Your leave balance has been deducted accordingly.
@@ -260,19 +260,19 @@ def template_l2_request(l2_manager_name, l1_manager_name, employee_name, type, s
     return f"""
 Hi {l2_manager_name},
 
-Action Required: Final Approval Needed (L2)
+Action Required: Level 2 Approval Needed (L2)
 
 {l1_manager_name} has completed the first level approval for {employee_name}.
-This request now requires your final sign-off as Department Head.
+This request now requires your Level 2 approval.
 
 --------------------------------
 Employee:   {employee_name}
 Leave Type: {type}
 Dates:      {start} to {end}
-L1 Status:  ✅ Approved by {l1_manager_name}
+L1 Status:  Approved by {l1_manager_name}
 --------------------------------
 
-Please log in to the Manager Dashboard to finalize this request.
+Please log in to the Manager Dashboard to review and approve this request.
 
 Best regards,
 Leave System
@@ -298,7 +298,7 @@ This request now requires your approval as the HOD.
 Employee:   {employee_name}
 Leave Type: {type}
 Dates:      {start} to {end}
-L2 Status:  ✅ Approved by {l2_manager_name}
+L2 Status:  Approved by {l2_manager_name}
 --------------------------------
 
 Please log in to the Manager Dashboard to review and approve this request.
@@ -358,20 +358,44 @@ def template_l2_ot_request(l2_manager_name, l1_manager_name, employee_name, ot_t
     return f"""
 Hi {l2_manager_name},
 
-Action Required: Final Approval Needed (L2 Overtime)
+Action Required: L2 Approval Needed (L2 Overtime)
 
 {l1_manager_name} has completed the first level approval for an Overtime claim by {employee_name}.
-This request now requires your final sign-off as Department Head.
+This request now requires your approval as the Line Manager (L2).
 
 --------------------------------
 Employee:   {employee_name}
 OT Type:    {ot_type}
 Date:       {ot_date}
 Duration:   {duration}
-L1 Status:  ✅ Approved by {l1_manager_name}
+L1 Status:  Approved by {l1_manager_name}
 --------------------------------
 
-Please log in to the Manager Dashboard to finalize this request.
+Please log in to the Manager Dashboard to review and approve this request.
+
+Best regards,
+Leave System
+"""
+
+
+def template_l3_ot_request(l3_manager_name, l2_manager_name, employee_name, ot_type, ot_date, duration):
+    return f"""
+Hi {l3_manager_name},
+
+Action Required: HOD Approval Needed (L3 Overtime)
+
+{l2_manager_name} has completed the second level approval for an Overtime claim by {employee_name}.
+This request now requires your approval as the HOD.
+
+--------------------------------
+Employee:   {employee_name}
+OT Type:    {ot_type}
+Date:       {ot_date}
+Duration:   {duration}
+L2 Status:  Approved by {l2_manager_name}
+--------------------------------
+
+Please log in to the Manager Dashboard to review and approve this request.
 
 Best regards,
 Leave System
@@ -434,7 +458,7 @@ Your request to CANCEL your leave has been APPROVED.
 Approved By: {manager_name}
 Type:        {type}
 Dates:       {start} to {end}
-Status:      ✅ CANCELLED (Balance Restored)
+Status:      CANCELLED (Balance Restored)
 --------------------------------
 
 Best regards,
@@ -451,7 +475,7 @@ Your request to CANCEL your leave was DENIED. The leave remains valid and active
 Denied By:   {manager_name}
 Type:        {type}
 Dates:       {start} to {end}
-Status:      ⚠️ CANCELLATION REJECTED
+Status:      CANCELLATION REJECTED
 Remarks:     {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
@@ -562,7 +586,7 @@ Good news! Your Carry Forward request has been APPROVED.
 --------------------------------
 Approver:   {manager_name}
 Days Approved: {days} Days
-Status:     ✅ APPROVED
+Status:     APPROVED
 --------------------------------
 
 The requested days will be moved to your balance for the upcoming year.
@@ -596,7 +620,7 @@ Your request to CANCEL your Carry Forward request has been APPROVED.
 --------------------------------
 Approved By: {manager_name}
 Days:        {days} Days
-Status:      ✅ CF CANCELLATION APPROVED
+Status:      CF CANCELLATION APPROVED
 --------------------------------
 
 Best regards,
@@ -611,7 +635,7 @@ Your request to CANCEL your Carry Forward request was DENIED.
 
 --------------------------------
 Denied By:   {manager_name}
-Status:      ⚠️ CF CANCELLATION REJECTED
+Status:      CF CANCELLATION REJECTED
 Remarks:     {remarks if remarks else 'No specific remarks provided.'}
 --------------------------------
 
@@ -656,6 +680,153 @@ Reason:     {reason if reason else 'No reason provided'}
 --------------------------------
 
 Please log in to the Manager Dashboard to Confirm or Deny this cancellation.
+
+Best regards,
+Leave System
+"""
+# ---------------------------------------------------------
+# OT CANCELLATION WORKFLOW TEMPLATES
+# ---------------------------------------------------------
+
+def template_ot_cancellation_request(
+    manager_name,
+    employee_name,
+    ot_type,
+    ot_date,
+    duration,
+    reason
+):
+    return f"""
+Hi {manager_name},
+
+Action Required: OT Cancellation Request
+
+{employee_name} has requested to CANCEL an already approved Overtime claim.
+
+--------------------------------
+Employee:   {employee_name}
+OT Type:    {ot_type}
+Date:       {ot_date}
+Duration:   {duration}
+Reason:     {reason if reason else 'No reason provided'}
+--------------------------------
+
+Please log in to the Manager Dashboard to Confirm or Deny this OT cancellation.
+
+Best regards,
+Leave System
+"""
+
+
+def template_l2_ot_cancellation_request(
+    l2_manager_name,
+    l1_manager_name,
+    employee_name,
+    ot_type,
+    ot_date,
+    duration
+):
+    return f"""
+Hi {l2_manager_name},
+
+Action Required: OT Cancellation Approval (Level 2)
+
+{l1_manager_name} has approved the CANCELLATION request for an Overtime claim by {employee_name}.
+This request now requires your approval as the Level 2 Line Manager.
+
+--------------------------------
+Employee:   {employee_name}
+OT Type:    {ot_type}
+Date:       {ot_date}
+Duration:   {duration}
+L1 Status:  Cancellation Approved by {l1_manager_name}
+--------------------------------
+
+Please log in to the Manager Dashboard to review and approve this OT cancellation.
+
+Best regards,
+Leave System
+"""
+
+
+def template_l3_ot_cancellation_request(
+    l3_manager_name,
+    l2_manager_name,
+    employee_name,
+    ot_type,
+    ot_date,
+    duration
+):
+    return f"""
+Hi {l3_manager_name},
+
+Action Required: OT Cancellation Approval (Level 3)
+
+{l2_manager_name} has approved the CANCELLATION request for an Overtime claim by {employee_name}.
+This request now requires your final approval as the HOD.
+
+--------------------------------
+Employee:   {employee_name}
+OT Type:    {ot_type}
+Date:       {ot_date}
+Duration:   {duration}
+L2 Status:  Cancellation Approved by {l2_manager_name}
+--------------------------------
+
+Please log in to the Manager Dashboard to finalize this OT cancellation.
+
+Best regards,
+Leave System
+"""
+
+
+def template_ot_cancellation_approved(
+    employee_name,
+    manager_name,
+    ot_type,
+    ot_date,
+    duration
+):
+    return f"""
+Hi {employee_name},
+
+Your request to CANCEL your Overtime claim has been APPROVED.
+
+--------------------------------
+Approved By: {manager_name}
+OT Type:     {ot_type}
+Date:        {ot_date}
+Duration:    {duration}
+Status:      CANCELLED (OT Bank Restored)
+--------------------------------
+
+Best regards,
+Leave System
+"""
+
+
+def template_ot_cancellation_rejected(
+    employee_name,
+    manager_name,
+    ot_type,
+    ot_date,
+    duration,
+    remarks
+):
+    return f"""
+Hi {employee_name},
+
+Your request to CANCEL your Overtime claim was DENIED.
+The original Overtime claim remains approved.
+
+--------------------------------
+Denied By:   {manager_name}
+OT Type:     {ot_type}
+Date:        {ot_date}
+Duration:    {duration}
+Status:      CANCELLATION REJECTED
+Remarks:     {remarks if remarks else 'No specific remarks provided.'}
+--------------------------------
 
 Best regards,
 Leave System
