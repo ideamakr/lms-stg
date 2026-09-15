@@ -15649,7 +15649,7 @@ function renderManagerQueueTable() {
     if (currentManagerRequests.length === 0) {
         tbody.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 16px; border: 1px dashed #cbd5e1;">
-                <div style="width: 60px; height: 60px; background: #f8fafc; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; color: #94a3b8; font-size: 1.5rem;">
+                <div style="width: 60px; height: 60px; background: #f8fafc; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; color: #16a34a; font-size: 1.5rem;">
                     <i class="fas fa-check-double"></i>
                 </div>
                 <h3 style="margin: 0; color: #1e293b; font-weight: 800; font-size: 1.2rem;">All Caught Up!</h3>
@@ -19745,7 +19745,7 @@ let summaryHtml = `
 
             // ðŸ›¡ï¸ Helper to globally block or unblock leave/overtime submission buttons
             const toggleSubmitButtons = (disable) => {
-                const submitBtns = document.querySelectorAll("button[type='submit'], .submit-leave-btn, #submit_leave_btn");
+                const submitBtns = document.querySelectorAll(".submit-leave-btn, #submit_leave_btn");
                 submitBtns.forEach(btn => {
                     btn.disabled = disable;
                     btn.style.opacity = disable ? "0.5" : "1";
@@ -30737,7 +30737,7 @@ function renderSmartNotifications() {
     else if (isBoss) {
         html = `
         <div style="padding: 15px; text-align: center;">
-            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 15px;">All tasks cleared! âœ¨</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 15px;">All tasks cleared!</div>
             
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div onclick="showSection('manager_requests')" style="padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#e2e8f0'">
